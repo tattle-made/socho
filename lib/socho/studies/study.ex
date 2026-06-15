@@ -1,18 +1,21 @@
 defmodule Socho.Studies.Study do
-  @moduledoc """
-  Prototype struct representing a jsPsych study to be served at /study/:id.
-  In the real implementation this will be an Ecto schema backed by the database.
-  """
+  use Ecto.Schema
+  import Ecto.Changeset
 
-  @enforce_keys [:id, :title]
-  defstruct [
-    :id,
-    :title,
-    :description,
-    :study,
-    :inline_css,
-    :inline_js,
-    external_scripts: [],
-    external_stylesheets: []
-  ]
+  schema "studies" do
+    field :title, :string
+    field :description, :string
+    field :status, Ecto.Enum, values: [:draft, :published], default: :draft
+
+    has_many :trials, Socho.Studies.Trial, preload_order: [asc: :position]
+
+    timestamps(type: :utc_datetime)
+  end
+
+  def changeset(study, attrs) do
+    study
+    |> cast(attrs, [:title, :description, :status])
+    |> validate_required([:title])
+    |> validate_length(:title, min: 1, max: 255)
+  end
 end

@@ -1,6 +1,7 @@
 defmodule SochoWeb.StudyLive.Builder do
   use SochoWeb, :live_view
 
+  alias Socho.Studies
   alias Socho.Studies.Registry
 
   # ── Mount ──────────────────────────────────────────────────────────────────
@@ -24,7 +25,7 @@ defmodule SochoWeb.StudyLive.Builder do
   # ── Events ─────────────────────────────────────────────────────────────────
 
   @impl true
-  def handle_event("study_title_changed", %{"title" => title}, socket) do
+  def handle_event("study_title_changed", %{"value" => title}, socket) do
     {:noreply, assign(socket, study_title: title)}
   end
 
@@ -85,6 +86,19 @@ defmodule SochoWeb.StudyLive.Builder do
   def handle_event("remove_trial", %{"id" => id_str}, socket) do
     id = String.to_integer(id_str)
     {:noreply, assign(socket, trials: Enum.reject(socket.assigns.trials, &(&1.id == id)))}
+  end
+
+  def handle_event("save_study", _params, socket) do
+    title = socket.assigns.study_title
+    trials = socket.assigns.trials
+
+    case Studies.create_study_with_trials(title, trials) do
+      {:ok, study} ->
+        {:noreply, push_navigate(socket, to: "/study/#{study.id}")}
+
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, "Failed to save: #{inspect(reason)}")}
+    end
   end
 
   # ── Helpers ────────────────────────────────────────────────────────────────
@@ -231,6 +245,17 @@ defmodule SochoWeb.StudyLive.Builder do
         </h2>
 
         <p :if={@trials == []} class="text-sm opacity-50">No trials yet.</p>
+
+        <div :if={@trials != []} class="flex justify-end pt-2">
+          <button
+            class="btn btn-success"
+            phx-click="save_study"
+            type="button"
+            disabled={@study_title == ""}
+          >
+            Save & Preview
+          </button>
+        </div>
 
         <%= for {trial, position} <- Enum.with_index(@trials, 1) do %>
           <div class="card bg-base-300 shadow p-4 space-y-2">

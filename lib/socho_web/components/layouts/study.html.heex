@@ -4,29 +4,21 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="csrf-token" content={get_csrf_token()} />
-    <title>{@study.title}</title>
+    <title>{@page_title}</title>
 
-    <%= for href <- @study.external_stylesheets do %>
+    <%= for href <- @external_stylesheets do %>
       <link rel="stylesheet" href={href} />
-    <% end %>
-
-    <%= if @study.inline_css do %>
-      <style>
-        <%= raw(@study.inline_css) %>
-      </style>
     <% end %>
   </head>
   <body>
     {@inner_content}
 
-    <%= for src <- @study.external_scripts do %>
+    <%= for src <- @external_scripts do %>
       <script src={src}></script>
     <% end %>
 
-    <%= if @study.inline_js do %>
-      <script>
-        <%= raw(@study.inline_js) %>
-      </script>
-    <% end %>
+    <script>
+      <%= raw(@inline_js) %>
+    </script>
   </body>
 </html>
