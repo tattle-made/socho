@@ -8,6 +8,7 @@ defmodule Socho.Accounts.User do
     field :hashed_password, :string, redact: true
     field :confirmed_at, :utc_datetime
     field :authenticated_at, :utc_datetime, virtual: true
+    field :role, Ecto.Enum, values: [:admin, :manager, :participant], default: :participant
 
     timestamps(type: :utc_datetime)
   end
@@ -104,6 +105,18 @@ defmodule Socho.Accounts.User do
     else
       changeset
     end
+  end
+
+  @doc """
+  A changeset for creating a user with email, password, and role.
+  Used by admin helpers to seed or provision users programmatically.
+  """
+  def admin_registration_changeset(user, attrs) do
+    user
+    |> cast(attrs, [:email, :password, :role])
+    |> validate_email([])
+    |> validate_password([])
+    |> validate_inclusion(:role, Ecto.Enum.values(__MODULE__, :role))
   end
 
   @doc """
