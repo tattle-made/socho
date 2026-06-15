@@ -30,11 +30,12 @@ defmodule SochoWeb.StudyController do
         "trials" => 5
       },
       external_stylesheets: [
-        "https://cdn.jsdelivr.net/npm/jspsych@8.2.3/css/jspsych.min.css"
+        "/vendor/jspsych/jspsych.min.css"
       ],
       external_scripts: [
-        "https://cdn.jsdelivr.net/npm/jspsych@8.2.3/dist/index.browser.min.js",
-        "https://cdn.jsdelivr.net/npm/@jspsych/plugin-html-keyboard-response@2.1.0/dist/index.browser.min.js"
+        "/vendor/jspsych/jspsych.js",
+        "/vendor/jspsych/html-keyboard-response.js",
+        "/vendor/jspsych/survey-likert.js"
       ],
       inline_css: """
       body { background-color: #1a1a2e; }

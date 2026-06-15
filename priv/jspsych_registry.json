@@ -1,0 +1,2315 @@
+{
+  "animation": {
+    "name": "animation",
+    "version": "2.1.0",
+    "parameters": {
+      "stimuli": {
+        "type": "IMAGE",
+        "default": null,
+        "description": null,
+        "array": true
+      },
+      "frame_time": {
+        "type": "INT",
+        "default": 250,
+        "description": null,
+        "array": false
+      },
+      "frame_isi": {
+        "type": "INT",
+        "default": 0,
+        "description": null,
+        "array": false
+      },
+      "sequence_reps": {
+        "type": "INT",
+        "default": 1,
+        "description": null,
+        "array": false
+      },
+      "choices": {
+        "type": "KEYS",
+        "default": "ALL_KEYS",
+        "description": null,
+        "array": false
+      },
+      "prompt": {
+        "type": "HTML_STRING",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "render_on_canvas": {
+        "type": "BOOL",
+        "default": true,
+        "description": null,
+        "array": false
+      }
+    }
+  },
+  "audio-button-response": {
+    "name": "audio-button-response",
+    "version": "2.1.1",
+    "parameters": {
+      "stimulus": {
+        "type": "AUDIO",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "choices": {
+        "type": "STRING",
+        "default": null,
+        "description": null,
+        "array": true
+      },
+      "button_html": {
+        "type": "FUNCTION",
+        "description": null,
+        "array": false
+      },
+      "prompt": {
+        "type": "HTML_STRING",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "trial_duration": {
+        "type": "INT",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "button_layout": {
+        "type": "STRING",
+        "default": "grid",
+        "description": null,
+        "array": false
+      },
+      "grid_rows": {
+        "type": "INT",
+        "default": 1,
+        "description": null,
+        "array": false
+      },
+      "grid_columns": {
+        "type": "INT",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "response_ends_trial": {
+        "type": "BOOL",
+        "default": true,
+        "description": null,
+        "array": false
+      },
+      "trial_ends_after_audio": {
+        "type": "BOOL",
+        "default": false,
+        "description": null,
+        "array": false
+      },
+      "response_allowed_while_playing": {
+        "type": "BOOL",
+        "default": true,
+        "description": null,
+        "array": false
+      },
+      "enable_button_after": {
+        "type": "INT",
+        "default": 0,
+        "description": null,
+        "array": false
+      }
+    }
+  },
+  "audio-keyboard-response": {
+    "name": "audio-keyboard-response",
+    "version": "2.1.1",
+    "parameters": {
+      "stimulus": {
+        "type": "AUDIO",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "choices": {
+        "type": "KEYS",
+        "default": "ALL_KEYS",
+        "description": null,
+        "array": false
+      },
+      "prompt": {
+        "type": "HTML_STRING",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "trial_duration": {
+        "type": "INT",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "response_ends_trial": {
+        "type": "BOOL",
+        "default": true,
+        "description": null,
+        "array": false
+      },
+      "trial_ends_after_audio": {
+        "type": "BOOL",
+        "default": false,
+        "description": null,
+        "array": false
+      },
+      "response_allowed_while_playing": {
+        "type": "BOOL",
+        "default": true,
+        "description": null,
+        "array": false
+      }
+    }
+  },
+  "canvas-button-response": {
+    "name": "canvas-button-response",
+    "version": "2.1.0",
+    "parameters": {
+      "stimulus": {
+        "type": "FUNCTION",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "choices": {
+        "type": "STRING",
+        "default": null,
+        "description": null,
+        "array": true
+      },
+      "button_html": {
+        "type": "FUNCTION",
+        "description": null,
+        "array": false
+      },
+      "prompt": {
+        "type": "HTML_STRING",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "stimulus_duration": {
+        "type": "INT",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "trial_duration": {
+        "type": "INT",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "button_layout": {
+        "type": "STRING",
+        "default": "grid",
+        "description": null,
+        "array": false
+      },
+      "grid_rows": {
+        "type": "INT",
+        "default": 1,
+        "description": null,
+        "array": false
+      },
+      "grid_columns": {
+        "type": "INT",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "response_ends_trial": {
+        "type": "BOOL",
+        "default": true,
+        "description": null,
+        "array": false
+      },
+      "canvas_size": {
+        "type": "INT",
+        "default": [
+          500,
+          500
+        ],
+        "description": null,
+        "array": true
+      }
+    }
+  },
+  "canvas-keyboard-response": {
+    "name": "canvas-keyboard-response",
+    "version": "2.1.0",
+    "parameters": {
+      "stimulus": {
+        "type": "FUNCTION",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "choices": {
+        "type": "KEYS",
+        "default": "ALL_KEYS",
+        "description": null,
+        "array": false
+      },
+      "prompt": {
+        "type": "HTML_STRING",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "stimulus_duration": {
+        "type": "INT",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "trial_duration": {
+        "type": "INT",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "response_ends_trial": {
+        "type": "BOOL",
+        "default": true,
+        "description": null,
+        "array": false
+      },
+      "canvas_size": {
+        "type": "INT",
+        "default": [
+          500,
+          500
+        ],
+        "description": null,
+        "array": true
+      }
+    }
+  },
+  "categorize-html": {
+    "name": "categorize-html",
+    "version": "2.1.0",
+    "parameters": {
+      "stimulus": {
+        "type": "HTML_STRING",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "key_answer": {
+        "type": "KEY",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "choices": {
+        "type": "KEYS",
+        "default": "ALL_KEYS",
+        "description": null,
+        "array": false
+      },
+      "text_answer": {
+        "type": "HTML_STRING",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "correct_text": {
+        "type": "HTML_STRING",
+        "default": "<p class='feedback'>Correct</p>",
+        "description": null,
+        "array": false
+      },
+      "incorrect_text": {
+        "type": "HTML_STRING",
+        "default": "<p class='feedback'>Incorrect</p>",
+        "description": null,
+        "array": false
+      },
+      "prompt": {
+        "type": "HTML_STRING",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "force_correct_button_press": {
+        "type": "BOOL",
+        "default": false,
+        "description": null,
+        "array": false
+      },
+      "show_stim_with_feedback": {
+        "type": "BOOL",
+        "default": false,
+        "description": null,
+        "array": false
+      },
+      "show_feedback_on_timeout": {
+        "type": "BOOL",
+        "default": false,
+        "description": null,
+        "array": false
+      },
+      "timeout_message": {
+        "type": "HTML_STRING",
+        "default": "<p>Please respond faster.</p>",
+        "description": null,
+        "array": false
+      },
+      "stimulus_duration": {
+        "type": "INT",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "trial_duration": {
+        "type": "INT",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "feedback_duration": {
+        "type": "INT",
+        "default": 2000,
+        "description": null,
+        "array": false
+      }
+    }
+  },
+  "categorize-image": {
+    "name": "categorize-image",
+    "version": "2.1.0",
+    "parameters": {
+      "stimulus": {
+        "type": "IMAGE",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "key_answer": {
+        "type": "KEY",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "choices": {
+        "type": "KEYS",
+        "default": "ALL_KEYS",
+        "description": null,
+        "array": false
+      },
+      "text_answer": {
+        "type": "HTML_STRING",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "correct_text": {
+        "type": "HTML_STRING",
+        "default": "<p class='feedback'>Correct</p>",
+        "description": null,
+        "array": false
+      },
+      "incorrect_text": {
+        "type": "HTML_STRING",
+        "default": "<p class='feedback'>Wrong</p>",
+        "description": null,
+        "array": false
+      },
+      "prompt": {
+        "type": "HTML_STRING",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "force_correct_button_press": {
+        "type": "BOOL",
+        "default": false,
+        "description": null,
+        "array": false
+      },
+      "show_stim_with_feedback": {
+        "type": "BOOL",
+        "default": true,
+        "description": null,
+        "array": false
+      },
+      "show_feedback_on_timeout": {
+        "type": "BOOL",
+        "default": false,
+        "description": null,
+        "array": false
+      },
+      "timeout_message": {
+        "type": "HTML_STRING",
+        "default": "<p>Please respond faster.</p>",
+        "description": null,
+        "array": false
+      },
+      "stimulus_duration": {
+        "type": "INT",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "trial_duration": {
+        "type": "INT",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "feedback_duration": {
+        "type": "INT",
+        "default": 2000,
+        "description": null,
+        "array": false
+      }
+    }
+  },
+  "free-sort": {
+    "name": "free-sort",
+    "version": "2.1.0",
+    "parameters": {
+      "stimuli": {
+        "type": "IMAGE",
+        "default": null,
+        "description": null,
+        "array": true
+      },
+      "stim_height": {
+        "type": "INT",
+        "default": 100,
+        "description": null,
+        "array": false
+      },
+      "stim_width": {
+        "type": "INT",
+        "default": 100,
+        "description": null,
+        "array": false
+      },
+      "scale_factor": {
+        "type": "FLOAT",
+        "default": 1.5,
+        "description": null,
+        "array": false
+      },
+      "sort_area_height": {
+        "type": "INT",
+        "default": 700,
+        "description": null,
+        "array": false
+      },
+      "sort_area_width": {
+        "type": "INT",
+        "default": 700,
+        "description": null,
+        "array": false
+      },
+      "sort_area_shape": {
+        "type": "SELECT",
+        "default": "ellipse",
+        "description": null,
+        "array": false
+      },
+      "prompt": {
+        "type": "HTML_STRING",
+        "default": "",
+        "description": null,
+        "array": false
+      },
+      "prompt_location": {
+        "type": "SELECT",
+        "default": "above",
+        "description": null,
+        "array": false
+      },
+      "button_label": {
+        "type": "STRING",
+        "default": "Continue",
+        "description": null,
+        "array": false
+      },
+      "change_border_background_color": {
+        "type": "BOOL",
+        "default": true,
+        "description": null,
+        "array": false
+      },
+      "border_color_in": {
+        "type": "STRING",
+        "default": "#a1d99b",
+        "description": null,
+        "array": false
+      },
+      "border_color_out": {
+        "type": "STRING",
+        "default": "#fc9272",
+        "description": null,
+        "array": false
+      },
+      "border_width": {
+        "type": "INT",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "counter_text_unfinished": {
+        "type": "HTML_STRING",
+        "default": "You still need to place %n% item%s% inside the sort area.",
+        "description": null,
+        "array": false
+      },
+      "counter_text_finished": {
+        "type": "HTML_STRING",
+        "default": "All items placed. Feel free to reposition items if necessary.",
+        "description": null,
+        "array": false
+      },
+      "stim_starts_inside": {
+        "type": "BOOL",
+        "default": false,
+        "description": null,
+        "array": false
+      },
+      "column_spread_factor": {
+        "type": "FLOAT",
+        "default": 1,
+        "description": null,
+        "array": false
+      }
+    }
+  },
+  "fullscreen": {
+    "name": "fullscreen",
+    "version": "2.1.0",
+    "parameters": {
+      "fullscreen_mode": {
+        "type": "BOOL",
+        "default": true,
+        "description": null,
+        "array": false
+      },
+      "message": {
+        "type": "HTML_STRING",
+        "default": "<p>The experiment will switch to full screen mode when you press the button below</p>",
+        "description": null,
+        "array": false
+      },
+      "button_label": {
+        "type": "STRING",
+        "default": "Continue",
+        "description": null,
+        "array": false
+      },
+      "delay_after": {
+        "type": "INT",
+        "default": 1000,
+        "description": null,
+        "array": false
+      }
+    }
+  },
+  "html-button-response": {
+    "name": "html-button-response",
+    "version": "2.1.0",
+    "parameters": {
+      "stimulus": {
+        "type": "HTML_STRING",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "choices": {
+        "type": "STRING",
+        "default": null,
+        "description": null,
+        "array": true
+      },
+      "button_html": {
+        "type": "FUNCTION",
+        "description": null,
+        "array": false
+      },
+      "prompt": {
+        "type": "HTML_STRING",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "stimulus_duration": {
+        "type": "INT",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "trial_duration": {
+        "type": "INT",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "button_layout": {
+        "type": "STRING",
+        "default": "grid",
+        "description": null,
+        "array": false
+      },
+      "grid_rows": {
+        "type": "INT",
+        "default": 1,
+        "description": null,
+        "array": false
+      },
+      "grid_columns": {
+        "type": "INT",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "response_ends_trial": {
+        "type": "BOOL",
+        "default": true,
+        "description": null,
+        "array": false
+      },
+      "enable_button_after": {
+        "type": "INT",
+        "default": 0,
+        "description": null,
+        "array": false
+      }
+    }
+  },
+  "html-keyboard-response": {
+    "name": "html-keyboard-response",
+    "version": "2.1.0",
+    "parameters": {
+      "stimulus": {
+        "type": "HTML_STRING",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "choices": {
+        "type": "KEYS",
+        "default": "ALL_KEYS",
+        "description": null,
+        "array": false
+      },
+      "prompt": {
+        "type": "HTML_STRING",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "stimulus_duration": {
+        "type": "INT",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "trial_duration": {
+        "type": "INT",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "response_ends_trial": {
+        "type": "BOOL",
+        "default": true,
+        "description": null,
+        "array": false
+      }
+    }
+  },
+  "iat-html": {
+    "name": "iat-html",
+    "version": "2.1.0",
+    "parameters": {
+      "stimulus": {
+        "type": "HTML_STRING",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "left_category_key": {
+        "type": "KEY",
+        "default": "e",
+        "description": null,
+        "array": false
+      },
+      "right_category_key": {
+        "type": "KEY",
+        "default": "i",
+        "description": null,
+        "array": false
+      },
+      "left_category_label": {
+        "type": "STRING",
+        "default": [
+          "left"
+        ],
+        "description": null,
+        "array": true
+      },
+      "right_category_label": {
+        "type": "STRING",
+        "default": [
+          "right"
+        ],
+        "description": null,
+        "array": true
+      },
+      "key_to_move_forward": {
+        "type": "KEYS",
+        "default": "ALL_KEYS",
+        "description": null,
+        "array": false
+      },
+      "display_feedback": {
+        "type": "BOOL",
+        "default": false,
+        "description": null,
+        "array": false
+      },
+      "html_when_wrong": {
+        "type": "HTML_STRING",
+        "default": "<span style=\"color: red; font-size: 80px\">X</span>",
+        "description": null,
+        "array": false
+      },
+      "bottom_instructions": {
+        "type": "HTML_STRING",
+        "default": "<p>If you press the wrong key, a red X will appear. Press any key to continue.</p>",
+        "description": null,
+        "array": false
+      },
+      "force_correct_key_press": {
+        "type": "BOOL",
+        "default": false,
+        "description": null,
+        "array": false
+      },
+      "stim_key_association": {
+        "type": "SELECT",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "response_ends_trial": {
+        "type": "BOOL",
+        "default": true,
+        "description": null,
+        "array": false
+      },
+      "trial_duration": {
+        "type": "INT",
+        "default": null,
+        "description": null,
+        "array": false
+      }
+    }
+  },
+  "image-button-response": {
+    "name": "image-button-response",
+    "version": "2.2.0",
+    "parameters": {
+      "stimulus": {
+        "type": "IMAGE",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "stimulus_height": {
+        "type": "INT",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "stimulus_width": {
+        "type": "INT",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "maintain_aspect_ratio": {
+        "type": "BOOL",
+        "default": true,
+        "description": null,
+        "array": false
+      },
+      "choices": {
+        "type": "STRING",
+        "default": null,
+        "description": null,
+        "array": true
+      },
+      "button_html": {
+        "type": "FUNCTION",
+        "description": null,
+        "array": false
+      },
+      "prompt": {
+        "type": "HTML_STRING",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "stimulus_duration": {
+        "type": "INT",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "trial_duration": {
+        "type": "INT",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "button_layout": {
+        "type": "STRING",
+        "default": "grid",
+        "description": null,
+        "array": false
+      },
+      "grid_rows": {
+        "type": "INT",
+        "default": 1,
+        "description": null,
+        "array": false
+      },
+      "grid_columns": {
+        "type": "INT",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "response_ends_trial": {
+        "type": "BOOL",
+        "default": true,
+        "description": null,
+        "array": false
+      },
+      "render_on_canvas": {
+        "type": "BOOL",
+        "default": true,
+        "description": null,
+        "array": false
+      },
+      "enable_button_after": {
+        "type": "INT",
+        "default": 0,
+        "description": null,
+        "array": false
+      }
+    }
+  },
+  "image-keyboard-response": {
+    "name": "image-keyboard-response",
+    "version": "2.1.0",
+    "parameters": {
+      "stimulus": {
+        "type": "IMAGE",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "stimulus_height": {
+        "type": "INT",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "stimulus_width": {
+        "type": "INT",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "maintain_aspect_ratio": {
+        "type": "BOOL",
+        "default": true,
+        "description": null,
+        "array": false
+      },
+      "choices": {
+        "type": "KEYS",
+        "default": "ALL_KEYS",
+        "description": null,
+        "array": false
+      },
+      "prompt": {
+        "type": "HTML_STRING",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "stimulus_duration": {
+        "type": "INT",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "trial_duration": {
+        "type": "INT",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "response_ends_trial": {
+        "type": "BOOL",
+        "default": true,
+        "description": null,
+        "array": false
+      },
+      "render_on_canvas": {
+        "type": "BOOL",
+        "default": true,
+        "description": null,
+        "array": false
+      }
+    }
+  },
+  "instructions": {
+    "name": "instructions",
+    "version": "2.1.0",
+    "parameters": {
+      "pages": {
+        "type": "HTML_STRING",
+        "default": null,
+        "description": null,
+        "array": true
+      },
+      "key_forward": {
+        "type": "KEY",
+        "default": "ArrowRight",
+        "description": null,
+        "array": false
+      },
+      "key_backward": {
+        "type": "KEY",
+        "default": "ArrowLeft",
+        "description": null,
+        "array": false
+      },
+      "allow_backward": {
+        "type": "BOOL",
+        "default": true,
+        "description": null,
+        "array": false
+      },
+      "allow_keys": {
+        "type": "BOOL",
+        "default": true,
+        "description": null,
+        "array": false
+      },
+      "show_clickable_nav": {
+        "type": "BOOL",
+        "default": false,
+        "description": null,
+        "array": false
+      },
+      "show_page_number": {
+        "type": "BOOL",
+        "default": false,
+        "description": null,
+        "array": false
+      },
+      "page_label": {
+        "type": "STRING",
+        "default": "Page",
+        "description": null,
+        "array": false
+      },
+      "button_label_previous": {
+        "type": "STRING",
+        "default": "Previous",
+        "description": null,
+        "array": false
+      },
+      "button_label_next": {
+        "type": "STRING",
+        "default": "Next",
+        "description": null,
+        "array": false
+      },
+      "on_page_change": {
+        "type": "FUNCTION",
+        "description": null,
+        "array": false
+      }
+    }
+  },
+  "preload": {
+    "name": "preload",
+    "version": "2.1.0",
+    "parameters": {
+      "auto_preload": {
+        "type": "BOOL",
+        "default": false,
+        "description": null,
+        "array": false
+      },
+      "trials": {
+        "type": "TIMELINE",
+        "default": [],
+        "description": null,
+        "array": false
+      },
+      "images": {
+        "type": "STRING",
+        "default": [],
+        "description": null,
+        "array": true
+      },
+      "audio": {
+        "type": "STRING",
+        "default": [],
+        "description": null,
+        "array": true
+      },
+      "video": {
+        "type": "STRING",
+        "default": [],
+        "description": null,
+        "array": true
+      },
+      "message": {
+        "type": "HTML_STRING",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "show_progress_bar": {
+        "type": "BOOL",
+        "default": true,
+        "description": null,
+        "array": false
+      },
+      "continue_after_error": {
+        "type": "BOOL",
+        "default": false,
+        "description": null,
+        "array": false
+      },
+      "error_message": {
+        "type": "HTML_STRING",
+        "default": "The experiment failed to load.",
+        "description": null,
+        "array": false
+      },
+      "show_detailed_errors": {
+        "type": "BOOL",
+        "default": false,
+        "description": null,
+        "array": false
+      },
+      "max_load_time": {
+        "type": "INT",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "on_error": {
+        "type": "FUNCTION",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "on_success": {
+        "type": "FUNCTION",
+        "default": null,
+        "description": null,
+        "array": false
+      }
+    }
+  },
+  "reconstruction": {
+    "name": "reconstruction",
+    "version": "2.1.0",
+    "parameters": {
+      "stim_function": {
+        "type": "FUNCTION",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "starting_value": {
+        "type": "FLOAT",
+        "default": 0.5,
+        "description": null,
+        "array": false
+      },
+      "step_size": {
+        "type": "FLOAT",
+        "default": 0.05,
+        "description": null,
+        "array": false
+      },
+      "key_increase": {
+        "type": "KEY",
+        "default": "h",
+        "description": null,
+        "array": false
+      },
+      "key_decrease": {
+        "type": "KEY",
+        "default": "g",
+        "description": null,
+        "array": false
+      },
+      "button_label": {
+        "type": "STRING",
+        "default": "Continue",
+        "description": null,
+        "array": false
+      }
+    }
+  },
+  "resize": {
+    "name": "resize",
+    "version": "2.1.0",
+    "parameters": {
+      "item_height": {
+        "type": "INT",
+        "default": 1,
+        "description": null,
+        "array": false
+      },
+      "item_width": {
+        "type": "INT",
+        "default": 1,
+        "description": null,
+        "array": false
+      },
+      "prompt": {
+        "type": "HTML_STRING",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "pixels_per_unit": {
+        "type": "INT",
+        "default": 100,
+        "description": null,
+        "array": false
+      },
+      "starting_size": {
+        "type": "INT",
+        "default": 100,
+        "description": null,
+        "array": false
+      },
+      "button_label": {
+        "type": "STRING",
+        "default": "Continue",
+        "description": null,
+        "array": false
+      }
+    }
+  },
+  "same-different-html": {
+    "name": "same-different-html",
+    "version": "2.1.0",
+    "parameters": {
+      "stimuli": {
+        "type": "HTML_STRING",
+        "default": null,
+        "description": null,
+        "array": true
+      },
+      "answer": {
+        "type": "SELECT",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "same_key": {
+        "type": "KEY",
+        "default": "q",
+        "description": null,
+        "array": false
+      },
+      "different_key": {
+        "type": "KEY",
+        "default": "p",
+        "description": null,
+        "array": false
+      },
+      "first_stim_duration": {
+        "type": "INT",
+        "default": 1000,
+        "description": null,
+        "array": false
+      },
+      "gap_duration": {
+        "type": "INT",
+        "default": 500,
+        "description": null,
+        "array": false
+      },
+      "second_stim_duration": {
+        "type": "INT",
+        "default": 1000,
+        "description": null,
+        "array": false
+      },
+      "prompt": {
+        "type": "HTML_STRING",
+        "default": null,
+        "description": null,
+        "array": false
+      }
+    }
+  },
+  "same-different-image": {
+    "name": "same-different-image",
+    "version": "2.1.0",
+    "parameters": {
+      "stimuli": {
+        "type": "IMAGE",
+        "default": null,
+        "description": null,
+        "array": true
+      },
+      "answer": {
+        "type": "SELECT",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "same_key": {
+        "type": "KEY",
+        "default": "q",
+        "description": null,
+        "array": false
+      },
+      "different_key": {
+        "type": "KEY",
+        "default": "p",
+        "description": null,
+        "array": false
+      },
+      "first_stim_duration": {
+        "type": "INT",
+        "default": 1000,
+        "description": null,
+        "array": false
+      },
+      "gap_duration": {
+        "type": "INT",
+        "default": 500,
+        "description": null,
+        "array": false
+      },
+      "second_stim_duration": {
+        "type": "INT",
+        "default": 1000,
+        "description": null,
+        "array": false
+      },
+      "prompt": {
+        "type": "HTML_STRING",
+        "default": null,
+        "description": null,
+        "array": false
+      }
+    }
+  },
+  "serial-reaction-time": {
+    "name": "serial-reaction-time",
+    "version": "2.1.0",
+    "parameters": {
+      "grid": {
+        "type": "BOOL",
+        "default": [
+          [
+            1,
+            1,
+            1,
+            1
+          ]
+        ],
+        "description": null,
+        "array": true
+      },
+      "target": {
+        "type": "INT",
+        "default": null,
+        "description": null,
+        "array": true
+      },
+      "choices": {
+        "type": "KEYS",
+        "default": [
+          [
+            "3",
+            "5",
+            "7",
+            "9"
+          ]
+        ],
+        "description": null,
+        "array": true
+      },
+      "grid_square_size": {
+        "type": "INT",
+        "default": 100,
+        "description": null,
+        "array": false
+      },
+      "target_color": {
+        "type": "STRING",
+        "default": "#999",
+        "description": null,
+        "array": false
+      },
+      "response_ends_trial": {
+        "type": "BOOL",
+        "default": true,
+        "description": null,
+        "array": false
+      },
+      "pre_target_duration": {
+        "type": "INT",
+        "default": 0,
+        "description": null,
+        "array": false
+      },
+      "trial_duration": {
+        "type": "INT",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "show_response_feedback": {
+        "type": "BOOL",
+        "default": false,
+        "description": null,
+        "array": false
+      },
+      "feedback_duration": {
+        "type": "INT",
+        "default": 200,
+        "description": null,
+        "array": false
+      },
+      "fade_duration": {
+        "type": "INT",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "prompt": {
+        "type": "HTML_STRING",
+        "default": null,
+        "description": null,
+        "array": false
+      }
+    }
+  },
+  "serial-reaction-time-mouse": {
+    "name": "serial-reaction-time-mouse",
+    "version": "2.2.0",
+    "parameters": {
+      "grid": {
+        "type": "BOOL",
+        "default": [
+          [
+            1,
+            1,
+            1,
+            1
+          ]
+        ],
+        "description": null,
+        "array": true
+      },
+      "target": {
+        "type": "INT",
+        "default": null,
+        "description": null,
+        "array": true
+      },
+      "grid_square_size": {
+        "type": "INT",
+        "default": 100,
+        "description": null,
+        "array": false
+      },
+      "target_color": {
+        "type": "STRING",
+        "default": "#999",
+        "description": null,
+        "array": false
+      },
+      "response_ends_trial": {
+        "type": "BOOL",
+        "default": true,
+        "description": null,
+        "array": false
+      },
+      "pre_target_duration": {
+        "type": "INT",
+        "default": 0,
+        "description": null,
+        "array": false
+      },
+      "trial_duration": {
+        "type": "INT",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "show_response_feedback": {
+        "type": "BOOL",
+        "default": false,
+        "description": null,
+        "array": false
+      },
+      "feedback_duration": {
+        "type": "INT",
+        "default": 200,
+        "description": null,
+        "array": false
+      },
+      "fade_duration": {
+        "type": "INT",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "allow_nontarget_responses": {
+        "type": "BOOL",
+        "default": false,
+        "description": null,
+        "array": false
+      },
+      "prompt": {
+        "type": "HTML_STRING",
+        "default": null,
+        "description": null,
+        "array": false
+      }
+    }
+  },
+  "sketchpad": {
+    "name": "sketchpad",
+    "version": "2.1.0",
+    "parameters": {
+      "canvas_shape": {
+        "type": "STRING",
+        "default": "rectangle",
+        "description": null,
+        "array": false
+      },
+      "canvas_width": {
+        "type": "INT",
+        "default": 500,
+        "description": null,
+        "array": false
+      },
+      "canvas_height": {
+        "type": "INT",
+        "default": 500,
+        "description": null,
+        "array": false
+      },
+      "canvas_diameter": {
+        "type": "INT",
+        "default": 500,
+        "description": null,
+        "array": false
+      },
+      "canvas_border_width": {
+        "type": "INT",
+        "default": 0,
+        "description": null,
+        "array": false
+      },
+      "canvas_border_color": {
+        "type": "STRING",
+        "default": "#000",
+        "description": null,
+        "array": false
+      },
+      "background_image": {
+        "type": "IMAGE",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "background_color": {
+        "type": "STRING",
+        "default": "#ffffff",
+        "description": null,
+        "array": false
+      },
+      "stroke_width": {
+        "type": "INT",
+        "default": 2,
+        "description": null,
+        "array": false
+      },
+      "stroke_color": {
+        "type": "STRING",
+        "default": "#000000",
+        "description": null,
+        "array": false
+      },
+      "stroke_color_palette": {
+        "type": "STRING",
+        "default": [],
+        "description": null,
+        "array": true
+      },
+      "prompt": {
+        "type": "HTML_STRING",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "prompt_location": {
+        "type": "STRING",
+        "default": "abovecanvas",
+        "description": null,
+        "array": false
+      },
+      "save_final_image": {
+        "type": "BOOL",
+        "default": true,
+        "description": null,
+        "array": false
+      },
+      "save_strokes": {
+        "type": "BOOL",
+        "default": true,
+        "description": null,
+        "array": false
+      },
+      "key_to_draw": {
+        "type": "KEY",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "show_finished_button": {
+        "type": "BOOL",
+        "default": true,
+        "description": null,
+        "array": false
+      },
+      "finished_button_label": {
+        "type": "STRING",
+        "default": "Finished",
+        "description": null,
+        "array": false
+      },
+      "show_clear_button": {
+        "type": "BOOL",
+        "default": true,
+        "description": null,
+        "array": false
+      },
+      "clear_button_label": {
+        "type": "STRING",
+        "default": "Clear",
+        "description": null,
+        "array": false
+      },
+      "show_undo_button": {
+        "type": "BOOL",
+        "default": true,
+        "description": null,
+        "array": false
+      },
+      "undo_button_label": {
+        "type": "STRING",
+        "default": "Undo",
+        "description": null,
+        "array": false
+      },
+      "show_redo_button": {
+        "type": "BOOL",
+        "default": true,
+        "description": null,
+        "array": false
+      },
+      "redo_button_label": {
+        "type": "STRING",
+        "default": "Redo",
+        "description": null,
+        "array": false
+      },
+      "choices": {
+        "type": "KEYS",
+        "default": "NO_KEYS",
+        "description": null,
+        "array": false
+      },
+      "trial_duration": {
+        "type": "INT",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "show_countdown_trial_duration": {
+        "type": "BOOL",
+        "default": false,
+        "description": null,
+        "array": false
+      },
+      "countdown_timer_html": {
+        "type": "HTML_STRING",
+        "default": "<span id=\"sketchpad-timer\"></span> remaining",
+        "description": null,
+        "array": false
+      }
+    }
+  },
+  "survey-html-form": {
+    "name": "survey-html-form",
+    "version": "2.1.0",
+    "parameters": {
+      "html": {
+        "type": "HTML_STRING",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "preamble": {
+        "type": "HTML_STRING",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "button_label": {
+        "type": "STRING",
+        "default": "Continue",
+        "description": null,
+        "array": false
+      },
+      "autofocus": {
+        "type": "STRING",
+        "default": "",
+        "description": null,
+        "array": false
+      },
+      "dataAsArray": {
+        "type": "BOOL",
+        "default": false,
+        "description": null,
+        "array": false
+      },
+      "autocomplete": {
+        "type": "BOOL",
+        "default": false,
+        "description": null,
+        "array": false
+      }
+    }
+  },
+  "survey-likert": {
+    "name": "survey-likert",
+    "version": "2.2.0",
+    "parameters": {
+      "questions": {
+        "type": "COMPLEX",
+        "default": null,
+        "description": null,
+        "array": true,
+        "nested": {
+          "prompt": {
+            "type": "HTML_STRING",
+            "default": null,
+            "description": null,
+            "array": false
+          },
+          "labels": {
+            "type": "STRING",
+            "default": null,
+            "description": null,
+            "array": true
+          },
+          "required": {
+            "type": "BOOL",
+            "default": false,
+            "description": null,
+            "array": false
+          },
+          "name": {
+            "type": "STRING",
+            "default": "",
+            "description": null,
+            "array": false
+          },
+          "default_response": {
+            "type": "INT",
+            "default": null,
+            "description": null,
+            "array": false
+          }
+        }
+      },
+      "randomize_question_order": {
+        "type": "BOOL",
+        "default": false,
+        "description": null,
+        "array": false
+      },
+      "preamble": {
+        "type": "HTML_STRING",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "scale_width": {
+        "type": "INT",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "button_label": {
+        "type": "STRING",
+        "default": "Continue",
+        "description": null,
+        "array": false
+      },
+      "autocomplete": {
+        "type": "BOOL",
+        "default": false,
+        "description": null,
+        "array": false
+      }
+    }
+  },
+  "survey-multi-choice": {
+    "name": "survey-multi-choice",
+    "version": "2.2.0",
+    "parameters": {
+      "questions": {
+        "type": "COMPLEX",
+        "default": null,
+        "description": null,
+        "array": true,
+        "nested": {
+          "prompt": {
+            "type": "HTML_STRING",
+            "default": null,
+            "description": null,
+            "array": false
+          },
+          "options": {
+            "type": "STRING",
+            "default": null,
+            "description": null,
+            "array": true
+          },
+          "required": {
+            "type": "BOOL",
+            "default": false,
+            "description": null,
+            "array": false
+          },
+          "horizontal": {
+            "type": "BOOL",
+            "default": false,
+            "description": null,
+            "array": false
+          },
+          "name": {
+            "type": "STRING",
+            "default": "",
+            "description": null,
+            "array": false
+          }
+        }
+      },
+      "randomize_question_order": {
+        "type": "BOOL",
+        "default": false,
+        "description": null,
+        "array": false
+      },
+      "preamble": {
+        "type": "HTML_STRING",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "button_label": {
+        "type": "STRING",
+        "default": "Continue",
+        "description": null,
+        "array": false
+      },
+      "autocomplete": {
+        "type": "BOOL",
+        "default": false,
+        "description": null,
+        "array": false
+      }
+    }
+  },
+  "survey-multi-select": {
+    "name": "survey-multi-select",
+    "version": "2.1.0",
+    "parameters": {
+      "questions": {
+        "type": "COMPLEX",
+        "default": null,
+        "description": null,
+        "array": true,
+        "nested": {
+          "prompt": {
+            "type": "HTML_STRING",
+            "default": null,
+            "description": null,
+            "array": false
+          },
+          "options": {
+            "type": "STRING",
+            "default": null,
+            "description": null,
+            "array": true
+          },
+          "horizontal": {
+            "type": "BOOL",
+            "default": false,
+            "description": null,
+            "array": false
+          },
+          "required": {
+            "type": "BOOL",
+            "default": false,
+            "description": null,
+            "array": false
+          },
+          "name": {
+            "type": "STRING",
+            "default": "",
+            "description": null,
+            "array": false
+          }
+        }
+      },
+      "randomize_question_order": {
+        "type": "BOOL",
+        "default": false,
+        "description": null,
+        "array": false
+      },
+      "preamble": {
+        "type": "HTML_STRING",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "button_label": {
+        "type": "STRING",
+        "default": "Continue",
+        "description": null,
+        "array": false
+      },
+      "required_message": {
+        "type": "STRING",
+        "default": "You must choose at least one response for this question",
+        "description": null,
+        "array": false
+      },
+      "autocomplete": {
+        "type": "BOOL",
+        "default": false,
+        "description": null,
+        "array": false
+      }
+    }
+  },
+  "survey-text": {
+    "name": "survey-text",
+    "version": "2.1.0",
+    "parameters": {
+      "questions": {
+        "type": "COMPLEX",
+        "default": null,
+        "description": null,
+        "array": true,
+        "nested": {
+          "prompt": {
+            "type": "HTML_STRING",
+            "default": null,
+            "description": null,
+            "array": false
+          },
+          "placeholder": {
+            "type": "STRING",
+            "default": "",
+            "description": null,
+            "array": false
+          },
+          "rows": {
+            "type": "INT",
+            "default": 1,
+            "description": null,
+            "array": false
+          },
+          "columns": {
+            "type": "INT",
+            "default": 40,
+            "description": null,
+            "array": false
+          },
+          "required": {
+            "type": "BOOL",
+            "default": false,
+            "description": null,
+            "array": false
+          },
+          "name": {
+            "type": "STRING",
+            "default": "",
+            "description": null,
+            "array": false
+          }
+        }
+      },
+      "randomize_question_order": {
+        "type": "BOOL",
+        "default": false,
+        "description": null,
+        "array": false
+      },
+      "preamble": {
+        "type": "HTML_STRING",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "button_label": {
+        "type": "STRING",
+        "default": "Continue",
+        "description": null,
+        "array": false
+      },
+      "autocomplete": {
+        "type": "BOOL",
+        "default": false,
+        "description": null,
+        "array": false
+      }
+    }
+  },
+  "video-button-response": {
+    "name": "video-button-response",
+    "version": "2.1.1",
+    "parameters": {
+      "stimulus": {
+        "type": "VIDEO",
+        "default": null,
+        "description": null,
+        "array": true
+      },
+      "choices": {
+        "type": "STRING",
+        "default": null,
+        "description": null,
+        "array": true
+      },
+      "button_html": {
+        "type": "FUNCTION",
+        "description": null,
+        "array": false
+      },
+      "prompt": {
+        "type": "HTML_STRING",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "width": {
+        "type": "INT",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "height": {
+        "type": "INT",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "autoplay": {
+        "type": "BOOL",
+        "default": true,
+        "description": null,
+        "array": false
+      },
+      "controls": {
+        "type": "BOOL",
+        "default": false,
+        "description": null,
+        "array": false
+      },
+      "start": {
+        "type": "FLOAT",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "stop": {
+        "type": "FLOAT",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "rate": {
+        "type": "FLOAT",
+        "default": 1,
+        "description": null,
+        "array": false
+      },
+      "trial_ends_after_video": {
+        "type": "BOOL",
+        "default": false,
+        "description": null,
+        "array": false
+      },
+      "trial_duration": {
+        "type": "INT",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "button_layout": {
+        "type": "STRING",
+        "default": "grid",
+        "description": null,
+        "array": false
+      },
+      "grid_rows": {
+        "type": "INT",
+        "default": 1,
+        "description": null,
+        "array": false
+      },
+      "grid_columns": {
+        "type": "INT",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "response_ends_trial": {
+        "type": "BOOL",
+        "default": true,
+        "description": null,
+        "array": false
+      },
+      "response_allowed_while_playing": {
+        "type": "BOOL",
+        "default": true,
+        "description": null,
+        "array": false
+      },
+      "enable_button_after": {
+        "type": "INT",
+        "default": 0,
+        "description": null,
+        "array": false
+      }
+    }
+  },
+  "video-keyboard-response": {
+    "name": "video-keyboard-response",
+    "version": "2.1.1",
+    "parameters": {
+      "stimulus": {
+        "type": "VIDEO",
+        "default": null,
+        "description": null,
+        "array": true
+      },
+      "choices": {
+        "type": "KEYS",
+        "default": "ALL_KEYS",
+        "description": null,
+        "array": false
+      },
+      "prompt": {
+        "type": "HTML_STRING",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "width": {
+        "type": "INT",
+        "default": "",
+        "description": null,
+        "array": false
+      },
+      "height": {
+        "type": "INT",
+        "default": "",
+        "description": null,
+        "array": false
+      },
+      "autoplay": {
+        "type": "BOOL",
+        "default": true,
+        "description": null,
+        "array": false
+      },
+      "controls": {
+        "type": "BOOL",
+        "default": false,
+        "description": null,
+        "array": false
+      },
+      "start": {
+        "type": "FLOAT",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "stop": {
+        "type": "FLOAT",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "rate": {
+        "type": "FLOAT",
+        "default": 1,
+        "description": null,
+        "array": false
+      },
+      "trial_ends_after_video": {
+        "type": "BOOL",
+        "default": false,
+        "description": null,
+        "array": false
+      },
+      "trial_duration": {
+        "type": "INT",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "response_ends_trial": {
+        "type": "BOOL",
+        "default": true,
+        "description": null,
+        "array": false
+      },
+      "response_allowed_while_playing": {
+        "type": "BOOL",
+        "default": true,
+        "description": null,
+        "array": false
+      }
+    }
+  },
+  "virtual-chinrest": {
+    "name": "virtual-chinrest",
+    "version": "3.1.0",
+    "parameters": {
+      "resize_units": {
+        "type": "SELECT",
+        "default": "none",
+        "description": null,
+        "array": false
+      },
+      "pixels_per_unit": {
+        "type": "INT",
+        "default": 100,
+        "description": null,
+        "array": false
+      },
+      "adjustment_prompt": {
+        "type": "HTML_STRING",
+        "default": "\n          <div style=\"text-align: left;\">\n          <p>Click and drag the lower right corner of the image until it is the same size as a credit card held up to the screen.</p>\n          <p>You can use any card that is the same size as a credit card, like a membership card or driver's license.</p>\n          <p>If you do not have access to a real card you can use a ruler to measure the image width to 3.37 inches or 85.6 mm.</p>\n          </div>",
+        "description": null,
+        "array": false
+      },
+      "adjustment_button_prompt": {
+        "type": "HTML_STRING",
+        "default": "Click here when the image is the correct size",
+        "description": null,
+        "array": false
+      },
+      "item_path": {
+        "type": "IMAGE",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "item_height_mm": {
+        "type": "FLOAT",
+        "default": 53.98,
+        "description": null,
+        "array": false
+      },
+      "item_width_mm": {
+        "type": "FLOAT",
+        "default": 85.6,
+        "description": null,
+        "array": false
+      },
+      "item_init_size": {
+        "type": "INT",
+        "default": 250,
+        "description": null,
+        "array": false
+      },
+      "blindspot_reps": {
+        "type": "INT",
+        "default": 5,
+        "description": null,
+        "array": false
+      },
+      "blindspot_prompt": {
+        "type": "HTML_STRING",
+        "default": "\n          <p>Now we will quickly measure how far away you are sitting.</p>\n          <div style=\"text-align: left\">\n            <ol>\n              <li>Put your left hand on the <b>space bar</b>.</li>\n              <li>Cover your right eye with your right hand.</li>\n              <li>Using your left eye, focus on the black square. Keep your focus on the black square.</li>\n              <li>The <span style=\"color: red; font-weight: bold;\">red ball</span> will disappear as it moves from right to left. Press the space bar as soon as the ball disappears.</li>\n            </ol>\n          </div>\n          <p>Press the space bar when you are ready to begin.</p>\n          ",
+        "description": null,
+        "array": false
+      },
+      "blindspot_measurements_prompt": {
+        "type": "HTML_STRING",
+        "default": "Remaining measurements: ",
+        "description": null,
+        "array": false
+      },
+      "viewing_distance_report": {
+        "type": "HTML_STRING",
+        "default": "<p>Based on your responses, you are sitting about <span id='distance-estimate' style='font-weight: bold;'></span> from the screen.</p><p>Does that seem about right?</p>",
+        "description": null,
+        "array": false
+      },
+      "redo_measurement_button_label": {
+        "type": "HTML_STRING",
+        "default": "No, that is not close. Try again.",
+        "description": null,
+        "array": false
+      },
+      "blindspot_done_prompt": {
+        "type": "HTML_STRING",
+        "default": "Yes",
+        "description": null,
+        "array": false
+      }
+    }
+  }
+}

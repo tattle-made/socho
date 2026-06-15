@@ -82,7 +82,12 @@ defmodule Socho.MixProject do
       "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
-      "assets.setup": ["tailwind.install --if-missing", "esbuild.install --if-missing"],
+      "assets.setup": [
+        "tailwind.install --if-missing",
+        "esbuild.install --if-missing",
+        "cmd npm install --prefix assets",
+        "cmd node assets/setup_jspsych.mjs"
+      ],
       "assets.build": ["compile", "tailwind socho", "esbuild socho"],
       "assets.deploy": [
         "tailwind socho --minify",
