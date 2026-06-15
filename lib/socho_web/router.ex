@@ -21,6 +21,8 @@ defmodule SochoWeb.Router do
     pipe_through :browser
 
     get "/", PageController, :home
+    get "/study/:study_id", StudyController, :show
+    post "/study/:study_id/user-data", StudyController, :save_data
   end
 
   # Other scopes may use custom stacks.
