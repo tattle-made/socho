@@ -58,6 +58,14 @@ defmodule SochoWeb.Router do
       live "/users/settings/confirm-email/:token", UserLive.Settings, :confirm_email
     end
 
+    live_session :require_admin_or_manager,
+      on_mount: [
+        {SochoWeb.UserAuth, :require_authenticated},
+        {SochoWeb.UserAuth, :require_admin_or_manager}
+      ] do
+      live "/users", UserLive.Management, :index
+    end
+
     post "/users/update-password", UserSessionController, :update_password
   end
 

@@ -19,6 +19,31 @@ defmodule Socho.Accounts.UserNotifier do
   end
 
   @doc """
+  Deliver an invitation email with a magic link to get started.
+  """
+  def deliver_invitation(user, url) do
+    role_label = user.role |> to_string() |> String.capitalize()
+
+    deliver(user.email, "You've been invited to Socho", """
+
+    ==============================
+
+    Hi #{user.email},
+
+    You've been invited to join Socho as a #{role_label}.
+
+    Click the link below to confirm your account and log in:
+
+    #{url}
+
+    This link will expire after a short time. If you weren't expecting this invitation,
+    you can safely ignore this email.
+
+    ==============================
+    """)
+  end
+
+  @doc """
   Deliver instructions to update a user email.
   """
   def deliver_update_email_instructions(user, url) do

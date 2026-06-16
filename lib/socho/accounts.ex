@@ -167,6 +167,49 @@ defmodule Socho.Accounts do
     |> update_user_and_delete_all_tokens()
   end
 
+  ## User management
+
+  @doc """
+  Returns all users ordered by insertion date.
+  """
+  def list_users() do
+    Repo.all(from u in User, order_by: [asc: u.inserted_at])
+  end
+
+  @doc """
+  Returns the roles that `inviter_role` is allowed to assign.
+  """
+  def assignable_roles(:admin), do: [:manager, :participant]
+  def assignable_roles(:manager), do: [:participant]
+  def assignable_roles(_), do: []
+
+  @doc """
+  Invites a user by creating an account and sending a magic link invitation email.
+
+  `inviter_scope` is a `%Socho.Accounts.Scope{}` with the inviting user.
+  `attrs` should include `email`, optionally `username`, and `role`.
+  `url_fun` is a 1-arity function that takes a token and returns the login URL.
+  """
+  def invite_user(inviter_scope, attrs, url_fun) when is_function(url_fun, 1) do
+    _inviter = inviter_scope.user
+
+    changeset = User.invitation_changeset(%User{}, attrs)
+
+    with {:ok, user} <- Repo.insert(changeset) do
+      {encoded_token, user_token} = UserToken.build_email_token(user, "login")
+      Repo.insert!(user_token)
+      deliver_user_invitation(user, url_fun.(encoded_token))
+      {:ok, user}
+    end
+  end
+
+  @doc """
+  Delivers the invitation email to the given user.
+  """
+  def deliver_user_invitation(user, url) do
+    UserNotifier.deliver_invitation(user, url)
+  end
+
   ## Session
 
   @doc """

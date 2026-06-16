@@ -4,6 +4,7 @@ defmodule Socho.Accounts.User do
 
   schema "users" do
     field :email, :string
+    field :username, :string
     field :password, :string, virtual: true, redact: true
     field :hashed_password, :string, redact: true
     field :confirmed_at, :utc_datetime
@@ -55,6 +56,23 @@ defmodule Socho.Accounts.User do
     else
       changeset
     end
+  end
+
+  @doc """
+  A changeset for inviting a user with email, optional username, and role.
+  No password is required — the user authenticates via magic link.
+  """
+  def invitation_changeset(user, attrs) do
+    user
+    |> cast(attrs, [:email, :username, :role])
+    |> validate_required([:email])
+    |> validate_format(:email, ~r/^[^@,;\s]+@[^@,;\s]+$/,
+      message: "must have the @ sign and no spaces"
+    )
+    |> validate_length(:email, max: 160)
+    |> unsafe_validate_unique(:email, Socho.Repo)
+    |> unique_constraint(:email)
+    |> validate_inclusion(:role, Ecto.Enum.values(__MODULE__, :role))
   end
 
   @doc """

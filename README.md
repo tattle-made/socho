@@ -14,3 +14,10 @@ To start your Phoenix server:
 Now you can visit [`localhost:4000`](http://localhost:4000) from your browser.
 
 Ready to run in production? Please [check our deployment guides](https://hexdocs.pm/phoenix/deployment.html).
+
+
+## Roadmap
+- [ ] Adding participants and studies to team
+- [ ] Tracking user's progress on a Study
+- [ ] Store and Export Study data
+- [ ] Whitelabel platform and apply client branding
