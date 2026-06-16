@@ -11,6 +11,7 @@ defmodule SochoWeb.StudyLive.Index do
   @impl true
   def render(assigns) do
     ~H"""
+    <Layouts.app flash={@flash} current_scope={@current_scope}>
     <div class="max-w-3xl mx-auto p-6 space-y-6">
       <div class="flex items-center justify-between">
         <h1 class="text-2xl font-bold">Studies</h1>
@@ -41,6 +42,7 @@ defmodule SochoWeb.StudyLive.Index do
         <% end %>
       </div>
     </div>
+    </Layouts.app>
     """
   end
 end

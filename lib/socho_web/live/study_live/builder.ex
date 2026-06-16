@@ -260,7 +260,8 @@ defmodule SochoWeb.StudyLive.Builder do
     assigns = assign(assigns, selected_trial: selected_trial)
 
     ~H"""
-    <div class="flex flex-col gap-4 p-4" style="height: calc(100vh - 4rem);">
+    <Layouts.app flash={@flash} current_scope={@current_scope}>
+    <div class="flex flex-col gap-4 p-4" style="height: calc(100vh - 8rem);">
       <%!-- Header bar --%>
       <div class="flex items-center gap-3 shrink-0">
         <h1 class="text-xl font-bold shrink-0">
@@ -428,6 +429,7 @@ defmodule SochoWeb.StudyLive.Builder do
 
       </div>
     </div>
+    </Layouts.app>
 
     <script :type={Phoenix.LiveView.ColocatedHook} name=".TipTap">
       import { Editor } from "@tiptap/core"
