@@ -213,15 +213,20 @@ defmodule SochoWeb.StudyLive.Builder do
 
           "COMPLEX" ->
             if spec["array"] and is_map(val) do
+              nested_params = spec["nested"] || %{}
               val
               |> Enum.sort_by(fn {k, _} -> String.to_integer(k) end)
-              |> Enum.map(fn {_, item} -> item end)
+              |> Enum.map(fn {_, item} -> coerce_config(item, nested_params) end)
             else
               ensure_list(val)
             end
 
           _ ->
-            val
+            if spec && spec["array"] && is_binary(val) do
+              val |> String.split(",") |> Enum.map(&String.trim/1) |> Enum.reject(&(&1 == ""))
+            else
+              val
+            end
         end
 
       {key, coerced}
@@ -279,7 +284,7 @@ defmodule SochoWeb.StudyLive.Builder do
       </div>
 
       <%!-- 3-column layout --%>
-      <div class="grid gap-4 flex-1 min-h-0" style="grid-template-columns: 240px 1fr 320px;">
+      <div class="grid gap-4 flex-1 min-h-0" style="grid-template-columns: 220px 400px 1fr;">
 
         <%!-- Column 1: Plugin picker --%>
         <div class="flex flex-col gap-2 min-h-0 border-r border-base-300 pr-4">
@@ -543,6 +548,15 @@ defmodule SochoWeb.StudyLive.Builder do
   end
 
   defp param_field(assigns) do
+    display_value =
+      cond do
+        is_list(assigns.value) -> Enum.join(assigns.value, ", ")
+        is_nil(assigns.value) -> ""
+        true -> assigns.value
+      end
+
+    assigns = assign(assigns, display_value: display_value)
+
     ~H"""
     <div class="form-control">
       <label class="label py-1">
@@ -553,7 +567,7 @@ defmodule SochoWeb.StudyLive.Builder do
         type="text"
         class="input input-bordered input-sm"
         name={"#{@prefix}[#{@param}]"}
-        value={@value || ""}
+        value={@display_value}
         placeholder={
           cond do
             @spec["type"] == "KEYS" -> "ALL_KEYS · NO_KEYS · space,arrowleft"
