@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "private": true,
   "dependencies": {
-    "jspsych": "8.2.3",
+    "@jspsych-contrib/plugin-survey-slider": "*",
     "@jspsych/plugin-animation": "*",
     "@jspsych/plugin-audio-button-response": "*",
     "@jspsych/plugin-audio-keyboard-response": "*",
@@ -32,10 +32,14 @@
     "@jspsych/plugin-survey-likert": "*",
     "@jspsych/plugin-survey-multi-choice": "*",
     "@jspsych/plugin-survey-multi-select": "*",
-    "@jspsych-contrib/plugin-survey-slider": "*",
     "@jspsych/plugin-survey-text": "*",
     "@jspsych/plugin-video-button-response": "*",
     "@jspsych/plugin-video-keyboard-response": "*",
-    "@jspsych/plugin-virtual-chinrest": "*"
+    "@jspsych/plugin-virtual-chinrest": "*",
+    "@tiptap/core": "^3.26.1",
+    "@tiptap/extension-image": "^3.26.1",
+    "@tiptap/extension-link": "^3.26.1",
+    "@tiptap/starter-kit": "^3.26.1",
+    "jspsych": "8.2.3"
   }
 }

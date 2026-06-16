@@ -11,7 +11,7 @@
  *      what fields are configurable per plugin.
  */
 
-import { copyFileSync, mkdirSync, writeFileSync, existsSync } from 'node:fs';
+import { copyFileSync, mkdirSync, writeFileSync, existsSync, readFileSync } from 'node:fs';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -173,6 +173,7 @@ for (const pluginName of PLUGINS) {
 
   // Extract info schema
   try {
+    const pkgJson = JSON.parse(readFileSync(join(pkgDir, 'package.json'), 'utf8'));
     const mod = await import(toFileUrl(join(pkgDir, 'dist/index.js')));
     // Plugins export their class as default; fall back to scanning all exports
     const Plugin = mod.default ?? Object.values(mod).find(v => v?.info?.parameters);
@@ -180,6 +181,7 @@ for (const pluginName of PLUGINS) {
       registry[pluginName] = {
         name: Plugin.info.name,
         version: Plugin.info.version ?? null,
+        description: pkgJson.description ?? null,
         parameters: serializeParameters(Plugin.info.parameters ?? {}),
       };
       console.log(`✓ ${pluginName}`);

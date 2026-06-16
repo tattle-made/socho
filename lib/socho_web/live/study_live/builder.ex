@@ -307,13 +307,17 @@ defmodule SochoWeb.StudyLive.Builder do
               No plugins found.
             </p>
             <%= for name <- @filtered_plugins do %>
+              <% desc = @registry[name]["description"] %>
               <button
-                class="btn btn-sm btn-ghost w-full justify-start text-left font-normal truncate"
+                class="btn btn-ghost w-full justify-start text-left h-auto py-2 px-2 font-normal"
                 phx-click="add_plugin_trial"
                 phx-value-plugin={name}
                 type="button"
               >
-                {name}
+                <div class="flex flex-col items-start gap-0.5 w-full">
+                  <span class="text-sm font-medium leading-tight">{name}</span>
+                  <span :if={desc} class="text-xs opacity-50 leading-tight whitespace-normal text-left">{desc}</span>
+                </div>
               </button>
             <% end %>
           </div>
@@ -424,6 +428,105 @@ defmodule SochoWeb.StudyLive.Builder do
 
       </div>
     </div>
+
+    <script :type={Phoenix.LiveView.ColocatedHook} name=".TipTap">
+      import { Editor } from "@tiptap/core"
+      import StarterKit from "@tiptap/starter-kit"
+      import Link from "@tiptap/extension-link"
+      import Image from "@tiptap/extension-image"
+
+      export default {
+        mounted() {
+          const fieldName = this.el.dataset.fieldName
+          const initialValue = this.el.dataset.value || ""
+
+          // Hidden textarea carries the value in form serialization
+          this.textarea = document.createElement("textarea")
+          this.textarea.name = fieldName
+          this.textarea.style.cssText = "display:none"
+          this.textarea.value = initialValue
+          this.el.appendChild(this.textarea)
+
+          // Toolbar
+          this.toolbar = document.createElement("div")
+          this.toolbar.className = "flex gap-1 flex-wrap p-1 border-b border-base-300 bg-base-200 rounded-t"
+          this.el.appendChild(this.toolbar)
+
+          // Editor mount point
+          const editorEl = document.createElement("div")
+          this.el.appendChild(editorEl)
+
+          const toolbarDefs = [
+            { label: "B",       title: "Bold",          style: "font-bold", cmd: () => this.editor.chain().focus().toggleBold().run(),                   active: () => this.editor.isActive("bold") },
+            { label: "I",       title: "Italic",        style: "italic",    cmd: () => this.editor.chain().focus().toggleItalic().run(),                 active: () => this.editor.isActive("italic") },
+            { label: "H1",      title: "Heading 1",     style: "",          cmd: () => this.editor.chain().focus().toggleHeading({ level: 1 }).run(),    active: () => this.editor.isActive("heading", { level: 1 }) },
+            { label: "H2",      title: "Heading 2",     style: "",          cmd: () => this.editor.chain().focus().toggleHeading({ level: 2 }).run(),    active: () => this.editor.isActive("heading", { level: 2 }) },
+            { label: "• List",  title: "Bullet list",   style: "",          cmd: () => this.editor.chain().focus().toggleBulletList().run(),             active: () => this.editor.isActive("bulletList") },
+            { label: "1. List", title: "Ordered list",  style: "",          cmd: () => this.editor.chain().focus().toggleOrderedList().run(),            active: () => this.editor.isActive("orderedList") },
+            { label: "🔗",      title: "Link",          style: "",          cmd: () => this.setLink(),                                                   active: () => this.editor.isActive("link") },
+            { label: "🖼",      title: "Image",         style: "",          cmd: () => this.insertImage(),                                               active: () => false },
+          ]
+
+          toolbarDefs.forEach(({ label, title, style, cmd }) => {
+            const btn = document.createElement("button")
+            btn.type = "button"
+            btn.title = title
+            btn.textContent = label
+            btn.className = `btn btn-xs btn-ghost ${style}`
+            btn.addEventListener("mousedown", e => { e.preventDefault(); cmd() })
+            this.toolbar.appendChild(btn)
+          })
+
+          this.editor = new Editor({
+            element: editorEl,
+            extensions: [
+              StarterKit,
+              Link.configure({ openOnClick: false }),
+              Image,
+            ],
+            content: initialValue,
+            editorProps: { attributes: { class: "outline-none" } },
+            onUpdate: ({ editor }) => {
+              this.textarea.value = editor.getHTML()
+              this.textarea.dispatchEvent(new Event("input", { bubbles: true }))
+            },
+            onTransaction: () => {
+              const btns = this.toolbar.querySelectorAll("button")
+              toolbarDefs.forEach(({ active }, i) => {
+                btns[i]?.classList.toggle("btn-active", active())
+              })
+            },
+          })
+        },
+
+        setLink() {
+          const prev = this.editor.getAttributes("link").href || ""
+          const url = window.prompt("Link URL", prev)
+          if (url === null) return
+          if (url === "") {
+            this.editor.chain().focus().unsetLink().run()
+          } else {
+            this.editor.chain().focus().setLink({ href: url }).run()
+          }
+        },
+
+        insertImage() {
+          const url = window.prompt("Image URL")
+          if (url) this.editor.chain().focus().setImage({ src: url }).run()
+        },
+
+        updated() {
+          const newVal = this.el.dataset.value || ""
+          if (this.editor && newVal !== this.editor.getHTML()) {
+            this.editor.commands.setContent(newVal, false)
+          }
+        },
+
+        destroyed() {
+          this.editor?.destroy()
+        }
+      }
+    </script>
     """
   end
 
@@ -531,18 +634,24 @@ defmodule SochoWeb.StudyLive.Builder do
   end
 
   defp param_field(%{kind: :html} = assigns) do
+    # Sanitize prefix/param into a valid HTML id (no brackets)
+    safe_id = String.replace("tiptap-#{assigns.prefix}-#{assigns.param}", ~r/[\[\]]/, "_")
+    assigns = assign(assigns, safe_id: safe_id)
+
     ~H"""
     <div class="form-control">
       <label class="label py-1">
         <span class="label-text">{@param}</span>
         <span class="label-text-alt opacity-50">HTML</span>
       </label>
-      <textarea
-        class="textarea textarea-bordered font-mono text-sm w-full"
-        name={"#{@prefix}[#{@param}]"}
-        rows="3"
-        placeholder="<p>HTML content…</p>"
-      >{@value}</textarea>
+      <div
+        id={@safe_id}
+        phx-hook=".TipTap"
+        phx-update="ignore"
+        data-field-name={"#{@prefix}[#{@param}]"}
+        data-value={@value || ""}
+        class="tiptap-editor rounded border border-base-300"
+      ></div>
     </div>
     """
   end

@@ -2,6 +2,7 @@
   "animation": {
     "name": "animation",
     "version": "2.1.0",
+    "description": "jsPsych plugin for showing animations and recording keyboard responses",
     "parameters": {
       "stimuli": {
         "type": "IMAGE",
@@ -50,6 +51,7 @@
   "audio-button-response": {
     "name": "audio-button-response",
     "version": "2.1.1",
+    "description": "jsPsych plugin for playing an audio file and getting a button response",
     "parameters": {
       "stimulus": {
         "type": "AUDIO",
@@ -127,6 +129,7 @@
   "audio-keyboard-response": {
     "name": "audio-keyboard-response",
     "version": "2.1.1",
+    "description": "jsPsych plugin for playing an audio file and getting a keyboard response",
     "parameters": {
       "stimulus": {
         "type": "AUDIO",
@@ -175,6 +178,7 @@
   "canvas-button-response": {
     "name": "canvas-button-response",
     "version": "2.1.0",
+    "description": "jsPsych plugin for displaying a canvas stimulus and getting a button response",
     "parameters": {
       "stimulus": {
         "type": "FUNCTION",
@@ -249,6 +253,7 @@
   "canvas-keyboard-response": {
     "name": "canvas-keyboard-response",
     "version": "2.1.0",
+    "description": "jsPsych plugin for displaying a canvas stimulus and getting a keyboard response",
     "parameters": {
       "stimulus": {
         "type": "FUNCTION",
@@ -300,6 +305,7 @@
   "categorize-html": {
     "name": "categorize-html",
     "version": "2.1.0",
+    "description": "jspsych plugin for categorization trials with feedback",
     "parameters": {
       "stimulus": {
         "type": "HTML_STRING",
@@ -390,6 +396,7 @@
   "categorize-image": {
     "name": "categorize-image",
     "version": "2.1.0",
+    "description": "jspsych plugin for categorization trials with feedback",
     "parameters": {
       "stimulus": {
         "type": "IMAGE",
@@ -480,6 +487,7 @@
   "free-sort": {
     "name": "free-sort",
     "version": "2.1.0",
+    "description": "jsPsych plugin for drag-and-drop sorting of a collection of images",
     "parameters": {
       "stimuli": {
         "type": "IMAGE",
@@ -594,6 +602,7 @@
   "fullscreen": {
     "name": "fullscreen",
     "version": "2.1.0",
+    "description": "jsPsych plugin to toggle fullscreen mode in the browser",
     "parameters": {
       "fullscreen_mode": {
         "type": "BOOL",
@@ -624,6 +633,7 @@
   "html-button-response": {
     "name": "html-button-response",
     "version": "2.1.0",
+    "description": "jsPsych plugin for displaying a stimulus and getting a button response",
     "parameters": {
       "stimulus": {
         "type": "HTML_STRING",
@@ -695,6 +705,7 @@
   "html-keyboard-response": {
     "name": "html-keyboard-response",
     "version": "2.1.0",
+    "description": "jsPsych plugin for displaying a stimulus and getting a keyboard response",
     "parameters": {
       "stimulus": {
         "type": "HTML_STRING",
@@ -737,6 +748,7 @@
   "iat-html": {
     "name": "iat-html",
     "version": "2.1.0",
+    "description": "jsPsych plugin for running an IAT (Implicit Association Test) with an HTML-formatted stimulus",
     "parameters": {
       "stimulus": {
         "type": "HTML_STRING",
@@ -825,6 +837,7 @@
   "image-button-response": {
     "name": "image-button-response",
     "version": "2.2.0",
+    "description": "jsPsych plugin for displaying a stimulus and getting a button response",
     "parameters": {
       "stimulus": {
         "type": "IMAGE",
@@ -920,6 +933,7 @@
   "image-keyboard-response": {
     "name": "image-keyboard-response",
     "version": "2.1.0",
+    "description": "jsPsych plugin for displaying a stimulus and getting a keyboard response",
     "parameters": {
       "stimulus": {
         "type": "IMAGE",
@@ -986,6 +1000,7 @@
   "instructions": {
     "name": "instructions",
     "version": "2.1.0",
+    "description": "jsPsych plugin to display instructions",
     "parameters": {
       "pages": {
         "type": "HTML_STRING",
@@ -1057,6 +1072,7 @@
   "preload": {
     "name": "preload",
     "version": "2.1.0",
+    "description": "",
     "parameters": {
       "auto_preload": {
         "type": "BOOL",
@@ -1141,6 +1157,7 @@
   "reconstruction": {
     "name": "reconstruction",
     "version": "2.1.0",
+    "description": "a jspsych plugin for a reconstruction task where the participant recreates a stimulus from memory",
     "parameters": {
       "stim_function": {
         "type": "FUNCTION",
@@ -1183,6 +1200,7 @@
   "resize": {
     "name": "resize",
     "version": "2.1.0",
+    "description": "jsPsych plugin for controlling the real world size of the display",
     "parameters": {
       "item_height": {
         "type": "INT",
@@ -1225,6 +1243,7 @@
   "same-different-html": {
     "name": "same-different-html",
     "version": "2.1.0",
+    "description": "jsPsych plugin for showing two stimuli sequentially and getting a same / different judgment",
     "parameters": {
       "stimuli": {
         "type": "HTML_STRING",
@@ -1279,6 +1298,7 @@
   "same-different-image": {
     "name": "same-different-image",
     "version": "2.1.0",
+    "description": "jsPsych plugin for showing two stimuli sequentially and getting a same / different judgment",
     "parameters": {
       "stimuli": {
         "type": "IMAGE",
@@ -1333,6 +1353,7 @@
   "serial-reaction-time": {
     "name": "serial-reaction-time",
     "version": "2.1.0",
+    "description": "jsPsych plugin for running a serial reaction time task",
     "parameters": {
       "grid": {
         "type": "BOOL",
@@ -1425,6 +1446,7 @@
   "serial-reaction-time-mouse": {
     "name": "serial-reaction-time-mouse",
     "version": "2.2.0",
+    "description": "jsPsych plugin for running a serial reaction time task",
     "parameters": {
       "grid": {
         "type": "BOOL",
@@ -1510,6 +1532,7 @@
   "sketchpad": {
     "name": "sketchpad",
     "version": "2.1.0",
+    "description": "jsPsych plugin for sketching a response",
     "parameters": {
       "canvas_shape": {
         "type": "STRING",
@@ -1684,6 +1707,7 @@
   "survey-html-form": {
     "name": "survey-html-form",
     "version": "2.1.0",
+    "description": "a jspsych plugin for free html forms",
     "parameters": {
       "html": {
         "type": "HTML_STRING",
@@ -1726,6 +1750,7 @@
   "survey-likert": {
     "name": "survey-likert",
     "version": "2.2.0",
+    "description": "a jspsych plugin for measuring items on a likert scale",
     "parameters": {
       "questions": {
         "type": "COMPLEX",
@@ -1800,6 +1825,7 @@
   "survey-multi-choice": {
     "name": "survey-multi-choice",
     "version": "2.2.0",
+    "description": "a jspsych plugin for multiple choice survey questions",
     "parameters": {
       "questions": {
         "type": "COMPLEX",
@@ -1868,6 +1894,7 @@
   "survey-multi-select": {
     "name": "survey-multi-select",
     "version": "2.1.0",
+    "description": "a jspsych plugin for multiple choice survey questions",
     "parameters": {
       "questions": {
         "type": "COMPLEX",
@@ -1942,6 +1969,7 @@
   "survey-text": {
     "name": "survey-text",
     "version": "2.1.0",
+    "description": "a jspsych plugin for free response survey questions",
     "parameters": {
       "questions": {
         "type": "COMPLEX",
@@ -2016,6 +2044,7 @@
   "video-button-response": {
     "name": "video-button-response",
     "version": "2.1.1",
+    "description": "jsPsych plugin for playing a video file and getting a button response",
     "parameters": {
       "stimulus": {
         "type": "VIDEO",
@@ -2135,6 +2164,7 @@
   "video-keyboard-response": {
     "name": "video-keyboard-response",
     "version": "2.1.1",
+    "description": "jsPsych plugin for playing a video file and getting a keyboard response",
     "parameters": {
       "stimulus": {
         "type": "VIDEO",
@@ -2225,6 +2255,7 @@
   "virtual-chinrest": {
     "name": "virtual-chinrest",
     "version": "3.1.0",
+    "description": "virtual chinrest plugin for jsPsych",
     "parameters": {
       "resize_units": {
         "type": "SELECT",
