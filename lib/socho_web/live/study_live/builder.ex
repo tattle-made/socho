@@ -177,7 +177,8 @@ defmodule SochoWeb.StudyLive.Builder do
   end
 
   def handle_event("save_study", _params, socket) do
-    %{study_id: study_id, study_title: title, study_client_id: client_id, trials: trials} = socket.assigns
+    %{study_id: study_id, study_client_id: client_id, trials: trials} = socket.assigns
+    title = if socket.assigns.study_title == "", do: "Untitled Study", else: socket.assigns.study_title
     trial_maps = Enum.map(trials, &node_to_map/1)
 
     result =
@@ -397,26 +398,18 @@ defmodule SochoWeb.StudyLive.Builder do
 
     ~H"""
     <Layouts.app flash={@flash} current_scope={@current_scope}>
-    <div class="flex flex-col gap-4 p-4" style="height: calc(100vh - 8rem);">
+    <div class="flex flex-col gap-8 p-4" style="height: calc(100vh - 8rem);">
       <%!-- Header bar --%>
       <div class="flex items-center gap-3 shrink-0">
-        <h1 class="text-xl font-bold shrink-0">
-          Study Builder <span class="badge badge-warning">PoC</span>
-        </h1>
-        <input
-          class="input input-bordered flex-1"
-          type="text"
-          placeholder="Study title"
-          value={@study_title}
-          phx-blur="study_title_changed"
-        />
+        <h1 class="text-xl font-bold shrink-0">Study Builder</h1>
+        <div class="flex-1" />
         <.link
           :if={@study_id}
           href={"/studies/#{@study_id}/settings"}
           class="btn btn-ghost btn-sm shrink-0"
           title="Study settings"
         >
-          ⚙
+          <.icon name="hero-cog-6-tooth" class="size-5" />
         </.link>
         <button
           :if={@study_id}
@@ -431,7 +424,7 @@ defmodule SochoWeb.StudyLive.Builder do
           class="btn btn-success shrink-0"
           phx-click="save_study"
           type="button"
-          disabled={@study_title == "" or @trials == []}
+          disabled={@trials == []}
         >
           Save
         </button>
