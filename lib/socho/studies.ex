@@ -5,8 +5,16 @@ defmodule Socho.Studies do
   alias Socho.Studies.{Study, Trial}
 
   def list_studies do
-    Study
-    |> order_by(desc: :inserted_at)
+    from(s in Study, order_by: [desc: s.inserted_at])
+    |> Repo.all()
+    |> Repo.preload(:client)
+  end
+
+  def list_studies_for_client(client_id) do
+    from(s in Study,
+      where: s.client_id == ^client_id and s.status == :published,
+      order_by: [desc: s.inserted_at]
+    )
     |> Repo.all()
   end
 
@@ -16,11 +24,11 @@ defmodule Socho.Studies do
     %{study | trials: build_trial_tree(trials_flat)}
   end
 
-  def create_study_with_trials(title, nodes) do
+  def create_study_with_trials(title, client_id, nodes) do
     Repo.transaction(fn ->
       study =
         %Study{}
-        |> Study.changeset(%{title: title, status: :draft})
+        |> Study.changeset(%{title: title, status: :draft, client_id: client_id})
         |> Repo.insert!()
 
       insert_trial_tree(study.id, nodes)
@@ -28,12 +36,12 @@ defmodule Socho.Studies do
     end)
   end
 
-  def update_study_with_trials(id, title, nodes) do
+  def update_study_with_trials(id, title, client_id, nodes) do
     Repo.transaction(fn ->
       study = Repo.get!(Study, id)
 
       study
-      |> Study.changeset(%{title: title})
+      |> Study.changeset(%{title: title, client_id: client_id})
       |> Repo.update!()
 
       Repo.delete_all(from(t in Trial, where: t.study_id == ^id))

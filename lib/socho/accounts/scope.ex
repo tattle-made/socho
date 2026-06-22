@@ -18,15 +18,17 @@ defmodule Socho.Accounts.Scope do
 
   alias Socho.Accounts.User
 
-  defstruct user: nil
+  defstruct user: nil, client: nil
 
   @doc """
-  Creates a scope for the given user.
+  Creates a scope for the given user. Loads the associated client if the user
+  has a client_id (i.e. participants).
 
   Returns nil if no user is given.
   """
   def for_user(%User{} = user) do
-    %__MODULE__{user: user}
+    client = Socho.Clients.get_client(user.client_id)
+    %__MODULE__{user: user, client: client}
   end
 
   def for_user(nil), do: nil

@@ -6,7 +6,9 @@ defmodule Socho.Studies.Study do
     field :title, :string
     field :description, :string
     field :status, Ecto.Enum, values: [:draft, :published], default: :draft
+    field :client_id, :id
 
+    belongs_to :client, Socho.Clients.Client, define_field: false
     has_many :trials, Socho.Studies.Trial, preload_order: [asc: :position]
 
     timestamps(type: :utc_datetime)
@@ -14,7 +16,7 @@ defmodule Socho.Studies.Study do
 
   def changeset(study, attrs) do
     study
-    |> cast(attrs, [:title, :description, :status])
+    |> cast(attrs, [:title, :description, :status, :client_id])
     |> validate_required([:title])
     |> validate_length(:title, min: 1, max: 255)
   end

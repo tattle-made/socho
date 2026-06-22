@@ -1,6 +1,7 @@
 defmodule SochoWeb.StudyLive.Builder do
   use SochoWeb, :live_view
 
+  alias Socho.Clients
   alias Socho.Studies
   alias Socho.Studies.Registry
 
@@ -19,6 +20,8 @@ defmodule SochoWeb.StudyLive.Builder do
        filtered_plugins: plugin_names,
        study_id: nil,
        study_title: "",
+       study_client_id: nil,
+       clients: Clients.list_clients(),
        trials: [],
        selected_trial_id: nil
      )}
@@ -33,6 +36,7 @@ defmodule SochoWeb.StudyLive.Builder do
      assign(socket,
        study_id: study.id,
        study_title: study.title,
+       study_client_id: study.client_id,
        trials: trials
      )}
   end
@@ -44,6 +48,11 @@ defmodule SochoWeb.StudyLive.Builder do
   @impl true
   def handle_event("study_title_changed", %{"value" => title}, socket) do
     {:noreply, assign(socket, study_title: title)}
+  end
+
+  def handle_event("study_client_changed", %{"value" => client_id_str}, socket) do
+    client_id = if client_id_str == "", do: nil, else: String.to_integer(client_id_str)
+    {:noreply, assign(socket, study_client_id: client_id)}
   end
 
   def handle_event("plugin_search", %{"query" => query}, socket) do
@@ -166,13 +175,13 @@ defmodule SochoWeb.StudyLive.Builder do
   end
 
   def handle_event("save_study", _params, socket) do
-    %{study_id: study_id, study_title: title, trials: trials} = socket.assigns
+    %{study_id: study_id, study_title: title, study_client_id: client_id, trials: trials} = socket.assigns
     trial_maps = Enum.map(trials, &node_to_map/1)
 
     result =
       if study_id,
-        do: Studies.update_study_with_trials(study_id, title, trial_maps),
-        else: Studies.create_study_with_trials(title, trial_maps)
+        do: Studies.update_study_with_trials(study_id, title, client_id, trial_maps),
+        else: Studies.create_study_with_trials(title, client_id, trial_maps)
 
     case result do
       {:ok, study} ->
@@ -387,6 +396,17 @@ defmodule SochoWeb.StudyLive.Builder do
           value={@study_title}
           phx-blur="study_title_changed"
         />
+        <select
+          class="select select-bordered shrink-0"
+          phx-change="study_client_changed"
+        >
+          <option value="">No client</option>
+          <%= for client <- @clients do %>
+            <option value={client.id} selected={@study_client_id == client.id}>
+              {client.name}
+            </option>
+          <% end %>
+        </select>
         <button
           class="btn btn-success shrink-0"
           phx-click="save_study"

@@ -27,6 +27,10 @@ defmodule SochoWeb.StudyLive.Index do
               <div class="font-semibold">{study.title}</div>
               <div class="flex gap-2 text-xs opacity-60">
                 <span class="badge badge-sm">{study.status}</span>
+                <span :if={study.client} class="badge badge-sm badge-secondary">
+                  {study.client.name}
+                </span>
+                <span :if={!study.client} class="badge badge-sm badge-ghost">No client</span>
                 <span>#{study.id}</span>
               </div>
             </div>

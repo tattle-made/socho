@@ -10,6 +10,9 @@ defmodule Socho.Accounts.User do
     field :confirmed_at, :utc_datetime
     field :authenticated_at, :utc_datetime, virtual: true
     field :role, Ecto.Enum, values: [:admin, :manager, :participant], default: :participant
+    field :client_id, :id
+
+    belongs_to :client, Socho.Clients.Client, define_field: false
 
     timestamps(type: :utc_datetime)
   end
@@ -64,7 +67,7 @@ defmodule Socho.Accounts.User do
   """
   def invitation_changeset(user, attrs) do
     user
-    |> cast(attrs, [:email, :username, :role])
+    |> cast(attrs, [:email, :username, :role, :client_id])
     |> validate_required([:email])
     |> validate_format(:email, ~r/^[^@,;\s]+@[^@,;\s]+$/,
       message: "must have the @ sign and no spaces"

@@ -245,6 +245,22 @@ defmodule SochoWeb.UserAuth do
     end
   end
 
+  def on_mount(:require_participant, _params, session, socket) do
+    socket = mount_current_scope(socket, session)
+    role = socket.assigns[:current_scope] && socket.assigns.current_scope.user && socket.assigns.current_scope.user.role
+
+    if role == :participant do
+      {:cont, socket}
+    else
+      socket =
+        socket
+        |> Phoenix.LiveView.put_flash(:error, "You must log in as a participant to access this page.")
+        |> Phoenix.LiveView.redirect(to: ~p"/users/log-in")
+
+      {:halt, socket}
+    end
+  end
+
   def on_mount(:require_sudo_mode, _params, session, socket) do
     socket = mount_current_scope(socket, session)
 
@@ -272,9 +288,12 @@ defmodule SochoWeb.UserAuth do
   end
 
   @doc "Returns the path to redirect to after log in."
-  # the user was already logged in, redirect to settings
+  def signed_in_path(%Plug.Conn{assigns: %{current_scope: %Scope{user: %Accounts.User{role: :participant}}}}) do
+    ~p"/dashboard"
+  end
+
   def signed_in_path(%Plug.Conn{assigns: %{current_scope: %Scope{user: %Accounts.User{}}}}) do
-    ~p"/users/settings"
+    ~p"/studies"
   end
 
   def signed_in_path(_), do: ~p"/"

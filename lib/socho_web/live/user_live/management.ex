@@ -3,6 +3,7 @@ defmodule SochoWeb.UserLive.Management do
 
   alias Socho.Accounts
   alias Socho.Accounts.User
+  alias Socho.Clients
 
   @impl true
   def mount(_params, _session, socket) do
@@ -12,11 +13,13 @@ defmodule SochoWeb.UserLive.Management do
 
     socket =
       socket
-      |> assign(:users, Accounts.list_users())
+      |> assign(:users, list_users_with_clients())
       |> assign(:form, to_form(changeset, as: "invite"))
       |> assign(:assignable_roles, assignable_roles)
+      |> assign(:clients, Clients.list_clients())
       |> assign(:invite_sent, nil)
       |> assign(:show_invite_form, false)
+      |> assign(:invite_role, nil)
 
     {:ok, socket}
   end
@@ -51,7 +54,7 @@ defmodule SochoWeb.UserLive.Management do
           </div>
 
           <.form for={@form} id="invite_form" phx-submit="invite" phx-change="validate">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div class="form-control">
                 <label class="label">
                   <span class="label-text">Email <span class="text-error">*</span></span>
@@ -84,6 +87,19 @@ defmodule SochoWeb.UserLive.Management do
                   field={@form[:role]}
                   type="select"
                   options={Enum.map(@assignable_roles, &{String.capitalize(to_string(&1)), &1})}
+                  phx-change="role_changed"
+                />
+              </div>
+
+              <div :if={@invite_role == "participant"} class="form-control">
+                <label class="label">
+                  <span class="label-text">Client <span class="text-error">*</span></span>
+                </label>
+                <.input
+                  field={@form[:client_id]}
+                  type="select"
+                  prompt="Select a client"
+                  options={Enum.map(@clients, &{&1.name, &1.id})}
                 />
               </div>
             </div>
@@ -104,6 +120,7 @@ defmodule SochoWeb.UserLive.Management do
                 <th>Display Name</th>
                 <th>Email</th>
                 <th>Role</th>
+                <th>Client</th>
                 <th>Status</th>
                 <th>Joined</th>
               </tr>
@@ -118,6 +135,9 @@ defmodule SochoWeb.UserLive.Management do
                   <span class={["badge badge-sm", role_badge_class(u.role)]}>
                     {String.capitalize(to_string(u.role))}
                   </span>
+                </td>
+                <td class="text-sm opacity-70">
+                  {if u.role == :participant and u.client, do: u.client.name, else: "—"}
                 </td>
                 <td>
                   <span class={["badge badge-sm", status_badge_class(u.confirmed_at)]}>
@@ -143,13 +163,17 @@ defmodule SochoWeb.UserLive.Management do
     {:noreply, assign(socket, show_invite_form: !socket.assigns.show_invite_form, invite_sent: nil)}
   end
 
+  def handle_event("role_changed", %{"invite" => %{"role" => role}}, socket) do
+    {:noreply, assign(socket, invite_role: role)}
+  end
+
   def handle_event("validate", %{"invite" => params}, socket) do
     changeset =
       %User{}
       |> User.invitation_changeset(params)
       |> Map.put(:action, :validate)
 
-    {:noreply, assign(socket, form: to_form(changeset, as: "invite"))}
+    {:noreply, assign(socket, form: to_form(changeset, as: "invite"), invite_role: params["role"])}
   end
 
   def handle_event("invite", %{"invite" => params}, socket) do
@@ -163,15 +187,20 @@ defmodule SochoWeb.UserLive.Management do
 
         socket =
           socket
-          |> assign(:users, Accounts.list_users())
+          |> assign(:users, list_users_with_clients())
           |> assign(:form, to_form(fresh_changeset, as: "invite"))
           |> assign(:invite_sent, user.email)
+          |> assign(:invite_role, nil)
 
         {:noreply, socket}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, form: to_form(changeset, as: "invite"))}
     end
+  end
+
+  defp list_users_with_clients do
+    Accounts.list_users() |> Socho.Repo.preload(:client)
   end
 
   defp role_badge_class(:admin), do: "badge-error"

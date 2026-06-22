@@ -25,18 +25,8 @@ defmodule SochoWeb.Router do
     post "/study/:study_id/user-data", StudyController, :save_data
   end
 
-  # Other scopes may use custom stacks.
-  # scope "/api", SochoWeb do
-  #   pipe_through :api
-  # end
-
   # Enable LiveDashboard and Swoosh mailbox preview in development
   if Application.compile_env(:socho, :dev_routes) do
-    # If you want to use the LiveDashboard in production, you should put
-    # it behind authentication and allow only admins to access it.
-    # If your application does not have an admins-only section yet,
-    # you can use Plug.BasicAuth to set up some basic authentication
-    # as long as you are also using SSL (which you should anyway).
     import Phoenix.LiveDashboard.Router
 
     scope "/dev" do
@@ -64,6 +54,15 @@ defmodule SochoWeb.Router do
         {SochoWeb.UserAuth, :require_admin_or_manager}
       ] do
       live "/users", UserLive.Management, :index
+      live "/studies", StudyLive.Index, :index
+      live "/studies/new", StudyLive.Builder, :new
+      live "/studies/:id/edit", StudyLive.Builder, :edit
+      live "/clients", ClientLive.Management, :index
+    end
+
+    live_session :require_participant,
+      on_mount: [{SochoWeb.UserAuth, :require_participant}] do
+      live "/dashboard", StudyLive.Dashboard, :index
     end
 
     post "/users/update-password", UserSessionController, :update_password
@@ -77,9 +76,6 @@ defmodule SochoWeb.Router do
       live "/users/register", UserLive.Registration, :new
       live "/users/log-in", UserLive.Login, :new
       live "/users/log-in/:token", UserLive.Confirmation, :new
-      live "/studies", StudyLive.Index, :index
-      live "/studies/new", StudyLive.Builder, :new
-      live "/studies/:id/edit", StudyLive.Builder, :edit
     end
 
     post "/users/log-in", UserSessionController, :create
