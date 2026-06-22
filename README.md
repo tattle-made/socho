@@ -17,11 +17,11 @@ Ready to run in production? Please [check our deployment guides](https://hexdocs
 
 
 ## Roadmap
-- [ ] Add support for nested trials and jspsych variables
-- [ ] Test touch screen functionality
-- [ ] Floating preview section
+- [X] Add support for nested trials and jspsych variables
 - [ ] Adding participants and studies to team
 - [ ] Tracking user's progress on a Study
 - [ ] Store and Export Study data
 - [ ] Whitelabel platform and apply client branding
 - [ ] Media Storage and reference
+- [ ] Test touch screen functionality
+- [ ] Floating preview section
