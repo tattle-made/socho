@@ -27,11 +27,7 @@ defmodule SochoWeb.StudyLive.Builder do
   @impl true
   def handle_params(%{"id" => id}, _uri, socket) do
     study = Studies.get_study!(id)
-
-    trials =
-      Enum.map(study.trials, fn t ->
-        %{id: System.unique_integer([:positive]), plugin: t.plugin, config: t.config}
-      end)
+    trials = Enum.map(study.trials, &db_trial_to_node/1)
 
     {:noreply,
      assign(socket,
@@ -59,16 +55,44 @@ defmodule SochoWeb.StudyLive.Builder do
     {:noreply, assign(socket, plugin_search: query, filtered_plugins: filtered)}
   end
 
-  def handle_event("add_plugin_trial", %{"plugin" => name}, socket) do
-    schema = socket.assigns.registry[name]
-    config = build_defaults(schema["parameters"] || %{})
-    trial = %{id: System.unique_integer([:positive]), plugin: name, config: config}
+  def handle_event("add_timeline", _params, socket) do
+    node = %{
+      id: System.unique_integer([:positive]),
+      node_type: "timeline",
+      plugin: nil,
+      config: %{"timeline_variables" => [], "repetitions" => 1, "randomize_order" => false},
+      children: []
+    }
 
     {:noreply,
      assign(socket,
-       trials: socket.assigns.trials ++ [trial],
-       selected_trial_id: trial.id
+       trials: socket.assigns.trials ++ [node],
+       selected_trial_id: node.id
      )}
+  end
+
+  def handle_event("add_plugin_trial", %{"plugin" => name}, socket) do
+    schema = socket.assigns.registry[name]
+    config = build_defaults(schema["parameters"] || %{})
+
+    trial = %{
+      id: System.unique_integer([:positive]),
+      node_type: "trial",
+      plugin: name,
+      config: config,
+      children: []
+    }
+
+    selected = find_node(socket.assigns.trials, socket.assigns.selected_trial_id)
+
+    trials =
+      if selected && selected.node_type == "timeline" do
+        add_child_to_node(socket.assigns.trials, selected.id, trial)
+      else
+        socket.assigns.trials ++ [trial]
+      end
+
+    {:noreply, assign(socket, trials: trials, selected_trial_id: trial.id)}
   end
 
   def handle_event("select_trial", %{"id" => id_str}, socket) do
@@ -77,20 +101,26 @@ defmodule SochoWeb.StudyLive.Builder do
 
   def handle_event("move_trial_up", %{"id" => id_str}, socket) do
     id = String.to_integer(id_str)
-    {:noreply, assign(socket, trials: move_trial(socket.assigns.trials, id, :up))}
+    {:noreply, assign(socket, trials: move_node_in_tree(socket.assigns.trials, id, :up))}
   end
 
   def handle_event("move_trial_down", %{"id" => id_str}, socket) do
     id = String.to_integer(id_str)
-    {:noreply, assign(socket, trials: move_trial(socket.assigns.trials, id, :down))}
+    {:noreply, assign(socket, trials: move_node_in_tree(socket.assigns.trials, id, :down))}
   end
 
   def handle_event("config_changed", %{"config" => params}, socket) do
     with id when not is_nil(id) <- socket.assigns.selected_trial_id,
-         trial when not is_nil(trial) <- find_trial(socket.assigns.trials, id) do
-      schema = socket.assigns.registry[trial.plugin]
-      config = coerce_config(params, schema["parameters"] || %{})
-      {:noreply, assign(socket, trials: update_trial_config(socket.assigns.trials, id, config))}
+         node when not is_nil(node) <- find_node(socket.assigns.trials, id) do
+      config =
+        if node.node_type == "timeline" do
+          coerce_timeline_config(params)
+        else
+          schema = socket.assigns.registry[node.plugin]
+          coerce_config(params, schema["parameters"] || %{})
+        end
+
+      {:noreply, assign(socket, trials: update_node_config(socket.assigns.trials, id, config))}
     else
       _ -> {:noreply, socket}
     end
@@ -98,13 +128,13 @@ defmodule SochoWeb.StudyLive.Builder do
 
   def handle_event("add_item", %{"param" => param_name}, socket) do
     with id when not is_nil(id) <- socket.assigns.selected_trial_id,
-         trial when not is_nil(trial) <- find_trial(socket.assigns.trials, id) do
-      schema = socket.assigns.registry[trial.plugin]
+         node when not is_nil(node) <- find_node(socket.assigns.trials, id) do
+      schema = socket.assigns.registry[node.plugin]
       nested = get_in(schema, ["parameters", param_name, "nested"]) || %{}
       new_item = build_defaults(nested)
-      items = Map.get(trial.config, param_name) |> ensure_list()
-      new_config = Map.put(trial.config, param_name, items ++ [new_item])
-      {:noreply, assign(socket, trials: update_trial_config(socket.assigns.trials, id, new_config))}
+      items = Map.get(node.config, param_name) |> ensure_list()
+      new_config = Map.put(node.config, param_name, items ++ [new_item])
+      {:noreply, assign(socket, trials: update_node_config(socket.assigns.trials, id, new_config))}
     else
       _ -> {:noreply, socket}
     end
@@ -112,11 +142,11 @@ defmodule SochoWeb.StudyLive.Builder do
 
   def handle_event("remove_item", %{"param" => param_name, "index" => idx_str}, socket) do
     with id when not is_nil(id) <- socket.assigns.selected_trial_id,
-         trial when not is_nil(trial) <- find_trial(socket.assigns.trials, id) do
+         node when not is_nil(node) <- find_node(socket.assigns.trials, id) do
       idx = String.to_integer(idx_str)
-      items = Map.get(trial.config, param_name) |> ensure_list() |> List.delete_at(idx)
-      new_config = Map.put(trial.config, param_name, items)
-      {:noreply, assign(socket, trials: update_trial_config(socket.assigns.trials, id, new_config))}
+      items = Map.get(node.config, param_name) |> ensure_list() |> List.delete_at(idx)
+      new_config = Map.put(node.config, param_name, items)
+      {:noreply, assign(socket, trials: update_node_config(socket.assigns.trials, id, new_config))}
     else
       _ -> {:noreply, socket}
     end
@@ -124,21 +154,25 @@ defmodule SochoWeb.StudyLive.Builder do
 
   def handle_event("remove_trial", %{"id" => id_str}, socket) do
     id = String.to_integer(id_str)
-    trials = Enum.reject(socket.assigns.trials, &(&1.id == id))
+    trials = remove_node_from_tree(socket.assigns.trials, id)
 
     selected =
-      if socket.assigns.selected_trial_id == id, do: nil, else: socket.assigns.selected_trial_id
+      if socket.assigns.selected_trial_id == id or
+           find_node(trials, socket.assigns.selected_trial_id) == nil,
+         do: nil,
+         else: socket.assigns.selected_trial_id
 
     {:noreply, assign(socket, trials: trials, selected_trial_id: selected)}
   end
 
   def handle_event("save_study", _params, socket) do
     %{study_id: study_id, study_title: title, trials: trials} = socket.assigns
+    trial_maps = Enum.map(trials, &node_to_map/1)
 
     result =
       if study_id,
-        do: Studies.update_study_with_trials(study_id, title, trials),
-        else: Studies.create_study_with_trials(title, trials)
+        do: Studies.update_study_with_trials(study_id, title, trial_maps),
+        else: Studies.create_study_with_trials(title, trial_maps)
 
     case result do
       {:ok, study} ->
@@ -149,30 +183,104 @@ defmodule SochoWeb.StudyLive.Builder do
     end
   end
 
-  # ── Helpers ────────────────────────────────────────────────────────────────
+  # ── Tree Helpers ────────────────────────────────────────────────────────────
 
-  defp find_trial(trials, id), do: Enum.find(trials, &(&1.id == id))
-
-  defp update_trial_config(trials, id, new_config) do
-    Enum.map(trials, fn t -> if t.id == id, do: %{t | config: new_config}, else: t end)
+  defp db_trial_to_node(trial) do
+    %{
+      id: System.unique_integer([:positive]),
+      node_type: trial.node_type,
+      plugin: trial.plugin,
+      config: trial.config,
+      children: Enum.map(trial.children, &db_trial_to_node/1)
+    }
   end
 
-  defp move_trial(trials, id, direction) do
-    case Enum.find_index(trials, &(&1.id == id)) do
-      nil -> trials
-      idx -> do_move(trials, idx, direction)
+  defp node_to_map(node) do
+    %{
+      node_type: node.node_type,
+      plugin: node.plugin,
+      config: node.config,
+      children: Enum.map(node.children || [], &node_to_map/1)
+    }
+  end
+
+  defp find_node(_nodes, nil), do: nil
+
+  defp find_node(nodes, id) do
+    Enum.find_value(nodes, fn node ->
+      if node.id == id, do: node, else: find_node(node.children, id)
+    end)
+  end
+
+  defp update_node_config(nodes, id, new_config) do
+    Enum.map(nodes, fn node ->
+      if node.id == id do
+        %{node | config: new_config}
+      else
+        %{node | children: update_node_config(node.children, id, new_config)}
+      end
+    end)
+  end
+
+  defp remove_node_from_tree(nodes, id) do
+    nodes
+    |> Enum.reject(&(&1.id == id))
+    |> Enum.map(fn node -> %{node | children: remove_node_from_tree(node.children, id)} end)
+  end
+
+  defp add_child_to_node(nodes, parent_id, new_node) do
+    Enum.map(nodes, fn node ->
+      if node.id == parent_id do
+        %{node | children: node.children ++ [new_node]}
+      else
+        %{node | children: add_child_to_node(node.children, parent_id, new_node)}
+      end
+    end)
+  end
+
+  defp move_node_in_tree(nodes, id, direction) do
+    idx = Enum.find_index(nodes, &(&1.id == id))
+
+    if idx != nil do
+      do_move(nodes, idx, direction)
+    else
+      Enum.map(nodes, fn node ->
+        %{node | children: move_node_in_tree(node.children, id, direction)}
+      end)
     end
   end
 
-  defp do_move(trials, 0, :up), do: trials
-  defp do_move(trials, idx, :down) when idx == length(trials) - 1, do: trials
-  defp do_move(trials, idx, :up), do: swap(trials, idx - 1, idx)
-  defp do_move(trials, idx, :down), do: swap(trials, idx, idx + 1)
+  defp do_move(nodes, 0, :up), do: nodes
+  defp do_move(nodes, idx, :down) when idx == length(nodes) - 1, do: nodes
+  defp do_move(nodes, idx, :up), do: swap(nodes, idx - 1, idx)
+  defp do_move(nodes, idx, :down), do: swap(nodes, idx, idx + 1)
 
   defp swap(list, i, j) do
     a = Enum.at(list, i)
     b = Enum.at(list, j)
     list |> List.replace_at(i, b) |> List.replace_at(j, a)
+  end
+
+  # ── Config Helpers ──────────────────────────────────────────────────────────
+
+  defp coerce_timeline_config(params) do
+    timeline_vars =
+      case Jason.decode(params["timeline_variables"] || "[]") do
+        {:ok, list} when is_list(list) -> list
+        _ -> []
+      end
+
+    repetitions =
+      case Integer.parse(to_string(params["repetitions"] || "1")) do
+        {n, _} -> max(n, 1)
+        :error -> 1
+      end
+
+    %{
+      "timeline_variables" => timeline_vars,
+      "repetitions" => repetitions,
+      "randomize_order" => params["randomize_order"] == "true"
+    }
   end
 
   defp build_defaults(parameters) do
@@ -214,6 +322,7 @@ defmodule SochoWeb.StudyLive.Builder do
           "COMPLEX" ->
             if spec["array"] and is_map(val) do
               nested_params = spec["nested"] || %{}
+
               val
               |> Enum.sort_by(fn {k, _} -> String.to_integer(k) end)
               |> Enum.map(fn {_, item} -> coerce_config(item, nested_params) end)
@@ -256,7 +365,11 @@ defmodule SochoWeb.StudyLive.Builder do
 
   @impl true
   def render(assigns) do
-    selected_trial = Enum.find(assigns.trials, &(&1.id == assigns.selected_trial_id))
+    selected_trial =
+      if assigns.selected_trial_id,
+        do: find_node(assigns.trials, assigns.selected_trial_id),
+        else: nil
+
     assigns = assign(assigns, selected_trial: selected_trial)
 
     ~H"""
@@ -291,6 +404,14 @@ defmodule SochoWeb.StudyLive.Builder do
         <div class="flex flex-col gap-2 min-h-0 border-r border-base-300 pr-4">
           <p class="text-xs font-semibold uppercase tracking-wider opacity-50 shrink-0">Add Block</p>
 
+          <button
+            class="btn btn-sm btn-outline btn-secondary w-full shrink-0"
+            phx-click="add_timeline"
+            type="button"
+          >
+            + Timeline Group
+          </button>
+
           <form phx-change="plugin_search" class="shrink-0">
             <input
               class="input input-bordered input-sm w-full"
@@ -324,7 +445,7 @@ defmodule SochoWeb.StudyLive.Builder do
           </div>
         </div>
 
-        <%!-- Column 2: Trial blocks --%>
+        <%!-- Column 2: Trial tree --%>
         <div class="flex flex-col gap-2 min-h-0">
           <p class="text-xs font-semibold uppercase tracking-wider opacity-50 shrink-0">
             Trials <span class="badge badge-neutral ml-1">{length(@trials)}</span>
@@ -335,69 +456,17 @@ defmodule SochoWeb.StudyLive.Builder do
               Pick a plugin on the left to add a block.
             </p>
 
-            <%= for {trial, position} <- Enum.with_index(@trials, 1) do %>
-              <div class={"card shadow-sm border-2 transition-colors " <>
-                if(@selected_trial_id == trial.id,
-                  do: "bg-primary/10 border-primary",
-                  else: "bg-base-200 border-transparent"
-                )}>
-                <div class="flex items-center gap-2 p-3">
-                  <%!-- Clickable label area --%>
-                  <div
-                    class="flex items-center gap-2 flex-1 min-w-0 cursor-pointer"
-                    phx-click="select_trial"
-                    phx-value-id={trial.id}
-                  >
-                    <span class="badge badge-neutral shrink-0">#{position}</span>
-                    <span class="text-sm font-medium truncate">{trial.plugin}</span>
-                  </div>
-
-                  <%!-- Reorder + remove controls --%>
-                  <div class="flex items-center gap-0.5 shrink-0">
-                    <button
-                      class="btn btn-xs btn-ghost px-1"
-                      phx-click="move_trial_up"
-                      phx-value-id={trial.id}
-                      type="button"
-                      title="Move up"
-                    >
-                      ↑
-                    </button>
-                    <button
-                      class="btn btn-xs btn-ghost px-1"
-                      phx-click="move_trial_down"
-                      phx-value-id={trial.id}
-                      type="button"
-                      title="Move down"
-                    >
-                      ↓
-                    </button>
-                    <button
-                      class="btn btn-xs btn-ghost px-1 text-error"
-                      phx-click="remove_trial"
-                      phx-value-id={trial.id}
-                      type="button"
-                      title="Remove"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                </div>
-              </div>
+            <%= for {node, position} <- Enum.with_index(@trials, 1) do %>
+              <.node_block node={node} position={position} selected_id={@selected_trial_id} />
             <% end %>
           </div>
         </div>
 
         <%!-- Column 3: Config panel --%>
         <div class="flex flex-col gap-2 min-h-0 border-l border-base-300 pl-4">
-          <%= if @selected_trial do %>
-            <% schema = @registry[@selected_trial.plugin] %>
-            <% params = sorted_params(schema["parameters"] || %{}) %>
-
-            <p class="text-xs font-semibold uppercase tracking-wider opacity-50 shrink-0">
-              Configure
-            </p>
-            <p class="text-sm font-medium text-primary shrink-0 -mt-1">{@selected_trial.plugin}</p>
+          <%= if @selected_trial && @selected_trial.node_type == "timeline" do %>
+            <p class="text-xs font-semibold uppercase tracking-wider opacity-50 shrink-0">Configure</p>
+            <p class="text-sm font-medium text-secondary shrink-0 -mt-1">Timeline Group</p>
 
             <div class="overflow-y-auto flex-1">
               <form
@@ -405,25 +474,86 @@ defmodule SochoWeb.StudyLive.Builder do
                 id={"config-form-#{@selected_trial.id}"}
                 class="space-y-3"
               >
-                <p
-                  :if={params == [] or Enum.all?(params, fn {_, s} -> input_kind(s) == :skip end)}
-                  class="text-sm opacity-50"
-                >
-                  No configurable parameters.
-                </p>
-                <%= for {param_name, spec} <- params, input_kind(spec) != :skip do %>
-                  <.param_field
-                    param={param_name}
-                    spec={spec}
-                    kind={input_kind(spec)}
-                    value={@selected_trial.config[param_name]}
+                <div class="form-control">
+                  <label class="label py-1">
+                    <span class="label-text">timeline_variables</span>
+                    <span class="label-text-alt opacity-50">JSON array</span>
+                  </label>
+                  <textarea
+                    class="textarea textarea-bordered text-xs font-mono"
+                    name="config[timeline_variables]"
+                    rows="6"
+                    placeholder={'[{"stimulus": "hello"}, {"stimulus": "world"}]'}
+                  >{Jason.encode!(@selected_trial.config["timeline_variables"] || [])}</textarea>
+                  <p class="text-xs opacity-50 mt-1">
+                    In trial params, use <code class="font-mono">{"{{varName}}"}</code> to reference a variable.
+                  </p>
+                </div>
+
+                <div class="form-control">
+                  <label class="label py-1">
+                    <span class="label-text">repetitions</span>
+                    <span class="label-text-alt opacity-50">INT</span>
+                  </label>
+                  <input
+                    type="number"
+                    class="input input-bordered input-sm"
+                    name="config[repetitions]"
+                    value={@selected_trial.config["repetitions"] || 1}
+                    min="1"
+                    step="1"
                   />
-                <% end %>
+                </div>
+
+                <div class="flex items-center gap-3">
+                  <input type="hidden" name="config[randomize_order]" value="false" />
+                  <input
+                    type="checkbox"
+                    class="checkbox checkbox-sm"
+                    name="config[randomize_order]"
+                    value="true"
+                    checked={@selected_trial.config["randomize_order"] == true}
+                  />
+                  <label class="text-sm">randomize_order</label>
+                </div>
               </form>
             </div>
           <% else %>
-            <p class="text-xs font-semibold uppercase tracking-wider opacity-50">Configure</p>
-            <p class="text-sm opacity-40 mt-2">Click a trial block to configure it.</p>
+            <%= if @selected_trial do %>
+              <% schema = @registry[@selected_trial.plugin] %>
+              <% params = sorted_params(schema["parameters"] || %{}) %>
+
+              <p class="text-xs font-semibold uppercase tracking-wider opacity-50 shrink-0">
+                Configure
+              </p>
+              <p class="text-sm font-medium text-primary shrink-0 -mt-1">{@selected_trial.plugin}</p>
+
+              <div class="overflow-y-auto flex-1">
+                <form
+                  phx-change="config_changed"
+                  id={"config-form-#{@selected_trial.id}"}
+                  class="space-y-3"
+                >
+                  <p
+                    :if={params == [] or Enum.all?(params, fn {_, s} -> input_kind(s) == :skip end)}
+                    class="text-sm opacity-50"
+                  >
+                    No configurable parameters.
+                  </p>
+                  <%= for {param_name, spec} <- params, input_kind(spec) != :skip do %>
+                    <.param_field
+                      param={param_name}
+                      spec={spec}
+                      kind={input_kind(spec)}
+                      value={@selected_trial.config[param_name]}
+                    />
+                  <% end %>
+                </form>
+              </div>
+            <% else %>
+              <p class="text-xs font-semibold uppercase tracking-wider opacity-50">Configure</p>
+              <p class="text-sm opacity-40 mt-2">Click a trial block to configure it.</p>
+            <% end %>
           <% end %>
         </div>
 
@@ -534,6 +664,123 @@ defmodule SochoWeb.StudyLive.Builder do
 
   # ── Function Components ────────────────────────────────────────────────────
 
+  attr :node, :map, required: true
+  attr :position, :integer, required: true
+  attr :selected_id, :integer, default: nil
+
+  defp node_block(%{node: %{node_type: "timeline"}} = assigns) do
+    ~H"""
+    <div class="space-y-1">
+      <div class={"card shadow-sm border-2 transition-colors " <>
+        if(@selected_id == @node.id,
+          do: "bg-secondary/10 border-secondary",
+          else: "bg-base-300 border-transparent"
+        )}>
+        <div class="flex items-center gap-2 p-3">
+          <div
+            class="flex items-center gap-2 flex-1 min-w-0 cursor-pointer"
+            phx-click="select_trial"
+            phx-value-id={@node.id}
+          >
+            <span class="badge badge-secondary shrink-0">TL</span>
+            <span class="text-sm font-medium truncate">Timeline Group</span>
+            <span class="text-xs opacity-40">({length(@node.children)} trials)</span>
+          </div>
+          <div class="flex items-center gap-0.5 shrink-0">
+            <button
+              class="btn btn-xs btn-ghost px-1"
+              phx-click="move_trial_up"
+              phx-value-id={@node.id}
+              type="button"
+              title="Move up"
+            >
+              ↑
+            </button>
+            <button
+              class="btn btn-xs btn-ghost px-1"
+              phx-click="move_trial_down"
+              phx-value-id={@node.id}
+              type="button"
+              title="Move down"
+            >
+              ↓
+            </button>
+            <button
+              class="btn btn-xs btn-ghost px-1 text-error"
+              phx-click="remove_trial"
+              phx-value-id={@node.id}
+              type="button"
+              title="Remove"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <%!-- Children indented below --%>
+      <div class="ml-4 pl-3 border-l-2 border-secondary/30 space-y-1">
+        <p :if={@node.children == []} class="text-xs opacity-40 py-1 italic">
+          Select this group then click a plugin to add trials here.
+        </p>
+        <%= for {child, child_pos} <- Enum.with_index(@node.children, 1) do %>
+          <.node_block node={child} position={child_pos} selected_id={@selected_id} />
+        <% end %>
+      </div>
+    </div>
+    """
+  end
+
+  defp node_block(assigns) do
+    ~H"""
+    <div class={"card shadow-sm border-2 transition-colors " <>
+      if(@selected_id == @node.id,
+        do: "bg-primary/10 border-primary",
+        else: "bg-base-200 border-transparent"
+      )}>
+      <div class="flex items-center gap-2 p-3">
+        <div
+          class="flex items-center gap-2 flex-1 min-w-0 cursor-pointer"
+          phx-click="select_trial"
+          phx-value-id={@node.id}
+        >
+          <span class="badge badge-neutral shrink-0">#{@position}</span>
+          <span class="text-sm font-medium truncate">{@node.plugin}</span>
+        </div>
+        <div class="flex items-center gap-0.5 shrink-0">
+          <button
+            class="btn btn-xs btn-ghost px-1"
+            phx-click="move_trial_up"
+            phx-value-id={@node.id}
+            type="button"
+            title="Move up"
+          >
+            ↑
+          </button>
+          <button
+            class="btn btn-xs btn-ghost px-1"
+            phx-click="move_trial_down"
+            phx-value-id={@node.id}
+            type="button"
+            title="Move down"
+          >
+            ↓
+          </button>
+          <button
+            class="btn btn-xs btn-ghost px-1 text-error"
+            phx-click="remove_trial"
+            phx-value-id={@node.id}
+            type="button"
+            title="Remove"
+          >
+            ✕
+          </button>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
   attr :param, :string, required: true
   attr :prefix, :string, default: "config"
   attr :spec, :map, required: true
@@ -636,7 +883,6 @@ defmodule SochoWeb.StudyLive.Builder do
   end
 
   defp param_field(%{kind: :html} = assigns) do
-    # Sanitize prefix/param into a valid HTML id (no brackets)
     safe_id = String.replace("tiptap-#{assigns.prefix}-#{assigns.param}", ~r/[\[\]]/, "_")
     assigns = assign(assigns, safe_id: safe_id)
 

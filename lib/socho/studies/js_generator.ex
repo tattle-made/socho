@@ -10,7 +10,7 @@ defmodule Socho.Studies.JsGenerator do
   def required_scripts(study) do
     plugins =
       study.trials
-      |> Enum.map(& &1.plugin)
+      |> collect_plugins()
       |> Enum.uniq()
       |> Enum.map(&"#{@jspsych_base}/#{&1}.js")
 
@@ -18,21 +18,10 @@ defmodule Socho.Studies.JsGenerator do
   end
 
   def generate_inline_js(study) do
-    timeline_items =
-      study.trials
-      |> Enum.with_index(1)
-      |> Enum.map(fn {trial, idx} ->
-        var_name = "trial#{idx}"
-        config_js = config_to_js(trial.config, trial.plugin)
-        "const #{var_name} = {\n  type: #{plugin_to_js_var(trial.plugin)},\n#{config_js}};"
-      end)
-      |> Enum.join("\n\n")
+    {_, declarations, root_var_names} = emit_nodes(study.trials, 1)
 
-    timeline_vars =
-      study.trials
-      |> Enum.with_index(1)
-      |> Enum.map(fn {_, idx} -> "trial#{idx}" end)
-      |> Enum.join(", ")
+    all_js = Enum.join(declarations, "\n\n")
+    root_vars = Enum.join(root_var_names, ", ")
 
     """
     function saveData(csvData) {
@@ -51,16 +40,64 @@ defmodule Socho.Studies.JsGenerator do
       on_finish: function() { saveData(jsPsych.data.get().csv()); }
     });
 
-    #{timeline_items}
+    #{all_js}
 
-    jsPsych.run([#{timeline_vars}]);
+    jsPsych.run([#{root_vars}]);
     """
   end
 
-  # Converts a plugin name like "html-keyboard-response" to "jsPsychHtmlKeyboardResponse"
   def plugin_to_js_var(plugin_name) do
     parts = String.split(plugin_name, "-")
     "jsPsych" <> Enum.map_join(parts, &String.capitalize/1)
+  end
+
+  defp collect_plugins(nodes) do
+    Enum.flat_map(nodes, fn node ->
+      child_plugins = collect_plugins(node.children || [])
+      if node.plugin, do: [node.plugin | child_plugins], else: child_plugins
+    end)
+  end
+
+  defp emit_nodes(nodes, counter) do
+    Enum.reduce(nodes, {counter, [], []}, fn node, {cnt, all_decls, all_var_names} ->
+      {new_cnt, node_decls, var_name} = emit_node(node, cnt)
+      {new_cnt, all_decls ++ node_decls, all_var_names ++ [var_name]}
+    end)
+  end
+
+  defp emit_node(%{node_type: "timeline"} = node, counter) do
+    var_name = "timeline#{counter}"
+    {new_counter, child_decls, child_var_names} = emit_nodes(node.children || [], counter + 1)
+    children_js = Enum.join(child_var_names, ", ")
+    extra_js = timeline_config_to_js(node.config || %{})
+    own_decl = "const #{var_name} = {\n  timeline: [#{children_js}],#{extra_js}\n};"
+    {new_counter, child_decls ++ [own_decl], var_name}
+  end
+
+  defp emit_node(node, counter) do
+    var_name = "trial#{counter}"
+    config_js = config_to_js(node.config, node.plugin)
+    decl = "const #{var_name} = {\n  type: #{plugin_to_js_var(node.plugin)},\n#{config_js}};"
+    {counter + 1, [decl], var_name}
+  end
+
+  defp timeline_config_to_js(config) do
+    [
+      if(config["timeline_variables"] not in [nil, []],
+        do: "\n  timeline_variables: #{value_to_js(config["timeline_variables"])},",
+        else: nil
+      ),
+      if(config["repetitions"] && config["repetitions"] != 1,
+        do: "\n  repetitions: #{config["repetitions"]},",
+        else: nil
+      ),
+      if(config["randomize_order"],
+        do: "\n  randomize_order: true,",
+        else: nil
+      )
+    ]
+    |> Enum.reject(&is_nil/1)
+    |> Enum.join("")
   end
 
   defp config_to_js(config, _plugin) when map_size(config) == 0, do: ""
@@ -72,9 +109,14 @@ defmodule Socho.Studies.JsGenerator do
     |> then(&(&1 <> "\n"))
   end
 
+  # Converts {{varName}} tokens to jsPsych.timelineVariable('varName') calls
   defp value_to_js(val) when is_binary(val) do
-    escaped = String.replace(val, "`", "\\`")
-    "`#{escaped}`"
+    case Regex.run(~r/^\{\{(\w+)\}\}$/, val) do
+      [_, var_name] -> "jsPsych.timelineVariable('#{var_name}')"
+      _ ->
+        escaped = String.replace(val, "`", "\\`")
+        "`#{escaped}`"
+    end
   end
 
   defp value_to_js(val) when is_integer(val), do: Integer.to_string(val)
