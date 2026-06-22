@@ -129,6 +129,15 @@ defmodule Socho.Accounts.User do
   end
 
   @doc """
+  A changeset for updating a user's profile fields (username, role, client_id).
+  """
+  def profile_changeset(user, attrs) do
+    user
+    |> cast(attrs, [:username, :role, :client_id])
+    |> validate_inclusion(:role, Ecto.Enum.values(__MODULE__, :role))
+  end
+
+  @doc """
   A changeset for creating a user with email, password, and role.
   Used by admin helpers to seed or provision users programmatically.
   """

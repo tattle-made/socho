@@ -18,6 +18,22 @@ defmodule Socho.Studies do
     |> Repo.all()
   end
 
+  def list_all_studies_for_client(client_id) do
+    from(s in Study,
+      where: s.client_id == ^client_id,
+      order_by: [desc: s.inserted_at]
+    )
+    |> Repo.all()
+  end
+
+  def get_study_meta!(id), do: Repo.get!(Study, id)
+
+  def update_study(id, attrs) do
+    Repo.get!(Study, id)
+    |> Study.changeset(attrs)
+    |> Repo.update()
+  end
+
   def get_study!(id) do
     study = Repo.get!(Study, id)
     trials_flat = Repo.all(from t in Trial, where: t.study_id == ^id, order_by: t.position)

@@ -60,6 +60,17 @@ defmodule Socho.Accounts do
   """
   def get_user!(id), do: Repo.get!(User, id)
 
+  def list_users_for_client(client_id) do
+    import Ecto.Query
+    Repo.all(from u in User, where: u.client_id == ^client_id, order_by: [asc: u.inserted_at])
+  end
+
+  def update_user_profile(%User{} = user, attrs) do
+    user
+    |> User.profile_changeset(attrs)
+    |> Repo.update()
+  end
+
   ## User registration
 
   @doc """

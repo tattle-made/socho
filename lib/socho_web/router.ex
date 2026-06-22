@@ -54,10 +54,15 @@ defmodule SochoWeb.Router do
         {SochoWeb.UserAuth, :require_admin_or_manager}
       ] do
       live "/users", UserLive.Management, :index
+      live "/users/:id", UserLive.Show, :show
+      live "/users/:id/edit", UserLive.Edit, :edit
       live "/studies", StudyLive.Index, :index
       live "/studies/new", StudyLive.Builder, :new
       live "/studies/:id/edit", StudyLive.Builder, :edit
+      live "/studies/:id/settings", StudyLive.Settings, :edit
       live "/clients", ClientLive.Management, :index
+      live "/clients/:id", ClientLive.Show, :show
+      live "/clients/:id/edit", ClientLive.Edit, :edit
     end
 
     live_session :require_participant,

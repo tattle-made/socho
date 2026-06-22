@@ -50,6 +50,13 @@ defmodule SochoWeb.Layouts do
           >
             Users
           </a>
+          <a
+            :if={@current_scope && @current_scope.user.role in [:admin, :manager]}
+            href={~p"/clients"}
+            class="btn btn-ghost btn-sm"
+          >
+            Clients
+          </a>
         </nav>
       </div>
       <div class="flex-none flex items-center gap-3">

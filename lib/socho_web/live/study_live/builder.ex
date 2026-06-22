@@ -396,17 +396,14 @@ defmodule SochoWeb.StudyLive.Builder do
           value={@study_title}
           phx-blur="study_title_changed"
         />
-        <select
-          class="select select-bordered shrink-0"
-          phx-change="study_client_changed"
+        <.link
+          :if={@study_id}
+          href={"/studies/#{@study_id}/settings"}
+          class="btn btn-ghost btn-sm shrink-0"
+          title="Study settings"
         >
-          <option value="">No client</option>
-          <%= for client <- @clients do %>
-            <option value={client.id} selected={@study_client_id == client.id}>
-              {client.name}
-            </option>
-          <% end %>
-        </select>
+          ⚙
+        </.link>
         <button
           class="btn btn-success shrink-0"
           phx-click="save_study"
