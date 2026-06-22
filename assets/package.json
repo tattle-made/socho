@@ -36,6 +36,7 @@
     "@jspsych/plugin-video-button-response": "*",
     "@jspsych/plugin-video-keyboard-response": "*",
     "@jspsych/plugin-virtual-chinrest": "*",
+    "@jspsych/plugin-iat-image": "2.1.0",
     "@tiptap/core": "^3.26.1",
     "@tiptap/extension-image": "^3.26.1",
     "@tiptap/extension-link": "^3.26.1",

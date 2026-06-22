@@ -126,6 +126,7 @@ const PLUGINS = [
   'html-button-response',
   'html-keyboard-response',
   'iat-html',
+  'iat-image',
   'image-button-response',
   'image-keyboard-response',
   'instructions',

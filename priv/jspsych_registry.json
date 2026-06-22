@@ -834,6 +834,95 @@
       }
     }
   },
+  "iat-image": {
+    "name": "iat-image",
+    "version": "2.1.0",
+    "description": "jsPsych plugin for running an IAT (Implicit Association Test) with an image stimulus",
+    "parameters": {
+      "stimulus": {
+        "type": "IMAGE",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "left_category_key": {
+        "type": "KEY",
+        "default": "e",
+        "description": null,
+        "array": false
+      },
+      "right_category_key": {
+        "type": "KEY",
+        "default": "i",
+        "description": null,
+        "array": false
+      },
+      "left_category_label": {
+        "type": "STRING",
+        "default": [
+          "left"
+        ],
+        "description": null,
+        "array": true
+      },
+      "right_category_label": {
+        "type": "STRING",
+        "default": [
+          "right"
+        ],
+        "description": null,
+        "array": true
+      },
+      "key_to_move_forward": {
+        "type": "KEYS",
+        "default": "ALL_KEYS",
+        "description": null,
+        "array": false
+      },
+      "display_feedback": {
+        "type": "BOOL",
+        "default": false,
+        "description": null,
+        "array": false
+      },
+      "html_when_wrong": {
+        "type": "HTML_STRING",
+        "default": "<span style=\"color: red; font-size: 80px\">X</span>",
+        "description": null,
+        "array": false
+      },
+      "bottom_instructions": {
+        "type": "HTML_STRING",
+        "default": "<p>If you press the wrong key, a red X will appear. Press any key to continue.</p>",
+        "description": null,
+        "array": false
+      },
+      "force_correct_key_press": {
+        "type": "BOOL",
+        "default": false,
+        "description": null,
+        "array": false
+      },
+      "stim_key_association": {
+        "type": "SELECT",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "response_ends_trial": {
+        "type": "BOOL",
+        "default": true,
+        "description": null,
+        "array": false
+      },
+      "trial_duration": {
+        "type": "INT",
+        "default": null,
+        "description": null,
+        "array": false
+      }
+    }
+  },
   "image-button-response": {
     "name": "image-button-response",
     "version": "2.2.0",
