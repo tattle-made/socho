@@ -11,9 +11,10 @@
  *      what fields are configurable per plugin.
  */
 
-import { copyFileSync, mkdirSync, writeFileSync, existsSync, readFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync, writeFileSync, existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { build as esbuild } from 'esbuild';
 
 // --- Minimal browser stubs so jsPsych modules load in Node.js without crashing.
 // We only need the class definitions and static `info` objects; no DOM access occurs
@@ -204,4 +205,83 @@ console.log(`\nRegistry → priv/jspsych_registry.json (${pluginCount}/${PLUGINS
 if (warnings.length > 0) {
   console.warn('\nWarnings:');
   warnings.forEach(w => console.warn(`  ⚠  ${w}`));
+}
+
+// ── Custom plugins ────────────────────────────────────────────────────────────
+
+const CUSTOM_PLUGINS_DIR = resolve(__dirname, 'custom_plugins');
+const CUSTOM_VENDOR_DIR = resolve(ROOT, 'priv/static/vendor/custom');
+const CUSTOM_REGISTRY_PATH = resolve(ROOT, 'priv/custom_plugins_registry.json');
+
+mkdirSync(CUSTOM_VENDOR_DIR, { recursive: true });
+
+function toPascalCase(kebab) {
+  return kebab.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join('');
+}
+
+const customRegistry = {};
+const customWarnings = [];
+
+const customDirs = existsSync(CUSTOM_PLUGINS_DIR)
+  ? readdirSync(CUSTOM_PLUGINS_DIR).filter(name => {
+      const full = join(CUSTOM_PLUGINS_DIR, name);
+      return !name.startsWith('.') && statSync(full).isDirectory();
+    })
+  : [];
+
+console.log(`\n── Custom plugins (${customDirs.length} found) ──`);
+
+for (const dirName of customDirs) {
+  const pluginPath = join(CUSTOM_PLUGINS_DIR, dirName, 'index.js');
+
+  if (!existsSync(pluginPath)) {
+    customWarnings.push(`custom/${dirName}: index.js not found — skipping`);
+    continue;
+  }
+
+  const jsGlobalName = `jsPsych${toPascalCase(dirName)}`;
+  const tempGlobal = '__jsPsychCustomPlugin__';
+  const outfile = join(CUSTOM_VENDOR_DIR, `${dirName}.js`);
+
+  try {
+    // Bundle to browser-ready IIFE and expose as the correct global variable.
+    // We use a temp global name so the IIFE result object is captured, then
+    // a footer extracts .default (ESM default export) as the real global.
+    await esbuild({
+      entryPoints: [pluginPath],
+      bundle: true,
+      format: 'iife',
+      globalName: tempGlobal,
+      footer: { js: `var ${jsGlobalName} = ${tempGlobal}.default ?? ${tempGlobal};` },
+      outfile,
+      logLevel: 'silent',
+    });
+
+    // Import the ESM module in Node to extract the static info object.
+    const mod = await import(toFileUrl(pluginPath));
+    const Plugin = mod.default ?? Object.values(mod).find(v => v?.info?.parameters);
+
+    if (Plugin?.info) {
+      customRegistry[dirName] = {
+        name: Plugin.info.name ?? dirName,
+        version: Plugin.info.version ?? null,
+        description: Plugin.info.description ?? null,
+        parameters: serializeParameters(Plugin.info.parameters ?? {}),
+        custom: true,
+      };
+      console.log(`✓ custom/${dirName}  →  ${jsGlobalName}`);
+    } else {
+      customWarnings.push(`custom/${dirName}: no static info found on default export`);
+    }
+  } catch (err) {
+    customWarnings.push(`custom/${dirName}: ${err.message}`);
+  }
+}
+
+writeFileSync(CUSTOM_REGISTRY_PATH, JSON.stringify(customRegistry, null, 2));
+console.log(`\nCustom registry → priv/custom_plugins_registry.json (${Object.keys(customRegistry).length} plugins)`);
+
+if (customWarnings.length > 0) {
+  console.warn('\nCustom plugin warnings:');
+  customWarnings.forEach(w => console.warn(`  ⚠  ${w}`));
 }

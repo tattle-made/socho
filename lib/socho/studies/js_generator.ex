@@ -1,18 +1,27 @@
 defmodule Socho.Studies.JsGenerator do
   @moduledoc "Generates jsPsych HTML page assets from a Study with preloaded trials."
 
+  alias Socho.Studies.Registry
+
   @jspsych_base "/vendor/jspsych"
+  @custom_base "/vendor/custom"
 
   def required_stylesheets(_study) do
     ["#{@jspsych_base}/jspsych.css"]
   end
 
   def required_scripts(study) do
+    custom_names = Registry.custom_plugin_names()
+
     plugins =
       study.trials
       |> collect_plugins()
       |> Enum.uniq()
-      |> Enum.map(&"#{@jspsych_base}/#{&1}.js")
+      |> Enum.map(fn name ->
+        if name in custom_names,
+          do: "#{@custom_base}/#{name}.js",
+          else: "#{@jspsych_base}/#{name}.js"
+      end)
 
     ["#{@jspsych_base}/jspsych.js" | plugins]
   end

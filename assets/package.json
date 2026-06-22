@@ -42,5 +42,8 @@
     "@tiptap/extension-link": "^3.26.1",
     "@tiptap/starter-kit": "^3.26.1",
     "jspsych": "8.2.3"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.4"
   }
 }

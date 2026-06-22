@@ -446,7 +446,7 @@ defmodule SochoWeb.StudyLive.Builder do
               No plugins found.
             </p>
             <%= for name <- @filtered_plugins do %>
-              <% desc = @registry[name]["description"] %>
+              <% meta = @registry[name] %>
               <button
                 class="btn btn-ghost w-full justify-start text-left h-auto py-2 px-2 font-normal"
                 phx-click="add_plugin_trial"
@@ -454,8 +454,11 @@ defmodule SochoWeb.StudyLive.Builder do
                 type="button"
               >
                 <div class="flex flex-col items-start gap-0.5 w-full">
-                  <span class="text-sm font-medium leading-tight">{name}</span>
-                  <span :if={desc} class="text-xs opacity-50 leading-tight whitespace-normal text-left">{desc}</span>
+                  <div class="flex items-center gap-1.5">
+                    <span class="text-sm font-medium leading-tight">{name}</span>
+                    <span :if={meta["custom"]} class="badge badge-accent badge-xs">custom</span>
+                  </div>
+                  <span :if={meta["description"]} class="text-xs opacity-50 leading-tight whitespace-normal text-left">{meta["description"]}</span>
                 </div>
               </button>
             <% end %>
