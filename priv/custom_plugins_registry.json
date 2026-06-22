@@ -31,6 +31,62 @@
     },
     "custom": true
   },
+  "image-swipe": {
+    "name": "image-swipe",
+    "version": "1.0.0",
+    "description": "Shows a single image the participant swipes left or right to respond.",
+    "parameters": {
+      "stimulus": {
+        "type": "IMAGE",
+        "default": null,
+        "description": "URL of the image to display.",
+        "array": false
+      },
+      "prompt": {
+        "type": "HTML_STRING",
+        "default": null,
+        "description": "Optional instructions shown above the image (HTML allowed).",
+        "array": false
+      },
+      "left_label": {
+        "type": "STRING",
+        "default": "No",
+        "description": "Label for the left-swipe action.",
+        "array": false
+      },
+      "right_label": {
+        "type": "STRING",
+        "default": "Yes",
+        "description": "Label for the right-swipe action.",
+        "array": false
+      },
+      "show_buttons": {
+        "type": "BOOL",
+        "default": true,
+        "description": "Show clickable left / right buttons below the image.",
+        "array": false
+      },
+      "image_width": {
+        "type": "INT",
+        "default": 360,
+        "description": "Width of the image card in pixels.",
+        "array": false
+      },
+      "image_height": {
+        "type": "INT",
+        "default": 360,
+        "description": "Height of the image card in pixels.",
+        "array": false
+      },
+      "swipe_threshold": {
+        "type": "INT",
+        "default": 80,
+        "description": "Minimum drag distance in pixels to register as a swipe.",
+        "array": false
+      }
+    },
+    "custom": true
+  },
   "multiple-images": {
     "name": "multiple-images",
     "version": "1.0.0",
