@@ -30,5 +30,61 @@
       }
     },
     "custom": true
+  },
+  "multiple-images": {
+    "name": "multiple-images",
+    "version": "1.0.0",
+    "description": "Shows a configurable grid of images with a free-text response box.",
+    "parameters": {
+      "images": {
+        "type": "IMAGE",
+        "default": null,
+        "description": "Array of image URLs to display in the grid.",
+        "array": true
+      },
+      "prompt": {
+        "type": "HTML_STRING",
+        "default": null,
+        "description": "Instructions or question shown above the image grid (HTML allowed).",
+        "array": false
+      },
+      "placeholder": {
+        "type": "STRING",
+        "default": "Enter your response...",
+        "description": "Placeholder text for the response box.",
+        "array": false
+      },
+      "button_label": {
+        "type": "STRING",
+        "default": "Continue",
+        "description": "Label for the submit button.",
+        "array": false
+      },
+      "required": {
+        "type": "BOOL",
+        "default": false,
+        "description": "If true, participant must enter text before continuing.",
+        "array": false
+      },
+      "columns": {
+        "type": "INT",
+        "default": 3,
+        "description": "Number of grid columns. Set to 0 for auto-fit based on image_width.",
+        "array": false
+      },
+      "image_width": {
+        "type": "INT",
+        "default": 240,
+        "description": "Width of each image in pixels (also used as min-width for auto-fit).",
+        "array": false
+      },
+      "image_height": {
+        "type": "INT",
+        "default": 180,
+        "description": "Height of each image in pixels.",
+        "array": false
+      }
+    },
+    "custom": true
   }
 }
