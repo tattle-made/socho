@@ -23,7 +23,9 @@ defmodule SochoWeb.StudyLive.Builder do
        study_client_id: nil,
        clients: Clients.list_clients(),
        trials: [],
-       selected_trial_id: nil
+       selected_trial_id: nil,
+       show_preview: false,
+       preview_key: 0
      )}
   end
 
@@ -185,11 +187,23 @@ defmodule SochoWeb.StudyLive.Builder do
 
     case result do
       {:ok, study} ->
-        {:noreply, push_navigate(socket, to: "/study/#{study.id}")}
+        {:noreply,
+         socket
+         |> assign(study_id: study.id, preview_key: socket.assigns.preview_key + 1)
+         |> put_flash(:info, "Saved")
+         |> push_patch(to: "/studies/#{study.id}/edit")}
 
       {:error, reason} ->
         {:noreply, put_flash(socket, :error, "Failed to save: #{inspect(reason)}")}
     end
+  end
+
+  def handle_event("toggle_preview", _params, socket) do
+    {:noreply, assign(socket, show_preview: !socket.assigns.show_preview)}
+  end
+
+  def handle_event("reload_preview", _params, socket) do
+    {:noreply, assign(socket, preview_key: socket.assigns.preview_key + 1)}
   end
 
   # ── Tree Helpers ────────────────────────────────────────────────────────────
@@ -405,17 +419,29 @@ defmodule SochoWeb.StudyLive.Builder do
           ⚙
         </.link>
         <button
+          :if={@study_id}
+          class={["btn btn-sm shrink-0", if(@show_preview, do: "btn-primary", else: "btn-outline")]}
+          phx-click="toggle_preview"
+          type="button"
+          title="Toggle live preview"
+        >
+          👁 Preview
+        </button>
+        <button
           class="btn btn-success shrink-0"
           phx-click="save_study"
           type="button"
           disabled={@study_title == "" or @trials == []}
         >
-          Save & Preview
+          Save
         </button>
       </div>
 
-      <%!-- 3-column layout --%>
-      <div class="grid gap-4 flex-1 min-h-0" style="grid-template-columns: 220px 400px 1fr;">
+      <%!-- 3-column layout (4th column added when preview is open) --%>
+      <div
+        class="grid gap-4 flex-1 min-h-0"
+        style={if @show_preview && @study_id, do: "grid-template-columns: 180px 300px 1fr 360px", else: "grid-template-columns: 220px 400px 1fr"}
+      >
 
         <%!-- Column 1: Plugin picker --%>
         <div class="flex flex-col gap-2 min-h-0 border-r border-base-300 pr-4">
@@ -575,6 +601,37 @@ defmodule SochoWeb.StudyLive.Builder do
               <p class="text-sm opacity-40 mt-2">Click a trial block to configure it.</p>
             <% end %>
           <% end %>
+        </div>
+
+        <%!-- Column 4: Phone preview --%>
+        <div
+          :if={@show_preview && @study_id}
+          class="border-l border-base-300 pl-4 flex flex-col gap-3 min-h-0"
+        >
+          <div class="flex items-center justify-between shrink-0">
+            <p class="text-xs font-semibold uppercase tracking-wider opacity-50">Live Preview</p>
+            <button
+              class="btn btn-xs btn-ghost"
+              phx-click="reload_preview"
+              type="button"
+              title="Reload preview"
+            >
+              ↺ Reload
+            </button>
+          </div>
+
+          <div class="overflow-y-auto flex-1 flex justify-center items-start">
+            <div class="mockup-phone shrink-0">
+              <div class="camera"></div>
+              <div class="display" style="width:300px; aspect-ratio:9/16;">
+                <iframe
+                  src={"/study/#{@study_id}?preview=true&k=#{@preview_key}"}
+                  style="width:100%;height:100%;border:none;"
+                  title="Study preview"
+                />
+              </div>
+            </div>
+          </div>
         </div>
 
       </div>

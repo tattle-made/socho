@@ -33,7 +33,20 @@ defmodule Socho.Studies.JsGenerator do
     root_vars = Enum.join(root_var_names, ", ")
 
     """
+    const __preview__ = new URLSearchParams(window.location.search).has('preview');
+
     function saveData(trialData) {
+      if (__preview__) {
+        document.body.innerHTML = [
+          "<div style='display:flex;flex-direction:column;align-items:center;justify-content:center;",
+          "height:100vh;font-family:sans-serif;gap:1rem;padding:2rem;text-align:center'>",
+          "<p style='font-size:1.2rem'>✓ Preview complete</p>",
+          "<button onclick='location.reload()' ",
+          "style='padding:8px 20px;border:1px solid #ccc;border-radius:6px;cursor:pointer;background:#fff'>",
+          "↺ Restart preview</button></div>"
+        ].join('');
+        return;
+      }
       const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
       fetch(window.location.pathname + "/user-data", {
         method: "POST",

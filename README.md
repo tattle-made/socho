@@ -26,4 +26,4 @@ Ready to run in production? Please [check our deployment guides](https://hexdocs
 - [ ] Test touch screen functionality
 - [ ] Floating preview section
 - [ ] Show client some data at the end of a survey
-- [ ] Add support for 3 custom trials
+- [X] Add support for 3 custom trials
