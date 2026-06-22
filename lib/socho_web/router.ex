@@ -54,15 +54,11 @@ defmodule SochoWeb.Router do
         {SochoWeb.UserAuth, :require_admin_or_manager}
       ] do
       live "/users", UserLive.Management, :index
-      live "/users/:id", UserLive.Show, :show
-      live "/users/:id/edit", UserLive.Edit, :edit
       live "/studies", StudyLive.Index, :index
       live "/studies/new", StudyLive.Builder, :new
       live "/studies/:id/edit", StudyLive.Builder, :edit
       live "/studies/:id/settings", StudyLive.Settings, :edit
       live "/clients", ClientLive.Management, :index
-      live "/clients/:id", ClientLive.Show, :show
-      live "/clients/:id/edit", ClientLive.Edit, :edit
     end
 
     live_session :require_participant,
@@ -85,5 +81,20 @@ defmodule SochoWeb.Router do
 
     post "/users/log-in", UserSessionController, :create
     delete "/users/log-out", UserSessionController, :delete
+  end
+
+  scope "/", SochoWeb do
+    pipe_through [:browser, :require_authenticated_user]
+
+    live_session :require_admin_or_manager_detail,
+      on_mount: [
+        {SochoWeb.UserAuth, :require_authenticated},
+        {SochoWeb.UserAuth, :require_admin_or_manager}
+      ] do
+      live "/users/:id", UserLive.Show, :show
+      live "/users/:id/edit", UserLive.Edit, :edit
+      live "/clients/:id", ClientLive.Show, :show
+      live "/clients/:id/edit", ClientLive.Edit, :edit
+    end
   end
 end

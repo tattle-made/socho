@@ -16,6 +16,13 @@ defmodule SochoWeb.UserLive.Settings do
         </.header>
       </div>
 
+      <div class="flex items-center justify-between mb-4">
+        <span class="text-sm font-medium">Theme</span>
+        <Layouts.theme_toggle />
+      </div>
+
+      <div class="divider" />
+
       <.form for={@email_form} id="email_form" phx-submit="update_email" phx-change="validate_email">
         <.input
           field={@email_form[:email]}
@@ -65,6 +72,14 @@ defmodule SochoWeb.UserLive.Settings do
           Save Password
         </.button>
       </.form>
+      <div class="divider" />
+
+      <div class="flex items-center justify-between">
+        <span class="text-sm font-medium">Sign out of your account</span>
+        <a href={~p"/users/log-out"} class="btn btn-outline btn-sm btn-error" data-method="delete">
+          Sign out
+        </a>
+      </div>
     </Layouts.app>
     """
   end

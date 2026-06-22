@@ -60,13 +60,29 @@ defmodule SochoWeb.Layouts do
         </nav>
       </div>
       <div class="flex-none flex items-center gap-3">
-        <.theme_toggle />
-        <a :if={@current_scope} href={~p"/users/log-out"} class="btn btn-ghost btn-sm" data-method="delete">
-          Sign out
-        </a>
-        <a :if={!@current_scope} href={~p"/users/log-in"} class="btn btn-ghost btn-sm">
-          Sign in
-        </a>
+        <div :if={@current_scope} class="dropdown dropdown-end dropdown-hover">
+          <div tabindex="0" role="button" class="btn btn-ghost btn-circle avatar placeholder">
+            <div class="bg-neutral text-neutral-content rounded-full w-8">
+              <span class="text-xs">{user_initials(@current_scope.user)}</span>
+            </div>
+          </div>
+          <ul
+            tabindex="0"
+            class="dropdown-content menu bg-base-100 rounded-box z-10 w-56 p-2 shadow-lg border border-base-300 mt-1"
+          >
+            <li class="pointer-events-none px-3 py-2">
+              <span class="text-sm font-medium opacity-70 block truncate">
+                {@current_scope.user.username || @current_scope.user.email}
+              </span>
+            </li>
+            <div class="divider my-0.5" />
+            <li><a href={~p"/users/settings"}>Settings</a></li>
+            <li>
+              <.link href={~p"/users/log-out"} method="delete" class="text-error">Log out</.link>
+            </li>
+          </ul>
+        </div>
+        <a :if={!@current_scope} href={~p"/users/log-in"} class="btn btn-ghost btn-sm">Sign in</a>
       </div>
     </header>
 
@@ -157,4 +173,10 @@ defmodule SochoWeb.Layouts do
     </div>
     """
   end
+
+  defp user_initials(%{username: name}) when is_binary(name) and name != "" do
+    name |> String.split() |> Enum.take(2) |> Enum.map(&String.first/1) |> Enum.join() |> String.upcase()
+  end
+
+  defp user_initials(%{email: email}), do: email |> String.first() |> String.upcase()
 end
