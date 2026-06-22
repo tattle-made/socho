@@ -20,8 +20,10 @@ Ready to run in production? Please [check our deployment guides](https://hexdocs
 - [X] Add support for nested trials and jspsych variables
 - [X] Adding participants and studies to team
 - [ ] Tracking user's progress on a Study
-- [ ] Store and Export Study data
+- [X] Store and Export Study data
 - [ ] Whitelabel platform and apply client branding
 - [ ] Media Storage and reference
 - [ ] Test touch screen functionality
 - [ ] Floating preview section
+- [ ] Show client some data at the end of a survey
+- [ ] Add support for 3 custom trials

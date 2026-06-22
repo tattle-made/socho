@@ -25,9 +25,29 @@ defmodule SochoWeb.StudyController do
     end
   end
 
-  def save_data(conn, %{"study_id" => study_id, "data" => csv_data}) do
-    IO.inspect({study_id, String.slice(csv_data, 0, 200)}, label: "study response data")
-    json(conn, %{status: "ok"})
+  def save_data(conn, %{"study_id" => study_id, "data" => trial_data}) when is_list(trial_data) do
+    user_id = get_in(conn.assigns, [:current_scope, Access.key(:user), Access.key(:id)])
+    study_id_int = String.to_integer(study_id)
+
+    if Studies.has_submitted?(study_id_int, user_id) do
+      json(conn, %{status: "already_submitted"})
+    else
+      case Studies.record_submission(study_id_int, user_id, trial_data) do
+        {:ok, _} -> json(conn, %{status: "ok"})
+        {:error, _} -> json(conn, %{status: "already_submitted"})
+      end
+    end
+  end
+
+  def export(conn, %{"study_id" => study_id}) do
+    study = Studies.get_study_meta!(study_id)
+    csv = Studies.export_submissions_csv(study_id)
+    filename = study.title |> String.downcase() |> String.replace(~r/[^a-z0-9]+/, "-") |> then(&"#{&1}-submissions.csv")
+
+    conn
+    |> put_resp_content_type("text/csv")
+    |> put_resp_header("content-disposition", ~s(attachment; filename="#{filename}"))
+    |> send_resp(200, csv)
   end
 
   defp authorize_study_access(%Scope{user: %User{role: :participant, client_id: p_client}}, study)

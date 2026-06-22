@@ -24,20 +24,24 @@ defmodule Socho.Studies.JsGenerator do
     root_vars = Enum.join(root_var_names, ", ")
 
     """
-    function saveData(csvData) {
+    function saveData(trialData) {
       const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
       fetch(window.location.pathname + "/user-data", {
         method: "POST",
         headers: { "content-type": "application/json", "x-csrf-token": csrfToken },
-        body: JSON.stringify({ data: csvData })
+        body: JSON.stringify({ data: trialData })
       })
         .then(r => r.json())
-        .then(result => console.log("Data saved:", result))
+        .then(result => {
+          if (result.status === "already_submitted") {
+            document.body.innerHTML = "<div style='display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif'><p>You have already completed this study. Thank you!</p></div>";
+          }
+        })
         .catch(err => console.error("Failed to save data:", err));
     }
 
     const jsPsych = initJsPsych({
-      on_finish: function() { saveData(jsPsych.data.get().csv()); }
+      on_finish: function() { saveData(jsPsych.data.get().values()); }
     });
 
     #{all_js}

@@ -2,7 +2,7 @@ defmodule Socho.Studies do
   import Ecto.Query
 
   alias Socho.Repo
-  alias Socho.Studies.{Study, Trial}
+  alias Socho.Studies.{Study, Trial, Submission}
 
   def list_studies do
     from(s in Study, order_by: [desc: s.inserted_at])
@@ -96,5 +96,64 @@ defmodule Socho.Studies do
 
       insert_trial_tree(study_id, node[:children] || [], record.id)
     end)
+  end
+
+  # ── Submissions ──────────────────────────────────────────────────────────────
+
+  def record_submission(study_id, user_id, trial_list) when is_list(trial_list) do
+    %Submission{}
+    |> Submission.changeset(%{study_id: study_id, user_id: user_id, data: %{"trials" => trial_list}})
+    |> Repo.insert()
+  end
+
+  def has_submitted?(study_id, user_id) when not is_nil(user_id) do
+    Repo.exists?(from s in Submission, where: s.study_id == ^study_id and s.user_id == ^user_id)
+  end
+
+  def has_submitted?(_study_id, nil), do: false
+
+  def count_submissions(study_id) do
+    Repo.aggregate(from(s in Submission, where: s.study_id == ^study_id), :count)
+  end
+
+  def list_submissions(study_id) do
+    from(s in Submission, where: s.study_id == ^study_id, order_by: [asc: s.inserted_at])
+    |> Repo.all()
+  end
+
+  def export_submissions_csv(study_id) do
+    submissions = list_submissions(study_id)
+
+    all_keys =
+      submissions
+      |> Enum.flat_map(fn sub -> (sub.data["trials"] || []) |> Enum.flat_map(&Map.keys/1) end)
+      |> Enum.uniq()
+      |> Enum.sort()
+
+    headers = ["submission_id", "submitted_at"] ++ all_keys
+
+    rows =
+      Enum.flat_map(submissions, fn sub ->
+        Enum.map(sub.data["trials"] || [], fn trial ->
+          [to_string(sub.id), Calendar.strftime(sub.inserted_at, "%Y-%m-%dT%H:%M:%S")] ++
+            Enum.map(all_keys, fn k -> csv_cell(trial[k]) end)
+        end)
+      end)
+
+    [headers | rows]
+    |> Enum.map_join("\n", fn row -> Enum.map_join(row, ",", &csv_escape/1) end)
+  end
+
+  defp csv_cell(nil), do: ""
+  defp csv_cell(v) when is_binary(v), do: v
+  defp csv_cell(v), do: to_string(v)
+
+  defp csv_escape(value) do
+    str = to_string(value)
+    if String.contains?(str, [",", "\"", "\n"]) do
+      "\"" <> String.replace(str, "\"", "\"\"") <> "\""
+    else
+      str
+    end
   end
 end

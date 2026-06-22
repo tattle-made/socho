@@ -23,6 +23,7 @@ defmodule SochoWeb.Router do
     get "/", PageController, :home
     get "/study/:study_id", StudyController, :show
     post "/study/:study_id/user-data", StudyController, :save_data
+    get "/studies/:study_id/export", StudyController, :export
   end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development

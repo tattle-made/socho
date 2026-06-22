@@ -15,7 +15,8 @@ defmodule SochoWeb.StudyLive.Settings do
      assign(socket,
        study: study,
        clients: clients,
-       form: to_form(changeset)
+       form: to_form(changeset),
+       submission_count: Studies.count_submissions(id)
      )}
   end
 
@@ -75,6 +76,25 @@ defmodule SochoWeb.StudyLive.Settings do
             </div>
 
           </.form>
+        </div>
+
+        <%!-- Submissions --%>
+        <div class="card bg-base-200 shadow p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-lg font-semibold">Submissions</h2>
+              <p class="text-sm opacity-60 mt-0.5">
+                {if @submission_count == 0, do: "No submissions yet.", else: "#{@submission_count} #{if @submission_count == 1, do: "submission", else: "submissions"} collected."}
+              </p>
+            </div>
+            <a
+              :if={@submission_count > 0}
+              href={"/studies/#{@study.id}/export"}
+              class="btn btn-outline btn-sm"
+            >
+              Export CSV
+            </a>
+          </div>
         </div>
 
       </div>
