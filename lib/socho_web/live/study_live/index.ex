@@ -9,6 +9,26 @@ defmodule SochoWeb.StudyLive.Index do
   end
 
   @impl true
+  def handle_event("delete_study", %{"id" => id}, socket) do
+    role = socket.assigns.current_scope.user.role
+
+    if role in [:admin, :manager] do
+      case Studies.delete_study(String.to_integer(id)) do
+        {:ok, _} ->
+          {:noreply, assign(socket, studies: Studies.list_studies())}
+
+        {:error, :not_found} ->
+          {:noreply, put_flash(socket, :error, "Study not found.")}
+
+        {:error, _} ->
+          {:noreply, put_flash(socket, :error, "Failed to delete study.")}
+      end
+    else
+      {:noreply, put_flash(socket, :error, "You are not authorized to delete studies.")}
+    end
+  end
+
+  @impl true
   def render(assigns) do
     ~H"""
     <Layouts.app flash={@flash} current_scope={@current_scope}>
@@ -41,6 +61,14 @@ defmodule SochoWeb.StudyLive.Index do
               <.link href={"/study/#{study.id}"} class="btn btn-sm btn-ghost" target="_blank">
                 Preview
               </.link>
+              <button
+                phx-click="delete_study"
+                phx-value-id={study.id}
+                data-confirm={"Delete \"#{study.title}\"? This cannot be undone."}
+                class="btn btn-sm btn-error btn-outline"
+              >
+                Delete
+              </button>
             </div>
           </div>
         <% end %>

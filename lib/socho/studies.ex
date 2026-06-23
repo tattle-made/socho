@@ -28,6 +28,13 @@ defmodule Socho.Studies do
 
   def get_study_meta!(id), do: Repo.get!(Study, id)
 
+  def delete_study(id) do
+    case Repo.get(Study, id) do
+      nil -> {:error, :not_found}
+      study -> Repo.delete(study)
+    end
+  end
+
   def update_study(id, attrs) do
     Repo.get!(Study, id)
     |> Study.changeset(attrs)
