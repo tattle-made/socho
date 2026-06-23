@@ -6,6 +6,7 @@ defmodule Socho.Studies.Trial do
     field :position, :integer
     field :plugin, :string
     field :config, :map, default: %{}
+    field :extensions, :map, default: %{}
     field :node_type, :string, default: "trial"
     field :parent_id, :integer
     field :children, :any, virtual: true, default: []
@@ -19,7 +20,7 @@ defmodule Socho.Studies.Trial do
 
   def changeset(trial, attrs) do
     trial
-    |> cast(attrs, [:position, :plugin, :config, :study_id, :node_type, :parent_id])
+    |> cast(attrs, [:position, :plugin, :config, :extensions, :study_id, :node_type, :parent_id])
     |> validate_required([:position, :study_id, :node_type])
     |> validate_inclusion(:node_type, ["trial", "timeline"])
   end

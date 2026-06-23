@@ -72,6 +72,7 @@ defmodule SochoWeb.StudyLive.Builder do
       node_type: "timeline",
       plugin: nil,
       config: %{"timeline_variables" => [], "repetitions" => 1, "randomize_order" => false},
+      extensions: %{},
       children: []
     }
 
@@ -91,6 +92,7 @@ defmodule SochoWeb.StudyLive.Builder do
       node_type: "trial",
       plugin: name,
       config: config,
+      extensions: %{},
       children: []
     }
 
@@ -132,6 +134,70 @@ defmodule SochoWeb.StudyLive.Builder do
         end
 
       {:noreply, assign(socket, trials: update_node_config(socket.assigns.trials, id, config))}
+    else
+      _ -> {:noreply, socket}
+    end
+  end
+
+  def handle_event("toggle_extension", %{"ext" => ext_name}, socket) do
+    with id when not is_nil(id) <- socket.assigns.selected_trial_id,
+         node when not is_nil(node) <- find_node(socket.assigns.trials, id) do
+      ext_cfg = get_in(node.extensions || %{}, [ext_name]) || %{}
+      enabled = Map.get(ext_cfg, "enabled", false)
+      new_ext_cfg = Map.put(ext_cfg, "enabled", !enabled)
+
+      new_ext_cfg =
+        if ext_name == "touchscreen-buttons" && !enabled && !Map.has_key?(ext_cfg, "buttons") do
+          Map.put(new_ext_cfg, "buttons", default_tsb_buttons())
+        else
+          new_ext_cfg
+        end
+
+      new_extensions = Map.put(node.extensions || %{}, ext_name, new_ext_cfg)
+      {:noreply, assign(socket, trials: update_node_extensions(socket.assigns.trials, id, new_extensions))}
+    else
+      _ -> {:noreply, socket}
+    end
+  end
+
+  def handle_event("add_tsb_button", %{"ext" => ext_name}, socket) do
+    with id when not is_nil(id) <- socket.assigns.selected_trial_id,
+         node when not is_nil(node) <- find_node(socket.assigns.trials, id) do
+      ext_cfg = get_in(node.extensions || %{}, [ext_name]) || %{}
+      buttons = Map.get(ext_cfg, "buttons", [])
+      new_button = %{"key" => "e", "preset" => "left", "label" => "←", "color" => ""}
+      new_ext_cfg = Map.put(ext_cfg, "buttons", buttons ++ [new_button])
+      new_extensions = Map.put(node.extensions || %{}, ext_name, new_ext_cfg)
+      {:noreply, assign(socket, trials: update_node_extensions(socket.assigns.trials, id, new_extensions))}
+    else
+      _ -> {:noreply, socket}
+    end
+  end
+
+  def handle_event("remove_tsb_button", %{"ext" => ext_name, "index" => idx_str}, socket) do
+    with id when not is_nil(id) <- socket.assigns.selected_trial_id,
+         node when not is_nil(node) <- find_node(socket.assigns.trials, id) do
+      idx = String.to_integer(idx_str)
+      ext_cfg = get_in(node.extensions || %{}, [ext_name]) || %{}
+      buttons = Map.get(ext_cfg, "buttons", []) |> List.delete_at(idx)
+      new_ext_cfg = Map.put(ext_cfg, "buttons", buttons)
+      new_extensions = Map.put(node.extensions || %{}, ext_name, new_ext_cfg)
+      {:noreply, assign(socket, trials: update_node_extensions(socket.assigns.trials, id, new_extensions))}
+    else
+      _ -> {:noreply, socket}
+    end
+  end
+
+  def handle_event("tsb_button_changed", %{"ext" => ext_name, "index" => idx_str, "button" => params}, socket) do
+    with id when not is_nil(id) <- socket.assigns.selected_trial_id,
+         node when not is_nil(node) <- find_node(socket.assigns.trials, id) do
+      idx = String.to_integer(idx_str)
+      ext_cfg = get_in(node.extensions || %{}, [ext_name]) || %{}
+      buttons = Map.get(ext_cfg, "buttons", [])
+      updated = Map.merge(Enum.at(buttons, idx, %{}), params)
+      new_ext_cfg = Map.put(ext_cfg, "buttons", List.replace_at(buttons, idx, updated))
+      new_extensions = Map.put(node.extensions || %{}, ext_name, new_ext_cfg)
+      {:noreply, assign(socket, trials: update_node_extensions(socket.assigns.trials, id, new_extensions))}
     else
       _ -> {:noreply, socket}
     end
@@ -215,6 +281,7 @@ defmodule SochoWeb.StudyLive.Builder do
       node_type: trial.node_type,
       plugin: trial.plugin,
       config: trial.config,
+      extensions: trial.extensions || %{},
       children: Enum.map(trial.children, &db_trial_to_node/1)
     }
   end
@@ -224,6 +291,7 @@ defmodule SochoWeb.StudyLive.Builder do
       node_type: node.node_type,
       plugin: node.plugin,
       config: node.config,
+      extensions: node.extensions || %{},
       children: Enum.map(node.children || [], &node_to_map/1)
     }
   end
@@ -242,6 +310,16 @@ defmodule SochoWeb.StudyLive.Builder do
         %{node | config: new_config}
       else
         %{node | children: update_node_config(node.children, id, new_config)}
+      end
+    end)
+  end
+
+  defp update_node_extensions(nodes, id, new_extensions) do
+    Enum.map(nodes, fn node ->
+      if node.id == id do
+        %{node | extensions: new_extensions}
+      else
+        %{node | children: update_node_extensions(node.children, id, new_extensions)}
       end
     end)
   end
@@ -385,6 +463,35 @@ defmodule SochoWeb.StudyLive.Builder do
     end)
   end
 
+  defp default_tsb_buttons do
+    [
+      %{"key" => "e", "preset" => "left", "label" => "←", "color" => ""},
+      %{"key" => "i", "preset" => "right", "label" => "→", "color" => ""}
+    ]
+  end
+
+  @tsb_presets [
+    {"left", "Fill left"},
+    {"right", "Fill right"},
+    {"left_middle", "Left middle"},
+    {"right_middle", "Right middle"},
+    {"fill_bottom", "Fill bottom"},
+    {"bottom_left", "Bottom left"},
+    {"bottom_right", "Bottom right"},
+    {"top_left", "Top left"},
+    {"top_right", "Top right"}
+  ]
+
+  defp available_extensions do
+    [
+      %{
+        name: "touchscreen-buttons",
+        label: "Touchscreen Buttons",
+        description: "Show on-screen tap zones for keyboard responses on touch devices."
+      }
+    ]
+  end
+
   # ── Template ───────────────────────────────────────────────────────────────
 
   @impl true
@@ -394,7 +501,7 @@ defmodule SochoWeb.StudyLive.Builder do
         do: find_node(assigns.trials, assigns.selected_trial_id),
         else: nil
 
-    assigns = assign(assigns, selected_trial: selected_trial)
+    assigns = assign(assigns, selected_trial: selected_trial, tsb_presets: @tsb_presets)
 
     ~H"""
     <Layouts.app flash={@flash} current_scope={@current_scope}>
@@ -588,6 +695,107 @@ defmodule SochoWeb.StudyLive.Builder do
                     />
                   <% end %>
                 </form>
+
+                <div class="divider text-xs mt-3 mb-2">Extensions</div>
+
+                <div class="space-y-3 pb-4">
+                  <%= for ext <- available_extensions() do %>
+                    <% ext_cfg = Map.get(@selected_trial.extensions || %{}, ext.name, %{}) %>
+                    <% enabled = Map.get(ext_cfg, "enabled", false) %>
+
+                    <div class="flex items-start gap-2">
+                      <input
+                        type="checkbox"
+                        class="checkbox checkbox-xs mt-1 shrink-0"
+                        checked={enabled}
+                        phx-click="toggle_extension"
+                        phx-value-ext={ext.name}
+                      />
+                      <div class="flex-1 min-w-0">
+                        <p class="text-xs font-medium">{ext.label}</p>
+                        <p class="text-xs opacity-50 leading-tight">{ext.description}</p>
+
+                        <%= if enabled do %>
+                          <% buttons = Map.get(ext_cfg, "buttons", default_tsb_buttons()) %>
+                          <div class="mt-2 space-y-2">
+                            <%= for {btn, idx} <- Enum.with_index(buttons) do %>
+                              <div class="border border-base-content/10 rounded p-2 space-y-1 bg-base-100">
+                                <div class="flex items-center justify-between">
+                                  <span class="text-xs font-medium opacity-60">Button {idx + 1}</span>
+                                  <button
+                                    class="btn btn-xs btn-ghost text-error px-1"
+                                    phx-click="remove_tsb_button"
+                                    phx-value-ext={ext.name}
+                                    phx-value-index={idx}
+                                    type="button"
+                                  >✕</button>
+                                </div>
+                                <form
+                                  phx-change="tsb_button_changed"
+                                  id={"tsb-btn-#{@selected_trial.id}-#{idx}"}
+                                  class="space-y-1"
+                                >
+                                  <input type="hidden" name="ext" value={ext.name} />
+                                  <input type="hidden" name="index" value={idx} />
+                                  <div class="flex items-center gap-2">
+                                    <label class="text-xs opacity-60 w-12 shrink-0">Zone</label>
+                                    <select
+                                      class="select select-bordered select-xs flex-1"
+                                      name="button[preset]"
+                                    >
+                                      <%= for {val, lbl} <- @tsb_presets do %>
+                                        <option value={val} selected={Map.get(btn, "preset", "left") == val}>
+                                          {lbl}
+                                        </option>
+                                      <% end %>
+                                    </select>
+                                  </div>
+                                  <div class="flex items-center gap-2">
+                                    <label class="text-xs opacity-60 w-12 shrink-0">Key</label>
+                                    <input
+                                      type="text"
+                                      class="input input-bordered input-xs w-12 font-mono"
+                                      name="button[key]"
+                                      value={Map.get(btn, "key", "e")}
+                                      maxlength="10"
+                                    />
+                                  </div>
+                                  <div class="flex items-center gap-2">
+                                    <label class="text-xs opacity-60 w-12 shrink-0">Label</label>
+                                    <input
+                                      type="text"
+                                      class="input input-bordered input-xs flex-1"
+                                      name="button[label]"
+                                      value={Map.get(btn, "label", "")}
+                                    />
+                                  </div>
+                                  <div class="flex items-center gap-2">
+                                    <label class="text-xs opacity-60 w-12 shrink-0">Color</label>
+                                    <input
+                                      type="color"
+                                      class="w-8 h-6 rounded cursor-pointer border border-base-300"
+                                      name="button[color]"
+                                      value={if Map.get(btn, "color", "") == "", do: "#999999", else: btn["color"]}
+                                    />
+                                  </div>
+                                </form>
+                              </div>
+                            <% end %>
+
+                            <button
+                              class="btn btn-xs btn-outline w-full"
+                              phx-click="add_tsb_button"
+                              phx-value-ext={ext.name}
+                              type="button"
+                            >
+                              + Add button
+                            </button>
+                          </div>
+                        <% end %>
+                      </div>
+                    </div>
+                  <% end %>
+                </div>
               </div>
             <% else %>
               <p class="text-xs font-semibold uppercase tracking-wider opacity-50">Configure</p>

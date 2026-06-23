@@ -21,9 +21,7 @@ Ready to run in production? Please [check our deployment guides](https://hexdocs
 - [X] Adding participants and studies to team
 - [X] Tracking submissions on a Study
 - [X] Store and Export Study data
-- [ ] Whitelabel platform and apply client branding
-- [ ] Media Storage and reference
-- [ ] Test touch screen functionality
 - [X] Floating preview section
-- [ ] Show client some data at the end of a survey
 - [X] Add support for 3 custom trials
+- [X] Test touch screen functionality
+- [ ] Show client some processed data at the end of a survey

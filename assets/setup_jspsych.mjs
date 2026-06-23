@@ -55,6 +55,39 @@ copyFileSync(nmPath('jspsych/dist/index.browser.min.js'), join(VENDOR_DIR, 'jsps
 copyFileSync(nmPath('jspsych/css/jspsych.css'), join(VENDOR_DIR, 'jspsych.css'));
 console.log('✓ jspsych core + css');
 
+// --- Extensions ---
+
+const EXTENSIONS = [
+  { name: 'extension-touchscreen-buttons', pkg: '@jspsych-contrib/extension-touchscreen-buttons' },
+];
+
+for (const { name, pkg } of EXTENSIONS) {
+  const pkgDir = nmPath(pkg);
+  if (!existsSync(pkgDir)) {
+    console.warn(`⚠  ${pkg} not found in node_modules — skipping`);
+    continue;
+  }
+  const browserBuild = join(pkgDir, 'dist/index.browser.min.js');
+  if (!existsSync(browserBuild)) {
+    console.warn(`⚠  ${pkg}: dist/index.browser.min.js not found — skipping`);
+    continue;
+  }
+  const outPath = join(VENDOR_DIR, `${name}.js`);
+  let src = readFileSync(browserBuild, 'utf8');
+
+  // Patch: also fire mousedown/mouseup so buttons work with mouse clicks (not just touch).
+  src = src.replace(
+    'addEventListener("touchend",a.end_listener.bind(a),!1),b.appendChild(a.div)',
+    'addEventListener("touchend",a.end_listener.bind(a),!1),' +
+    'a.div.addEventListener("mousedown",a.start_listener.bind(a),!1),' +
+    'a.div.addEventListener("mouseup",a.end_listener.bind(a),!1),' +
+    'b.appendChild(a.div)'
+  );
+
+  writeFileSync(outPath, src);
+  console.log(`✓ ${name}`);
+}
+
 // --- ParameterType mapping ---
 // Numeric enum values from jsPsych 8.x (ParameterType in packages/jspsych/src/modules/plugins.ts).
 // Used to convert numeric type values in plugin info to readable strings.

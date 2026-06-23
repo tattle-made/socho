@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "private": true,
   "dependencies": {
+    "@jspsych-contrib/extension-touchscreen-buttons": "*",
     "@jspsych-contrib/plugin-survey-slider": "*",
     "@jspsych/plugin-animation": "*",
     "@jspsych/plugin-audio-button-response": "*",

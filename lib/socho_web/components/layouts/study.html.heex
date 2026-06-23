@@ -9,6 +9,9 @@
     <%= for href <- @external_stylesheets do %>
       <link rel="stylesheet" href={href} />
     <% end %>
+    <%= if @inline_css != "" do %>
+      <style><%= raw(@inline_css) %></style>
+    <% end %>
   </head>
   <body>
     {@inner_content}

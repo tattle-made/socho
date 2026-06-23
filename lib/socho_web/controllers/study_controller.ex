@@ -15,6 +15,7 @@ defmodule SochoWeb.StudyController do
         |> assign(:external_stylesheets, JsGenerator.required_stylesheets(study))
         |> assign(:external_scripts, JsGenerator.required_scripts(study))
         |> assign(:inline_js, JsGenerator.generate_inline_js(study))
+        |> assign(:inline_css, JsGenerator.required_inline_css(study))
         |> put_layout(html: {SochoWeb.Layouts, :study})
         |> render(:show)
 

@@ -90,6 +90,7 @@ defmodule Socho.Studies do
           node_type: node[:node_type] || "trial",
           plugin: node[:plugin],
           config: node[:config] || %{},
+          extensions: node[:extensions] || %{},
           parent_id: parent_id
         })
         |> Repo.insert!()

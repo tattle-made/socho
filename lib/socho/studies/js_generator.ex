@@ -10,6 +10,52 @@ defmodule Socho.Studies.JsGenerator do
     ["#{@jspsych_base}/jspsych.css"]
   end
 
+  def required_inline_css(study) do
+    if collect_tsb_layouts(study.trials) != [] do
+      """
+      .jsTouchButton {
+        position: fixed;
+        z-index: 1000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        user-select: none;
+        -webkit-user-select: none;
+        touch-action: none;
+        font-size: 6vw;
+        color: rgba(255,255,255,0.6);
+      }
+      .jsTouchButtonLeft   { left: 0;  top: 0; width: 30%; height: 100%; }
+      .jsTouchButtonRight  { right: 0; top: 0; width: 30%; height: 100%; }
+      .jsTouchButtonLeftBottom  { left: 0;  bottom: 0; width: 35%; height: 35%; }
+      .jsTouchButtonRightBottom { right: 0; bottom: 0; width: 35%; height: 35%; }
+      .jsTouchButtonLeftTop     { left: 0;  top: 0;    width: 35%; height: 35%; }
+      .jsTouchButtonRightTop    { right: 0; top: 0;    width: 35%; height: 35%; }
+      .jsTouchButtonFillBottom,
+      .jsTouchButtonLeftMiddle,
+      .jsTouchButtonRightMiddle {
+        position: fixed;
+        z-index: 1000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        user-select: none;
+        -webkit-user-select: none;
+        touch-action: none;
+        font-size: 6vw;
+        color: rgba(255,255,255,0.6);
+      }
+      .jsTouchButtonFillBottom  { left: 0; bottom: 0; width: 100%; height: 20%; }
+      .jsTouchButtonLeftMiddle  { left: 0;  top: 30%; width: 30%; height: 40%; }
+      .jsTouchButtonRightMiddle { right: 0; top: 30%; width: 30%; height: 40%; }
+      """
+    else
+      ""
+    end
+  end
+
   def required_scripts(study) do
     custom_names = Registry.custom_plugin_names()
 
@@ -23,14 +69,35 @@ defmodule Socho.Studies.JsGenerator do
           else: "#{@jspsych_base}/#{name}.js"
       end)
 
-    ["#{@jspsych_base}/jspsych.js" | plugins]
+    extension_scripts =
+      if collect_tsb_layouts(study.trials) != [],
+        do: ["#{@jspsych_base}/extension-touchscreen-buttons.js"],
+        else: []
+
+    ["#{@jspsych_base}/jspsych.js"] ++ extension_scripts ++ plugins
   end
 
   def generate_inline_js(study) do
+    tsb_layouts = collect_tsb_layouts(study.trials)
     {_, declarations, root_var_names} = emit_nodes(study.trials, 1)
 
     all_js = Enum.join(declarations, "\n\n")
     root_vars = Enum.join(root_var_names, ", ")
+
+    extensions_js =
+      case tsb_layouts do
+        [] ->
+          ""
+
+        layouts ->
+          layouts_js =
+            Enum.map_join(layouts, ", ", fn {name, buttons} ->
+              buttons_js = Enum.map_join(buttons, ", ", &btn_to_js/1)
+              ~s(#{name}: [#{buttons_js}])
+            end)
+
+          "extensions: [{ type: jsPsychExtensionTouchscreenButtons, params: { #{layouts_js} } }],\n      "
+      end
 
     """
     const __preview__ = new URLSearchParams(window.location.search).has('preview');
@@ -63,7 +130,7 @@ defmodule Socho.Studies.JsGenerator do
     }
 
     const jsPsych = initJsPsych({
-      on_finish: function() { saveData(jsPsych.data.get().values()); }
+      #{extensions_js}on_finish: function() { saveData(jsPsych.data.get().values()); }
     });
 
     #{all_js}
@@ -75,6 +142,60 @@ defmodule Socho.Studies.JsGenerator do
   def plugin_to_js_var(plugin_name) do
     parts = String.split(plugin_name, "-")
     "jsPsych" <> Enum.map_join(parts, &String.capitalize/1)
+  end
+
+  defp default_tsb_buttons do
+    [
+      %{"key" => "e", "preset" => "left", "label" => "←", "color" => ""},
+      %{"key" => "i", "preset" => "right", "label" => "→", "color" => ""}
+    ]
+  end
+
+  # Collects unique touchscreen-button layouts across all trials.
+  # Returns [{layout_name, buttons}] deduplicated by name.
+  defp collect_tsb_layouts(nodes) do
+    nodes
+    |> Enum.flat_map(fn node ->
+      child_layouts = collect_tsb_layouts(node.children || [])
+      tsb = get_in(node.extensions || %{}, ["touchscreen-buttons"])
+
+      if tsb && tsb["enabled"] do
+        buttons = tsb["buttons"] || default_tsb_buttons()
+        name = tsb_layout_name(buttons)
+        [{name, buttons} | child_layouts]
+      else
+        child_layouts
+      end
+    end)
+    |> Enum.uniq_by(fn {name, _} -> name end)
+  end
+
+  defp tsb_layout_name(buttons) do
+    keys = Enum.map_join(buttons, "_", & &1["key"])
+    "tsb_#{keys}"
+  end
+
+  # Custom presets not in the extension library — rendered via CSS class instead of the `preset` param.
+  @custom_tsb_presets %{
+    "fill_bottom"   => "jsTouchButtonFillBottom",
+    "left_middle"   => "jsTouchButtonLeftMiddle",
+    "right_middle"  => "jsTouchButtonRightMiddle"
+  }
+
+  defp btn_to_js(btn) do
+    preset = btn["preset"] || "left"
+    color = btn["color"] || ""
+    color_js = if color != "", do: ~s(, color: '#{color}'), else: ""
+    label = btn["label"] || ""
+    label_js = if label != "", do: ~s(, innerText: '#{label}'), else: ""
+
+    case Map.get(@custom_tsb_presets, preset) do
+      nil ->
+        ~s({ key: '#{btn["key"]}', preset: '#{preset}'#{label_js}#{color_js} })
+
+      css_class ->
+        ~s({ key: '#{btn["key"]}', css: '#{css_class}'#{label_js}#{color_js} })
+    end
   end
 
   defp collect_plugins(nodes) do
@@ -103,7 +224,19 @@ defmodule Socho.Studies.JsGenerator do
   defp emit_node(node, counter) do
     var_name = "trial#{counter}"
     config_js = config_to_js(node.config, node.plugin)
-    decl = "const #{var_name} = {\n  type: #{plugin_to_js_var(node.plugin)},\n#{config_js}};"
+
+    extensions_js =
+      case get_in(node.extensions || %{}, ["touchscreen-buttons"]) do
+        %{"enabled" => true} = tsb ->
+          buttons = tsb["buttons"] || default_tsb_buttons()
+          layout = tsb_layout_name(buttons)
+          "  extensions: [{ type: jsPsychExtensionTouchscreenButtons, params: { layout: '#{layout}' } }],\n"
+
+        _ ->
+          ""
+      end
+
+    decl = "const #{var_name} = {\n  type: #{plugin_to_js_var(node.plugin)},\n#{extensions_js}#{config_js}};"
     {counter + 1, [decl], var_name}
   end
 
