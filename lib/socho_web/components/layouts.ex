@@ -38,8 +38,8 @@ defmodule SochoWeb.Layouts do
     <header class="navbar px-4 sm:px-6 lg:px-8 border-b border-base-300">
       <div class="flex-1 flex items-center gap-6">
         <a href="/" class="flex items-center gap-2 shrink-0">
-          <img src={~p"/images/logo.svg"} width="36" />
-          <span class="text-sm font-semibold">Socho</span>
+          <img src={~p"/images/logo.svg"} width="28" />
+          <span class="text-sm font-semibold text-base-content">Socho</span>
         </a>
         <nav class="flex items-center gap-1">
           <a href={~p"/studies"} class="btn btn-ghost btn-sm">Studies</a>
