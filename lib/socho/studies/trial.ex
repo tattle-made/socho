@@ -22,6 +22,6 @@ defmodule Socho.Studies.Trial do
     trial
     |> cast(attrs, [:position, :plugin, :config, :extensions, :study_id, :node_type, :parent_id])
     |> validate_required([:position, :study_id, :node_type])
-    |> validate_inclusion(:node_type, ["trial", "timeline"])
+    |> validate_inclusion(:node_type, ["trial", "timeline", "template_group"])
   end
 end

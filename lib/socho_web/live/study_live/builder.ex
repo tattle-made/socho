@@ -4,6 +4,7 @@ defmodule SochoWeb.StudyLive.Builder do
   alias Socho.Clients
   alias Socho.Studies
   alias Socho.Studies.Registry
+  alias Socho.Studies.Templates
 
   # ── Mount ──────────────────────────────────────────────────────────────────
 
@@ -25,7 +26,10 @@ defmodule SochoWeb.StudyLive.Builder do
        trials: [],
        selected_trial_id: nil,
        show_preview: false,
-       preview_key: 0
+       preview_key: 0,
+       sidebar_tab: :blocks,
+       templates: Templates.all(),
+       template_group_key: 0
      )}
   end
 
@@ -109,7 +113,15 @@ defmodule SochoWeb.StudyLive.Builder do
   end
 
   def handle_event("select_trial", %{"id" => id_str}, socket) do
-    {:noreply, assign(socket, selected_trial_id: String.to_integer(id_str))}
+    id = String.to_integer(id_str)
+    node = find_node(socket.assigns.trials, id)
+
+    extra =
+      if node && node.node_type == "template_group",
+        do: [template_group_key: System.unique_integer([:positive])],
+        else: []
+
+    {:noreply, assign(socket, [{:selected_trial_id, id} | extra])}
   end
 
   def handle_event("move_trial_up", %{"id" => id_str}, socket) do
@@ -265,6 +277,50 @@ defmodule SochoWeb.StudyLive.Builder do
     end
   end
 
+  def handle_event("switch_sidebar_tab", %{"tab" => tab}, socket) do
+    {:noreply, assign(socket, sidebar_tab: String.to_existing_atom(tab))}
+  end
+
+  def handle_event("insert_template", %{"id" => tpl_id}, socket) do
+    tpl = Templates.get(tpl_id)
+    vars = Map.new(tpl.variables, &{&1.key, &1.default})
+    children = tpl.build.(vars) |> stamp_ids()
+
+    group = %{
+      id: System.unique_integer([:positive]),
+      node_type: "template_group",
+      plugin: nil,
+      config: %{"template_id" => tpl_id, "template_name" => tpl.name, "vars" => vars},
+      extensions: %{},
+      children: children
+    }
+
+    {:noreply,
+     assign(socket,
+       trials: socket.assigns.trials ++ [group],
+       selected_trial_id: group.id,
+       template_group_key: System.unique_integer([:positive])
+     )}
+  end
+
+  def handle_event("template_vars_changed", %{"vars" => vars}, socket) do
+    with id when not is_nil(id) <- socket.assigns.selected_trial_id,
+         %{node_type: "template_group"} = node <- find_node(socket.assigns.trials, id) do
+      tpl = Templates.get(node.config["template_id"])
+      children = tpl.build.(vars) |> stamp_ids()
+      new_config = %{"template_id" => node.config["template_id"], "template_name" => node.config["template_name"], "vars" => vars}
+
+      trials =
+        socket.assigns.trials
+        |> update_node_config(id, new_config)
+        |> update_node_children(id, children)
+
+      {:noreply, assign(socket, trials: trials)}
+    else
+      _ -> {:noreply, socket}
+    end
+  end
+
   def handle_event("toggle_preview", _params, socket) do
     {:noreply, assign(socket, show_preview: !socket.assigns.show_preview)}
   end
@@ -274,6 +330,14 @@ defmodule SochoWeb.StudyLive.Builder do
   end
 
   # ── Tree Helpers ────────────────────────────────────────────────────────────
+
+  defp stamp_ids(nodes) do
+    Enum.map(nodes, fn node ->
+      node
+      |> Map.put(:id, System.unique_integer([:positive]))
+      |> Map.update(:children, [], &stamp_ids/1)
+    end)
+  end
 
   defp db_trial_to_node(trial) do
     %{
@@ -310,6 +374,16 @@ defmodule SochoWeb.StudyLive.Builder do
         %{node | config: new_config}
       else
         %{node | children: update_node_config(node.children, id, new_config)}
+      end
+    end)
+  end
+
+  defp update_node_children(nodes, id, new_children) do
+    Enum.map(nodes, fn node ->
+      if node.id == id do
+        %{node | children: new_children}
+      else
+        %{node | children: update_node_children(node.children, id, new_children)}
       end
     end)
   end
@@ -501,7 +575,17 @@ defmodule SochoWeb.StudyLive.Builder do
         do: find_node(assigns.trials, assigns.selected_trial_id),
         else: nil
 
-    assigns = assign(assigns, selected_trial: selected_trial, tsb_presets: @tsb_presets)
+    selected_template =
+      if selected_trial && selected_trial.node_type == "template_group" do
+        Templates.get(selected_trial.config["template_id"])
+      end
+
+    assigns =
+      assign(assigns,
+        selected_trial: selected_trial,
+        selected_template: selected_template,
+        tsb_presets: @tsb_presets
+      )
 
     ~H"""
     <Layouts.app flash={@flash} current_scope={@current_scope}>
@@ -543,52 +627,99 @@ defmodule SochoWeb.StudyLive.Builder do
         style={if @show_preview && @study_id, do: "grid-template-columns: 180px 300px 1fr 360px", else: "grid-template-columns: 220px 400px 1fr"}
       >
 
-        <%!-- Column 1: Plugin picker --%>
+        <%!-- Column 1: Blocks / Templates --%>
         <div class="flex flex-col gap-2 min-h-0 border-r border-base-300 pr-4">
-          <p class="text-xs font-semibold uppercase tracking-wider opacity-50 shrink-0">Add Block</p>
 
-          <button
-            class="btn btn-sm btn-outline btn-secondary w-full shrink-0"
-            phx-click="add_timeline"
-            type="button"
-          >
-            + Timeline Group
-          </button>
-
-          <form phx-change="plugin_search" class="shrink-0">
-            <input
-              class="input input-bordered input-sm w-full"
-              type="text"
-              name="query"
-              placeholder="Search plugins…"
-              value={@plugin_search}
-              phx-debounce="100"
-              autocomplete="off"
-            />
-          </form>
-
-          <div class="overflow-y-auto flex-1 space-y-0.5">
-            <p :if={@filtered_plugins == []} class="text-sm opacity-50 px-2 py-1">
-              No plugins found.
-            </p>
-            <%= for name <- @filtered_plugins do %>
-              <% meta = @registry[name] %>
-              <button
-                class="btn btn-ghost w-full justify-start text-left h-auto py-2 px-2 font-normal"
-                phx-click="add_plugin_trial"
-                phx-value-plugin={name}
-                type="button"
-              >
-                <div class="flex flex-col items-start gap-0.5 w-full">
-                  <div class="flex items-center gap-1.5">
-                    <span class="text-sm font-medium leading-tight">{name}</span>
-                    <span :if={meta["custom"]} class="badge badge-accent badge-xs">custom</span>
-                  </div>
-                  <span :if={meta["description"]} class="text-xs opacity-50 leading-tight whitespace-normal text-left">{meta["description"]}</span>
-                </div>
-              </button>
-            <% end %>
+          <%!-- Tab bar --%>
+          <div role="tablist" class="tabs tabs-boxed tabs-sm shrink-0">
+            <button
+              role="tab"
+              class={["tab", if(@sidebar_tab == :blocks, do: "tab-active")]}
+              phx-click="switch_sidebar_tab"
+              phx-value-tab="blocks"
+              type="button"
+            >
+              Blocks
+            </button>
+            <button
+              role="tab"
+              class={["tab", if(@sidebar_tab == :templates, do: "tab-active")]}
+              phx-click="switch_sidebar_tab"
+              phx-value-tab="templates"
+              type="button"
+            >
+              Templates
+            </button>
           </div>
+
+          <%!-- Blocks tab --%>
+          <%= if @sidebar_tab == :blocks do %>
+            <button
+              class="btn btn-sm btn-outline btn-secondary w-full shrink-0"
+              phx-click="add_timeline"
+              type="button"
+            >
+              + Timeline Group
+            </button>
+
+            <form phx-change="plugin_search" class="shrink-0">
+              <input
+                class="input input-bordered input-sm w-full"
+                type="text"
+                name="query"
+                placeholder="Search plugins…"
+                value={@plugin_search}
+                phx-debounce="100"
+                autocomplete="off"
+              />
+            </form>
+
+            <div class="overflow-y-auto flex-1 space-y-0.5">
+              <p :if={@filtered_plugins == []} class="text-sm opacity-50 px-2 py-1">
+                No plugins found.
+              </p>
+              <%= for name <- @filtered_plugins do %>
+                <% meta = @registry[name] %>
+                <button
+                  class="btn btn-ghost w-full justify-start text-left h-auto py-2 px-2 font-normal"
+                  phx-click="add_plugin_trial"
+                  phx-value-plugin={name}
+                  type="button"
+                >
+                  <div class="flex flex-col items-start gap-0.5 w-full">
+                    <div class="flex items-center gap-1.5">
+                      <span class="text-sm font-medium leading-tight">{name}</span>
+                      <span :if={meta["custom"]} class="badge badge-accent badge-xs">custom</span>
+                    </div>
+                    <span :if={meta["description"]} class="text-xs opacity-50 leading-tight whitespace-normal text-left">{meta["description"]}</span>
+                  </div>
+                </button>
+              <% end %>
+            </div>
+          <% end %>
+
+          <%!-- Templates tab --%>
+          <%= if @sidebar_tab == :templates do %>
+            <p class="text-xs opacity-50 shrink-0">
+              Click a template to insert it. Edit its variables in the Configure panel.
+            </p>
+            <div class="overflow-y-auto flex-1 space-y-2">
+              <%= for tpl <- @templates do %>
+                <button
+                  class="btn btn-ghost w-full justify-start text-left h-auto py-2 px-2 font-normal border border-base-300 rounded-lg hover:border-primary"
+                  phx-click="insert_template"
+                  phx-value-id={tpl.id}
+                  type="button"
+                >
+                  <div class="flex flex-col items-start gap-0.5 w-full">
+                    <span class="text-sm font-semibold leading-tight">{tpl.name}</span>
+                    <span class="text-xs opacity-50 leading-tight whitespace-normal text-left">{tpl.description}</span>
+                  </div>
+                </button>
+              <% end %>
+            </div>
+          <% end %>
+
         </div>
 
         <%!-- Column 2: Trial tree --%>
@@ -610,6 +741,43 @@ defmodule SochoWeb.StudyLive.Builder do
 
         <%!-- Column 3: Config panel --%>
         <div class="flex flex-col gap-2 min-h-0 border-l border-base-300 pl-4">
+          <%= if @selected_trial && @selected_trial.node_type == "template_group" do %>
+            <p class="text-xs font-semibold uppercase tracking-wider opacity-50 shrink-0">Configure</p>
+            <p class="text-sm font-medium text-accent shrink-0 -mt-1">{@selected_template && @selected_template.name}</p>
+
+            <div class="overflow-y-auto flex-1">
+              <form
+                phx-change="template_vars_changed"
+                id={"template-vars-form-#{@template_group_key}"}
+                class="space-y-3"
+              >
+                <%= for var <- (@selected_template && @selected_template.variables) || [] do %>
+                  <% current_vars = @selected_trial.config["vars"] || %{} %>
+                  <div class="form-control">
+                    <label class="label py-1">
+                      <span class="label-text">{var.label}</span>
+                    </label>
+                    <textarea
+                      :if={var.type == :text}
+                      id={"tvar-#{@template_group_key}-#{var.key}"}
+                      class="textarea textarea-bordered textarea-sm text-xs font-mono leading-snug"
+                      name={"vars[#{var.key}]"}
+                      rows="4"
+                    >{Map.get(current_vars, var.key, var.default)}</textarea>
+                    <input
+                      :if={var.type == :int}
+                      id={"tvar-#{@template_group_key}-#{var.key}"}
+                      type="number"
+                      class="input input-bordered input-sm"
+                      name={"vars[#{var.key}]"}
+                      value={Map.get(current_vars, var.key, var.default)}
+                      step="1"
+                    />
+                  </div>
+                <% end %>
+              </form>
+            </div>
+          <% else %>
           <%= if @selected_trial && @selected_trial.node_type == "timeline" do %>
             <p class="text-xs font-semibold uppercase tracking-wider opacity-50 shrink-0">Configure</p>
             <p class="text-sm font-medium text-secondary shrink-0 -mt-1">Timeline Group</p>
@@ -802,6 +970,7 @@ defmodule SochoWeb.StudyLive.Builder do
               <p class="text-sm opacity-40 mt-2">Click a trial block to configure it.</p>
             <% end %>
           <% end %>
+          <% end %>
         </div>
 
         <%!-- Column 4: Phone preview --%>
@@ -945,6 +1114,61 @@ defmodule SochoWeb.StudyLive.Builder do
   attr :node, :map, required: true
   attr :position, :integer, required: true
   attr :selected_id, :integer, default: nil
+
+  defp node_block(%{node: %{node_type: "template_group"}} = assigns) do
+    ~H"""
+    <div class="space-y-1">
+      <div class={"card shadow-sm border-2 transition-colors " <>
+        if(@selected_id == @node.id,
+          do: "bg-accent/10 border-accent",
+          else: "bg-base-300 border-transparent"
+        )}>
+        <div class="flex items-center gap-2 p-3">
+          <div
+            class="flex items-center gap-2 flex-1 min-w-0 cursor-pointer"
+            phx-click="select_trial"
+            phx-value-id={@node.id}
+          >
+            <span class="badge badge-accent shrink-0">TPL</span>
+            <span class="text-sm font-medium truncate">
+              {@node.config["template_name"] || "Template"}
+            </span>
+            <span class="text-xs opacity-40">({length(@node.children)} blocks)</span>
+          </div>
+          <div class="flex items-center gap-0.5 shrink-0">
+            <button
+              class="btn btn-xs btn-ghost px-1"
+              phx-click="move_trial_up"
+              phx-value-id={@node.id}
+              type="button"
+              title="Move up"
+            >↑</button>
+            <button
+              class="btn btn-xs btn-ghost px-1"
+              phx-click="move_trial_down"
+              phx-value-id={@node.id}
+              type="button"
+              title="Move down"
+            >↓</button>
+            <button
+              class="btn btn-xs btn-ghost px-1 text-error"
+              phx-click="remove_trial"
+              phx-value-id={@node.id}
+              type="button"
+              title="Remove"
+            >✕</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="ml-4 pl-3 border-l-2 border-accent/30 space-y-1">
+        <%= for {child, child_pos} <- Enum.with_index(@node.children, 1) do %>
+          <.node_block node={child} position={child_pos} selected_id={@selected_id} />
+        <% end %>
+      </div>
+    </div>
+    """
+  end
 
   defp node_block(%{node: %{node_type: "timeline"}} = assigns) do
     ~H"""
