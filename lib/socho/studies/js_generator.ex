@@ -212,6 +212,14 @@ defmodule Socho.Studies.JsGenerator do
     end)
   end
 
+  defp emit_node(%{node_type: "template_group"} = node, counter) do
+    var_name = "timeline#{counter}"
+    {new_counter, child_decls, child_var_names} = emit_nodes(node.children || [], counter + 1)
+    children_js = Enum.join(child_var_names, ", ")
+    own_decl = "const #{var_name} = {\n  timeline: [#{children_js}]\n};"
+    {new_counter, child_decls ++ [own_decl], var_name}
+  end
+
   defp emit_node(%{node_type: "timeline"} = node, counter) do
     var_name = "timeline#{counter}"
     {new_counter, child_decls, child_var_names} = emit_nodes(node.children || [], counter + 1)

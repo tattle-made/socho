@@ -204,7 +204,17 @@ for (const pluginName of PLUGINS) {
     warnings.push(`${pkgName}: dist/index.browser.min.js not found — skipping`);
     continue;
   }
-  copyFileSync(browserBuild, join(VENDOR_DIR, `${pluginName}.js`));
+  let pluginSrc = readFileSync(browserBuild, 'utf8');
+
+  // Patch iat-image: center the stimulus div and set its dimensions.
+  if (pluginName === 'iat-image') {
+    pluginSrc = pluginSrc.replace(
+      "height: 20%; width: 100%; margin-left: auto; margin-right: auto; top: 42%; left: 0; right: 0'><img",
+      "height: 4em; width: 16em; margin-left: auto; margin-right: auto; top: 36%; left: 0; right: 0; text-align: center'><img"
+    );
+  }
+
+  writeFileSync(join(VENDOR_DIR, `${pluginName}.js`), pluginSrc);
 
   // Extract info schema
   try {
