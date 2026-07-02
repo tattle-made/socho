@@ -1124,6 +1124,17 @@ defmodule SochoWeb.StudyLive.Builder do
           else: "bg-base-300 border-transparent"
         )}>
         <div class="flex items-center gap-2 p-3">
+          <button
+            class="btn btn-xs btn-ghost px-1 shrink-0"
+            phx-click={
+              JS.toggle(to: "#tpl-children-#{@node.id}")
+              |> JS.toggle_class("rotate-180", to: "#tpl-chevron-#{@node.id}")
+            }
+            type="button"
+            title="Collapse/expand"
+          >
+            <span id={"tpl-chevron-#{@node.id}"} class="inline-block transition-transform">▾</span>
+          </button>
           <div
             class="flex items-center gap-2 flex-1 min-w-0 cursor-pointer"
             phx-click="select_trial"
@@ -1161,7 +1172,7 @@ defmodule SochoWeb.StudyLive.Builder do
         </div>
       </div>
 
-      <div class="ml-4 pl-3 border-l-2 border-accent/30 space-y-1">
+      <div id={"tpl-children-#{@node.id}"} class="ml-4 pl-3 border-l-2 border-accent/30 space-y-1">
         <%= for {child, child_pos} <- Enum.with_index(@node.children, 1) do %>
           <.node_block node={child} position={child_pos} selected_id={@selected_id} />
         <% end %>
@@ -1179,6 +1190,17 @@ defmodule SochoWeb.StudyLive.Builder do
           else: "bg-base-300 border-transparent"
         )}>
         <div class="flex items-center gap-2 p-3">
+          <button
+            class="btn btn-xs btn-ghost px-1 shrink-0"
+            phx-click={
+              JS.toggle(to: "#tl-children-#{@node.id}")
+              |> JS.toggle_class("rotate-180", to: "#tl-chevron-#{@node.id}")
+            }
+            type="button"
+            title="Collapse/expand"
+          >
+            <span id={"tl-chevron-#{@node.id}"} class="inline-block transition-transform">▾</span>
+          </button>
           <div
             class="flex items-center gap-2 flex-1 min-w-0 cursor-pointer"
             phx-click="select_trial"
@@ -1195,33 +1217,26 @@ defmodule SochoWeb.StudyLive.Builder do
               phx-value-id={@node.id}
               type="button"
               title="Move up"
-            >
-              ↑
-            </button>
+            >↑</button>
             <button
               class="btn btn-xs btn-ghost px-1"
               phx-click="move_trial_down"
               phx-value-id={@node.id}
               type="button"
               title="Move down"
-            >
-              ↓
-            </button>
+            >↓</button>
             <button
               class="btn btn-xs btn-ghost px-1 text-error"
               phx-click="remove_trial"
               phx-value-id={@node.id}
               type="button"
               title="Remove"
-            >
-              ✕
-            </button>
+            >✕</button>
           </div>
         </div>
       </div>
 
-      <%!-- Children indented below --%>
-      <div class="ml-4 pl-3 border-l-2 border-secondary/30 space-y-1">
+      <div id={"tl-children-#{@node.id}"} class="ml-4 pl-3 border-l-2 border-secondary/30 space-y-1">
         <p :if={@node.children == []} class="text-xs opacity-40 py-1 italic">
           Select this group then click a plugin to add trials here.
         </p>
