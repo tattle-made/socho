@@ -132,20 +132,48 @@ defmodule Socho.Studies do
   def export_submissions_csv(study_id) do
     submissions = list_submissions(study_id)
 
-    all_keys =
+    max_trials =
       submissions
-      |> Enum.flat_map(fn sub -> (sub.data["trials"] || []) |> Enum.flat_map(&Map.keys/1) end)
-      |> Enum.uniq()
-      |> Enum.sort()
+      |> Enum.map(fn sub -> length(sub.data["trials"] || []) end)
+      |> Enum.max(fn -> 0 end)
 
-    headers = ["submission_id", "submitted_at"] ++ all_keys
+    # Build {header, trial_index, key} triples ordered by trial position then key name
+    trial_columns =
+      if max_trials == 0 do
+        []
+      else
+        Enum.flat_map(0..(max_trials - 1), fn i ->
+          keys =
+            submissions
+            |> Enum.flat_map(fn sub ->
+              case Enum.at(sub.data["trials"] || [], i) do
+                nil -> []
+                trial -> Map.keys(trial)
+              end
+            end)
+            |> Enum.uniq()
+            |> Enum.sort()
+
+          Enum.map(keys, fn k -> {"trial_#{i + 1}_#{k}", i, k} end)
+        end)
+      end
+
+    headers = ["submission_id", "submitted_at"] ++ Enum.map(trial_columns, &elem(&1, 0))
 
     rows =
-      Enum.flat_map(submissions, fn sub ->
-        Enum.map(sub.data["trials"] || [], fn trial ->
-          [to_string(sub.id), Calendar.strftime(sub.inserted_at, "%Y-%m-%dT%H:%M:%S")] ++
-            Enum.map(all_keys, fn k -> csv_cell(trial[k]) end)
-        end)
+      Enum.map(submissions, fn sub ->
+        trials = sub.data["trials"] || []
+
+        trial_values =
+          Enum.map(trial_columns, fn {_col, i, key} ->
+            case Enum.at(trials, i) do
+              nil -> ""
+              trial -> csv_cell(trial[key])
+            end
+          end)
+
+        [to_string(sub.id), Calendar.strftime(sub.inserted_at, "%Y-%m-%dT%H:%M:%S")] ++
+          trial_values
       end)
 
     [headers | rows]

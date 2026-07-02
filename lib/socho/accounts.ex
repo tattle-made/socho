@@ -215,6 +215,49 @@ defmodule Socho.Accounts do
   end
 
   @doc """
+  Imports users from a CSV string. Each row must have at least an `email` column.
+  Optional columns: `username`, `role` (defaults to "participant").
+
+  Returns a list of `{email, :ok | {:error, reason}}` for each data row.
+  """
+  def import_users_from_csv(csv_content, inviter_scope, url_fun)
+      when is_function(url_fun, 1) do
+    rows =
+      Socho.CSVParser.parse_string(csv_content, skip_headers: false)
+
+    case rows do
+      [] ->
+        []
+
+      [header_row | data_rows] ->
+        headers = Enum.map(header_row, &(String.downcase(String.trim(&1))))
+
+        Enum.map(data_rows, fn row ->
+          attrs =
+            headers
+            |> Enum.zip(row)
+            |> Map.new()
+
+          email = Map.get(attrs, "email", "")
+
+          result = invite_user(inviter_scope, attrs, url_fun)
+
+          case result do
+            {:ok, _user} -> {email, :ok}
+            {:error, changeset} ->
+              errors =
+                Ecto.Changeset.traverse_errors(changeset, fn {msg, opts} ->
+                  Regex.replace(~r"%{(\w+)}", msg, fn _, key ->
+                    opts |> Keyword.get(String.to_existing_atom(key), key) |> to_string()
+                  end)
+                end)
+              {email, {:error, errors}}
+          end
+        end)
+    end
+  end
+
+  @doc """
   Delivers the invitation email to the given user.
   """
   def deliver_user_invitation(user, url) do
