@@ -757,18 +757,19 @@ defmodule SochoWeb.StudyLive.Builder do
               <form
                 phx-change="template_vars_changed"
                 id={"template-vars-form-#{@template_group_key}"}
-                class="space-y-3"
+                class="space-y-5"
               >
                 <%= for var <- (@selected_template && @selected_template.variables) || [] do %>
                   <% current_vars = @selected_trial.config["vars"] || %{} %>
                   <div class="form-control">
-                    <label class="label py-1">
-                      <span class="label-text">{var.label}</span>
-                    </label>
+                    <p class="text-sm font-medium leading-tight">{var.label}</p>
+                    <p class="text-xs opacity-40 mt-0.5 mb-1">
+                      {if var.type == :int, do: "INT", else: "TEXT"}
+                    </p>
                     <textarea
                       :if={var.type == :text}
                       id={"tvar-#{@template_group_key}-#{var.key}"}
-                      class="textarea textarea-bordered textarea-sm text-xs font-mono leading-snug"
+                      class="textarea textarea-bordered textarea-sm text-xs font-mono leading-snug w-full"
                       name={"vars[#{var.key}]"}
                       rows="4"
                     >{Map.get(current_vars, var.key, var.default)}</textarea>
@@ -776,7 +777,7 @@ defmodule SochoWeb.StudyLive.Builder do
                       :if={var.type == :int}
                       id={"tvar-#{@template_group_key}-#{var.key}"}
                       type="number"
-                      class="input input-bordered input-sm"
+                      class="input input-bordered input-sm w-full"
                       name={"vars[#{var.key}]"}
                       value={Map.get(current_vars, var.key, var.default)}
                       step="1"
@@ -794,15 +795,13 @@ defmodule SochoWeb.StudyLive.Builder do
               <form
                 phx-change="config_changed"
                 id={"config-form-#{@selected_trial.id}"}
-                class="space-y-3"
+                class="space-y-5"
               >
                 <div class="form-control">
-                  <label class="label py-1">
-                    <span class="label-text">timeline_variables</span>
-                    <span class="label-text-alt opacity-50">JSON array</span>
-                  </label>
+                  <p class="text-sm font-medium leading-tight">timeline_variables</p>
+                  <p class="text-xs opacity-40 mt-0.5 mb-1">JSON array</p>
                   <textarea
-                    class="textarea textarea-bordered text-xs font-mono"
+                    class="textarea textarea-bordered text-xs font-mono w-full"
                     name="config[timeline_variables]"
                     rows="6"
                     placeholder={"[{\"stimulus\": \"hello\"}, {\"stimulus\": \"world\"}]"}
@@ -813,13 +812,11 @@ defmodule SochoWeb.StudyLive.Builder do
                 </div>
 
                 <div class="form-control">
-                  <label class="label py-1">
-                    <span class="label-text">repetitions</span>
-                    <span class="label-text-alt opacity-50">INT</span>
-                  </label>
+                  <p class="text-sm font-medium leading-tight">repetitions</p>
+                  <p class="text-xs opacity-40 mt-0.5 mb-1">INT</p>
                   <input
                     type="number"
-                    class="input input-bordered input-sm"
+                    class="input input-bordered input-sm w-full"
                     name="config[repetitions]"
                     value={@selected_trial.config["repetitions"] || 1}
                     min="1"
@@ -827,27 +824,28 @@ defmodule SochoWeb.StudyLive.Builder do
                   />
                 </div>
 
-                <div class="flex items-center gap-3">
-                  <input type="hidden" name="config[randomize_order]" value="false" />
-                  <input
-                    type="checkbox"
-                    class="checkbox checkbox-sm"
-                    name="config[randomize_order]"
-                    value="true"
-                    checked={@selected_trial.config["randomize_order"] == true}
-                  />
-                  <label class="text-sm">randomize_order</label>
+                <div>
+                  <p class="text-sm font-medium leading-tight mb-1">randomize_order</p>
+                  <div class="flex items-center gap-2">
+                    <input type="hidden" name="config[randomize_order]" value="false" />
+                    <input
+                      type="checkbox"
+                      class="checkbox checkbox-sm"
+                      name="config[randomize_order]"
+                      value="true"
+                      checked={@selected_trial.config["randomize_order"] == true}
+                    />
+                    <span class="text-xs opacity-40">BOOL</span>
+                  </div>
                 </div>
 
                 <div class="divider text-xs my-1">Conditional Logic</div>
 
                 <div class="form-control">
-                  <label class="label py-1">
-                    <span class="label-text text-xs font-medium">Skip unless…</span>
-                    <span class="label-text-alt opacity-50 text-xs">conditional_function</span>
-                  </label>
+                  <p class="text-sm font-medium leading-tight">Skip unless…</p>
+                  <p class="text-xs opacity-40 mt-0.5 mb-1">conditional_function</p>
                   <textarea
-                    class="textarea textarea-bordered text-xs font-mono leading-snug"
+                    class="textarea textarea-bordered text-xs font-mono leading-snug w-full"
                     name="config[conditional_function]"
                     rows="4"
                     placeholder={"// Return true to run this block, false to skip it\nconst d = jsPsych.data.get().last(1).values()[0];\nreturn d.response === \"yes\";"}
@@ -860,12 +858,10 @@ defmodule SochoWeb.StudyLive.Builder do
                 </div>
 
                 <div class="form-control">
-                  <label class="label py-1">
-                    <span class="label-text text-xs font-medium">Repeat while…</span>
-                    <span class="label-text-alt opacity-50 text-xs">loop_function</span>
-                  </label>
+                  <p class="text-sm font-medium leading-tight">Repeat while…</p>
+                  <p class="text-xs opacity-40 mt-0.5 mb-1">loop_function</p>
                   <textarea
-                    class="textarea textarea-bordered text-xs font-mono leading-snug"
+                    class="textarea textarea-bordered text-xs font-mono leading-snug w-full"
                     name="config[loop_function]"
                     rows="4"
                     placeholder={"// data = DataCollection from the last iteration\n// Return true to repeat, false to continue\nreturn data.select(\"correct\").mean() < 0.8;"}
@@ -891,7 +887,7 @@ defmodule SochoWeb.StudyLive.Builder do
                 <form
                   phx-change="config_changed"
                   id={"config-form-#{@selected_trial.id}"}
-                  class="space-y-3"
+                  class="space-y-5"
                 >
                   <p
                     :if={params == [] or Enum.all?(params, fn {_, s} -> input_kind(s) == :skip end)}
@@ -911,13 +907,11 @@ defmodule SochoWeb.StudyLive.Builder do
                   <div class="divider text-xs my-1">Identification</div>
 
                   <div class="form-control">
-                    <label class="label py-1">
-                      <span class="label-text text-xs font-medium">Tag</span>
-                      <span class="label-text-alt opacity-50 text-xs">data.tag</span>
-                    </label>
+                    <p class="text-sm font-medium leading-tight">Tag</p>
+                    <p class="text-xs opacity-40 mt-0.5 mb-1">data.tag</p>
                     <input
                       type="text"
-                      class="input input-bordered input-sm font-mono"
+                      class="input input-bordered input-sm font-mono w-full"
                       name="config[data_tag]"
                       value={@selected_trial.config["data_tag"] || ""}
                       placeholder="e.g. screening-question"
@@ -1432,16 +1426,19 @@ defmodule SochoWeb.StudyLive.Builder do
 
   defp param_field(%{kind: :bool} = assigns) do
     ~H"""
-    <div class="flex items-center gap-3">
-      <input type="hidden" name={"#{@prefix}[#{@param}]"} value="false" />
-      <input
-        type="checkbox"
-        class="checkbox checkbox-sm"
-        name={"#{@prefix}[#{@param}]"}
-        value="true"
-        checked={@value == true or @value == "true"}
-      />
-      <label class="text-sm">{@param}</label>
+    <div>
+      <p class="text-sm font-medium leading-tight mb-1">{@param}</p>
+      <div class="flex items-center gap-2">
+        <input type="hidden" name={"#{@prefix}[#{@param}]"} value="false" />
+        <input
+          type="checkbox"
+          class="checkbox checkbox-sm"
+          name={"#{@prefix}[#{@param}]"}
+          value="true"
+          checked={@value == true or @value == "true"}
+        />
+        <span class="text-xs opacity-40">BOOL</span>
+      </div>
     </div>
     """
   end
@@ -1449,13 +1446,11 @@ defmodule SochoWeb.StudyLive.Builder do
   defp param_field(%{kind: :number} = assigns) do
     ~H"""
     <div class="form-control">
-      <label class="label py-1">
-        <span class="label-text">{@param}</span>
-        <span class="label-text-alt opacity-50">{@spec["type"]}</span>
-      </label>
+      <p class="text-sm font-medium leading-tight">{@param}</p>
+      <p class="text-xs opacity-40 mt-0.5 mb-1">{@spec["type"]}</p>
       <input
         type="number"
-        class="input input-bordered input-sm"
+        class="input input-bordered input-sm w-full"
         name={"#{@prefix}[#{@param}]"}
         value={@value || ""}
         step={if @spec["type"] == "FLOAT", do: "0.01", else: "1"}
@@ -1471,10 +1466,8 @@ defmodule SochoWeb.StudyLive.Builder do
 
     ~H"""
     <div class="form-control">
-      <label class="label py-1">
-        <span class="label-text">{@param}</span>
-        <span class="label-text-alt opacity-50">HTML</span>
-      </label>
+      <p class="text-sm font-medium leading-tight">{@param}</p>
+      <p class="text-xs opacity-40 mt-0.5 mb-1">HTML</p>
       <div
         id={@safe_id}
         phx-hook=".TipTap"
@@ -1499,13 +1492,13 @@ defmodule SochoWeb.StudyLive.Builder do
 
     ~H"""
     <div class="form-control">
-      <label class="label py-1">
-        <span class="label-text">{@param}</span>
-        <span class="label-text-alt opacity-50">{@spec["type"]}{if @spec["array"], do: "[]", else: ""}</span>
-      </label>
+      <p class="text-sm font-medium leading-tight">{@param}</p>
+      <p class="text-xs opacity-40 mt-0.5 mb-1">
+        {@spec["type"]}{if @spec["array"], do: "[]", else: ""}
+      </p>
       <input
         type="text"
-        class="input input-bordered input-sm"
+        class="input input-bordered input-sm w-full"
         name={"#{@prefix}[#{@param}]"}
         value={@display_value}
         placeholder={
