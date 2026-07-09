@@ -805,7 +805,7 @@ defmodule SochoWeb.StudyLive.Builder do
                     class="textarea textarea-bordered text-xs font-mono"
                     name="config[timeline_variables]"
                     rows="6"
-                    placeholder={'[{"stimulus": "hello"}, {"stimulus": "world"}]'}
+                    placeholder={"[{\"stimulus\": \"hello\"}, {\"stimulus\": \"world\"}]"}
                   >{Jason.encode!(@selected_trial.config["timeline_variables"] || [])}</textarea>
                   <p class="text-xs opacity-50 mt-1">
                     In trial params, use <code class="font-mono">{"{{varName}}"}</code> to reference a variable.
@@ -925,7 +925,7 @@ defmodule SochoWeb.StudyLive.Builder do
                     />
                     <p class="text-xs opacity-50 mt-1 leading-snug">
                       Optional identifier. Filter this trial's response with
-                      <code class="font-mono">jsPsych.data.get().filter({"{"} tag: "your-tag" {"}"})</code>.
+                      <code class="font-mono">jsPsych.data.get().filter(&#123; tag: "your-tag" &#125;)</code>.
                     </p>
                   </div>
                 </form>
