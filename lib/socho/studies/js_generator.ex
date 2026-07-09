@@ -231,7 +231,17 @@ defmodule Socho.Studies.JsGenerator do
 
   defp emit_node(node, counter) do
     var_name = "trial#{counter}"
-    config_js = config_to_js(node.config, node.plugin)
+    data_tag = node.config["data_tag"]
+    clean_config = Map.delete(node.config, "data_tag")
+    config_js = config_to_js(clean_config, node.plugin)
+
+    data_tag_js =
+      if data_tag && data_tag != "" do
+        escaped = String.replace(data_tag, "`", "\\`")
+        "  data: { tag: `#{escaped}` },\n"
+      else
+        ""
+      end
 
     extensions_js =
       case get_in(node.extensions || %{}, ["touchscreen-buttons"]) do
@@ -244,7 +254,7 @@ defmodule Socho.Studies.JsGenerator do
           ""
       end
 
-    decl = "const #{var_name} = {\n  type: #{plugin_to_js_var(node.plugin)},\n#{extensions_js}#{config_js}};"
+    decl = "const #{var_name} = {\n  type: #{plugin_to_js_var(node.plugin)},\n#{extensions_js}#{data_tag_js}#{config_js}};"
     {counter + 1, [decl], var_name}
   end
 
@@ -261,10 +271,25 @@ defmodule Socho.Studies.JsGenerator do
       if(config["randomize_order"],
         do: "\n  randomize_order: true,",
         else: nil
+      ),
+      if(config["conditional_function"] not in [nil, ""],
+        do: "\n  conditional_function: function() {\n#{indent_js_body(config["conditional_function"])}\n  },",
+        else: nil
+      ),
+      if(config["loop_function"] not in [nil, ""],
+        do: "\n  loop_function: function(data) {\n#{indent_js_body(config["loop_function"])}\n  },",
+        else: nil
       )
     ]
     |> Enum.reject(&is_nil/1)
     |> Enum.join("")
+  end
+
+  defp indent_js_body(body) do
+    body
+    |> String.trim()
+    |> String.split("\n")
+    |> Enum.map_join("\n", &("    " <> &1))
   end
 
   defp config_to_js(config, _plugin) when map_size(config) == 0, do: ""

@@ -75,7 +75,13 @@ defmodule SochoWeb.StudyLive.Builder do
       id: System.unique_integer([:positive]),
       node_type: "timeline",
       plugin: nil,
-      config: %{"timeline_variables" => [], "repetitions" => 1, "randomize_order" => false},
+      config: %{
+        "timeline_variables" => [],
+        "repetitions" => 1,
+        "randomize_order" => false,
+        "conditional_function" => "",
+        "loop_function" => ""
+      },
       extensions: %{},
       children: []
     }
@@ -89,7 +95,7 @@ defmodule SochoWeb.StudyLive.Builder do
 
   def handle_event("add_plugin_trial", %{"plugin" => name}, socket) do
     schema = socket.assigns.registry[name]
-    config = build_defaults(schema["parameters"] || %{})
+    config = build_defaults(schema["parameters"] || %{}) |> Map.put("data_tag", "")
 
     trial = %{
       id: System.unique_integer([:positive]),
@@ -455,7 +461,9 @@ defmodule SochoWeb.StudyLive.Builder do
     %{
       "timeline_variables" => timeline_vars,
       "repetitions" => repetitions,
-      "randomize_order" => params["randomize_order"] == "true"
+      "randomize_order" => params["randomize_order"] == "true",
+      "conditional_function" => String.trim(params["conditional_function"] || ""),
+      "loop_function" => String.trim(params["loop_function"] || "")
     }
   end
 
@@ -830,6 +838,43 @@ defmodule SochoWeb.StudyLive.Builder do
                   />
                   <label class="text-sm">randomize_order</label>
                 </div>
+
+                <div class="divider text-xs my-1">Conditional Logic</div>
+
+                <div class="form-control">
+                  <label class="label py-1">
+                    <span class="label-text text-xs font-medium">Skip unless…</span>
+                    <span class="label-text-alt opacity-50 text-xs">conditional_function</span>
+                  </label>
+                  <textarea
+                    class="textarea textarea-bordered text-xs font-mono leading-snug"
+                    name="config[conditional_function]"
+                    rows="4"
+                    placeholder={"// Return true to run this block, false to skip it\nconst d = jsPsych.data.get().last(1).values()[0];\nreturn d.response === \"yes\";"}
+                    phx-debounce="300"
+                  >{@selected_trial.config["conditional_function"] || ""}</textarea>
+                  <p class="text-xs opacity-50 mt-1 leading-snug">
+                    JS function body. Return <code class="font-mono">true</code> to run this block, <code class="font-mono">false</code> to skip it entirely.
+                    Use <code class="font-mono">jsPsych.data.get()</code> to access previous responses.
+                  </p>
+                </div>
+
+                <div class="form-control">
+                  <label class="label py-1">
+                    <span class="label-text text-xs font-medium">Repeat while…</span>
+                    <span class="label-text-alt opacity-50 text-xs">loop_function</span>
+                  </label>
+                  <textarea
+                    class="textarea textarea-bordered text-xs font-mono leading-snug"
+                    name="config[loop_function]"
+                    rows="4"
+                    placeholder={"// data = DataCollection from the last iteration\n// Return true to repeat, false to continue\nreturn data.select(\"correct\").mean() < 0.8;"}
+                    phx-debounce="300"
+                  >{@selected_trial.config["loop_function"] || ""}</textarea>
+                  <p class="text-xs opacity-50 mt-1 leading-snug">
+                    JS function body. Receives <code class="font-mono">data</code> (last iteration's trials). Return <code class="font-mono">true</code> to repeat this block.
+                  </p>
+                </div>
               </form>
             </div>
           <% else %>
@@ -862,6 +907,27 @@ defmodule SochoWeb.StudyLive.Builder do
                       value={@selected_trial.config[param_name]}
                     />
                   <% end %>
+
+                  <div class="divider text-xs my-1">Identification</div>
+
+                  <div class="form-control">
+                    <label class="label py-1">
+                      <span class="label-text text-xs font-medium">Tag</span>
+                      <span class="label-text-alt opacity-50 text-xs">data.tag</span>
+                    </label>
+                    <input
+                      type="text"
+                      class="input input-bordered input-sm font-mono"
+                      name="config[data_tag]"
+                      value={@selected_trial.config["data_tag"] || ""}
+                      placeholder="e.g. screening-question"
+                      phx-debounce="300"
+                    />
+                    <p class="text-xs opacity-50 mt-1 leading-snug">
+                      Optional identifier. Filter this trial's response with
+                      <code class="font-mono">jsPsych.data.get().filter({"{"} tag: "your-tag" {"}"})</code>.
+                    </p>
+                  </div>
                 </form>
 
                 <div class="divider text-xs mt-3 mb-2">Extensions</div>
