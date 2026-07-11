@@ -2,6 +2,7 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
   use SochoWeb, :live_component
 
   @question_types [
+    {"html", "HTML content"},
     {"text", "Short text"},
     {"number", "Number"},
     {"comment", "Long text"},
@@ -20,10 +21,13 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
       if Map.has_key?(socket.assigns, :questions) do
         assign(socket, id: assigns.id, field_name: field_name)
       else
+        parsed = parse_survey_json(value)
+
         assign(socket,
           id: assigns.id,
           field_name: field_name,
-          questions: parse_survey_json(value),
+          questions: parsed.questions,
+          complete_text: parsed.complete_text,
           question_types: @question_types,
           choice_types: @choice_types
         )
@@ -42,6 +46,7 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
       "type" => "text",
       "name" => "question#{n}",
       "title" => "",
+      "html" => "",
       "isRequired" => false,
       "choices" => [],
       "minValue" => "",
@@ -49,24 +54,28 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
     }
 
     socket = update(socket, :questions, fn qs -> qs ++ [new_q] end)
+    notify_parent(socket)
     {:noreply, socket}
   end
 
   def handle_event("sq_remove_question", %{"index" => idx}, socket) do
     idx = String.to_integer(idx)
     socket = update(socket, :questions, fn qs -> List.delete_at(qs, idx) end)
+    notify_parent(socket)
     {:noreply, socket}
   end
 
   def handle_event("sq_set_type", %{"index" => idx, "type" => type_val}, socket) do
     idx = String.to_integer(idx)
     socket = update(socket, :questions, fn qs -> List.update_at(qs, idx, fn q -> Map.put(q, "type", type_val) end) end)
+    notify_parent(socket)
     {:noreply, socket}
   end
 
   def handle_event("sq_update_field", %{"index" => idx, "field" => field, "value" => val}, socket) do
     idx = String.to_integer(idx)
     socket = update(socket, :questions, fn qs -> List.update_at(qs, idx, fn q -> Map.put(q, field, val) end) end)
+    notify_parent(socket)
     {:noreply, socket}
   end
 
@@ -78,6 +87,7 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
         List.update_at(qs, idx, fn q -> Map.update(q, "isRequired", true, fn v -> !v end) end)
       end)
 
+    notify_parent(socket)
     {:noreply, socket}
   end
 
@@ -89,6 +99,7 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
         List.update_at(qs, idx, fn q -> Map.update(q, "choices", [""], fn cs -> cs ++ [""] end) end)
       end)
 
+    notify_parent(socket)
     {:noreply, socket}
   end
 
@@ -101,6 +112,7 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
         List.update_at(qs, q_i, fn q -> Map.update(q, "choices", [], fn cs -> List.delete_at(cs, c_i) end) end)
       end)
 
+    notify_parent(socket)
     {:noreply, socket}
   end
 
@@ -113,6 +125,13 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
         List.update_at(qs, q_i, fn q -> Map.update(q, "choices", [], fn cs -> List.replace_at(cs, c_i, val) end) end)
       end)
 
+    notify_parent(socket)
+    {:noreply, socket}
+  end
+
+  def handle_event("sq_set_complete_text", %{"value" => val}, socket) do
+    socket = assign(socket, :complete_text, val)
+    notify_parent(socket)
     {:noreply, socket}
   end
 
@@ -120,7 +139,7 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
 
   @impl true
   def render(assigns) do
-    assigns = assign(assigns, :encoded, Jason.encode!(to_survey_json(assigns.questions)))
+    assigns = assign(assigns, :encoded, Jason.encode!(to_survey_json(assigns.questions, assigns.complete_text)))
 
     ~H"""
     <div id={@id} class="space-y-3">
@@ -160,19 +179,48 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
             </div>
           </div>
 
-          <div class="form-control">
-            <label class="label py-0"><span class="label-text text-xs">Question text</span></label>
-            <input
-              type="text"
-              class="input input-bordered input-xs"
-              placeholder="Enter question..."
-              value={q["title"]}
-              phx-blur="sq_update_field"
-              phx-value-index={idx}
-              phx-value-field="title"
-              phx-target={"##{@id}"}
-            />
-          </div>
+          <%= if q["type"] == "html" do %>
+            <div class="form-control">
+              <label class="label py-0">
+                <span class="label-text text-xs">HTML content</span>
+              </label>
+              <div
+                id={"sq-html-#{@id}-#{idx}"}
+                phx-hook=".SurveyHtml"
+                phx-update="ignore"
+                data-index={to_string(idx)}
+                data-value={q["html"] || ""}
+                data-component-id={@id}
+                class="tiptap-editor rounded border border-base-300"
+              ></div>
+            </div>
+          <% else %>
+            <div class="form-control">
+              <label class="label py-0"><span class="label-text text-xs">Question text</span></label>
+              <input
+                type="text"
+                class="input input-bordered input-xs"
+                placeholder="Enter question..."
+                value={q["title"]}
+                phx-blur="sq_update_field"
+                phx-value-index={idx}
+                phx-value-field="title"
+                phx-target={"##{@id}"}
+              />
+            </div>
+
+            <div class="flex items-center gap-2">
+              <input
+                type="checkbox"
+                class="checkbox checkbox-xs"
+                checked={q["isRequired"]}
+                phx-click="sq_toggle_required"
+                phx-value-index={idx}
+                phx-target={"##{@id}"}
+              />
+              <span class="text-xs">Required</span>
+            </div>
+          <% end %>
 
           <div class="form-control">
             <label class="label py-0"><span class="label-text text-xs">Field name</span></label>
@@ -185,18 +233,6 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
               phx-value-field="name"
               phx-target={"##{@id}"}
             />
-          </div>
-
-          <div class="flex items-center gap-2">
-            <input
-              type="checkbox"
-              class="checkbox checkbox-xs"
-              checked={q["isRequired"]}
-              phx-click="sq_toggle_required"
-              phx-value-index={idx}
-              phx-target={"##{@id}"}
-            />
-            <span class="text-xs">Required</span>
           </div>
 
           <%= if q["type"] == "number" do %>
@@ -272,20 +308,136 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
         type="button"
         class="btn btn-sm btn-outline w-full"
         phx-click="sq_add_question"
-        phx-target={@myself}
+        phx-target={"##{@id}"}
       >
         + Add question
       </button>
+
+      <div class="form-control">
+        <label class="label py-0"><span class="label-text text-xs">Complete button text</span></label>
+        <input
+          type="text"
+          class="input input-bordered input-xs"
+          placeholder="Next"
+          value={@complete_text}
+          phx-blur="sq_set_complete_text"
+          phx-target={"##{@id}"}
+        />
+      </div>
+
+      <script :type={Phoenix.LiveView.ColocatedHook} name=".SurveyHtml">
+        import { Editor } from "@tiptap/core"
+        import StarterKit from "@tiptap/starter-kit"
+        import Link from "@tiptap/extension-link"
+        import Image from "@tiptap/extension-image"
+
+        export default {
+          mounted() {
+            const index = this.el.dataset.index
+            const componentId = this.el.dataset.componentId
+            const initialValue = this.el.dataset.value || ""
+
+            // Toolbar
+            this.toolbar = document.createElement("div")
+            this.toolbar.className = "flex gap-1 flex-wrap p-1 border-b border-base-300 bg-base-200 rounded-t"
+            this.el.appendChild(this.toolbar)
+
+            // Editor mount point
+            const editorEl = document.createElement("div")
+            this.el.appendChild(editorEl)
+
+            const toolbarDefs = [
+              { label: "B",       title: "Bold",          style: "font-bold", cmd: () => this.editor.chain().focus().toggleBold().run(),                   active: () => this.editor.isActive("bold") },
+              { label: "I",       title: "Italic",        style: "italic",    cmd: () => this.editor.chain().focus().toggleItalic().run(),                 active: () => this.editor.isActive("italic") },
+              { label: "H1",      title: "Heading 1",     style: "",          cmd: () => this.editor.chain().focus().toggleHeading({ level: 1 }).run(),    active: () => this.editor.isActive("heading", { level: 1 }) },
+              { label: "H2",      title: "Heading 2",     style: "",          cmd: () => this.editor.chain().focus().toggleHeading({ level: 2 }).run(),    active: () => this.editor.isActive("heading", { level: 2 }) },
+              { label: "• List",  title: "Bullet list",   style: "",          cmd: () => this.editor.chain().focus().toggleBulletList().run(),             active: () => this.editor.isActive("bulletList") },
+              { label: "1. List", title: "Ordered list",  style: "",          cmd: () => this.editor.chain().focus().toggleOrderedList().run(),            active: () => this.editor.isActive("orderedList") },
+              { label: "🔗",      title: "Link",          style: "",          cmd: () => this.setLink(),                                                   active: () => this.editor.isActive("link") },
+              { label: "🖼",      title: "Image",         style: "",          cmd: () => this.insertImage(),                                               active: () => false },
+            ]
+
+            toolbarDefs.forEach(({ label, title, style, cmd }) => {
+              const btn = document.createElement("button")
+              btn.type = "button"
+              btn.title = title
+              btn.textContent = label
+              btn.className = `btn btn-xs btn-ghost ${style}`
+              btn.addEventListener("mousedown", e => { e.preventDefault(); cmd() })
+              this.toolbar.appendChild(btn)
+            })
+
+            this.editor = new Editor({
+              element: editorEl,
+              extensions: [
+                StarterKit,
+                Link.configure({ openOnClick: false }),
+                Image,
+              ],
+              content: initialValue,
+              editorProps: { attributes: { class: "outline-none" } },
+              onUpdate: ({ editor }) => {
+                this.pushEventTo("#" + componentId, "sq_update_field", { index: index, field: "html", value: editor.getHTML() })
+              },
+              onTransaction: () => {
+                const btns = this.toolbar.querySelectorAll("button")
+                toolbarDefs.forEach(({ active }, i) => {
+                  btns[i]?.classList.toggle("btn-active", active())
+                })
+              },
+            })
+          },
+
+          setLink() {
+            const prev = this.editor.getAttributes("link").href || ""
+            const url = window.prompt("Link URL", prev)
+            if (url === null) return
+            if (url === "") {
+              this.editor.chain().focus().unsetLink().run()
+            } else {
+              this.editor.chain().focus().setLink({ href: url }).run()
+            }
+          },
+
+          insertImage() {
+            const url = window.prompt("Image URL")
+            if (url) this.editor.chain().focus().setImage({ src: url }).run()
+          },
+
+          updated() {
+            const newVal = this.el.dataset.value || ""
+            if (this.editor && newVal !== this.editor.getHTML()) {
+              this.editor.commands.setContent(newVal, false)
+            }
+          },
+
+          destroyed() {
+            this.editor?.destroy()
+          }
+        }
+      </script>
     </div>
     """
   end
 
+  defp notify_parent(socket) do
+    json = to_survey_json(socket.assigns.questions, socket.assigns.complete_text)
+    send(self(), {:survey_builder_update, json})
+  end
+
   # ── Serialize to Survey.js JSON ─────────────────────────────────────────────
 
-  defp to_survey_json([]), do: %{}
+  defp to_survey_json([], _complete_text), do: %{}
 
-  defp to_survey_json(questions) do
-    %{"elements" => Enum.map(questions, &question_to_element/1)}
+  defp to_survey_json(questions, complete_text) do
+    %{
+      "elements" => Enum.map(questions, &question_to_element/1),
+      "completeText" => if(complete_text && complete_text != "", do: complete_text, else: "Next")
+    }
+  end
+
+  defp question_to_element(%{"type" => "html"} = q) do
+    %{"type" => "html", "name" => q["name"], "html" => q["html"] || ""}
   end
 
   defp question_to_element(q) do
@@ -347,13 +499,30 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
 
   # ── Deserialize from stored Survey.js JSON ───────────────────────────────────
 
-  defp parse_survey_json(v) when v in [nil, %{}], do: []
+  defp parse_survey_json(v) when v in [nil, %{}],
+    do: %{questions: [], complete_text: "Next"}
 
-  defp parse_survey_json(%{"elements" => els}) when is_list(els) do
-    Enum.with_index(els, fn el, i -> element_to_question(el, i) end)
+  defp parse_survey_json(%{"elements" => els} = json) when is_list(els) do
+    %{
+      questions: Enum.with_index(els, fn el, i -> element_to_question(el, i) end),
+      complete_text: json["completeText"] || "Next"
+    }
   end
 
-  defp parse_survey_json(_), do: []
+  defp parse_survey_json(_), do: %{questions: [], complete_text: "Next"}
+
+  defp element_to_question(%{"type" => "html"} = el, i) do
+    %{
+      "type" => "html",
+      "name" => el["name"] || "content#{i + 1}",
+      "html" => el["html"] || "",
+      "title" => "",
+      "isRequired" => false,
+      "choices" => [],
+      "minValue" => "",
+      "maxValue" => ""
+    }
+  end
 
   defp element_to_question(el, i) do
     type =
@@ -367,6 +536,7 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
       "type" => type,
       "name" => el["name"] || "question#{i + 1}",
       "title" => el["title"] || "",
+      "html" => "",
       "isRequired" => el["isRequired"] || false,
       "choices" => normalize_choices(el["choices"]),
       "minValue" => to_string(min_v || ""),
