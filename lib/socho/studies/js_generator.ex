@@ -6,8 +6,13 @@ defmodule Socho.Studies.JsGenerator do
   @jspsych_base "/vendor/jspsych"
   @custom_base "/vendor/custom"
 
-  def required_stylesheets(_study) do
-    ["#{@jspsych_base}/jspsych.css"]
+  def required_stylesheets(study) do
+    survey_css =
+      if "survey" in collect_plugins(study.trials),
+        do: ["#{@jspsych_base}/survey.css"],
+        else: []
+
+    ["#{@jspsych_base}/jspsych.css"] ++ survey_css
   end
 
   def required_inline_css(study) do

@@ -1,4 +1,35 @@
 {
+  "survey": {
+    "name": "survey",
+    "version": "4.0.0",
+    "description": "a jspsych plugin for displaying surveys using the SurveyJS library",
+    "parameters": {
+      "survey_json": {
+        "type": "OBJECT",
+        "default": {},
+        "description": "A SurveyJS-compatible object defining the survey structure, questions, and validators",
+        "array": false
+      },
+      "survey_function": {
+        "type": "FUNCTION",
+        "default": null,
+        "description": "A function that receives a SurveyJS survey model and can modify it programmatically",
+        "array": false
+      },
+      "validation_function": {
+        "type": "FUNCTION",
+        "default": null,
+        "description": "A function for custom response validation",
+        "array": false
+      },
+      "min_width": {
+        "type": "STRING",
+        "default": "min(100vw, 800px)",
+        "description": "CSS min-width property for the survey container",
+        "array": false
+      }
+    }
+  },
   "animation": {
     "name": "animation",
     "version": "2.1.0",

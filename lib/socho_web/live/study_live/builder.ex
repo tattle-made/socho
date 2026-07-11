@@ -5,6 +5,7 @@ defmodule SochoWeb.StudyLive.Builder do
   alias Socho.Studies
   alias Socho.Studies.Registry
   alias Socho.Studies.Templates
+  alias SochoWeb.StudyLive.SurveyBuilderComponent
 
   # ── Mount ──────────────────────────────────────────────────────────────────
 
@@ -138,6 +139,17 @@ defmodule SochoWeb.StudyLive.Builder do
   def handle_event("move_trial_down", %{"id" => id_str}, socket) do
     id = String.to_integer(id_str)
     {:noreply, assign(socket, trials: move_node_in_tree(socket.assigns.trials, id, :down))}
+  end
+
+  @impl true
+  def handle_info({:survey_builder_update, survey_json}, socket) do
+    with id when not is_nil(id) <- socket.assigns.selected_trial_id,
+         node when not is_nil(node) <- find_node(socket.assigns.trials, id) do
+      new_config = Map.put(node.config, "survey_json", survey_json)
+      {:noreply, assign(socket, trials: update_node_config(socket.assigns.trials, id, new_config))}
+    else
+      _ -> {:noreply, socket}
+    end
   end
 
   def handle_event("config_changed", %{"config" => params}, socket) do
@@ -473,6 +485,7 @@ defmodule SochoWeb.StudyLive.Builder do
         cond do
           spec["type"] == "COMPLEX" and spec["array"] -> []
           spec["type"] == "COMPLEX" -> %{}
+          spec["type"] == "OBJECT" -> %{}
           spec["type"] == "BOOL" -> spec["default"] || false
           spec["default"] != nil -> to_string(spec["default"])
           true -> ""
@@ -502,6 +515,17 @@ defmodule SochoWeb.StudyLive.Builder do
 
           "BOOL" ->
             val == "true"
+
+          "OBJECT" ->
+            case val do
+              val when is_map(val) -> val
+              val when is_binary(val) ->
+                case Jason.decode(val) do
+                  {:ok, map} when is_map(map) -> map
+                  _ -> %{}
+                end
+              _ -> %{}
+            end
 
           "COMPLEX" ->
             if spec["array"] and is_map(val) do
@@ -535,6 +559,7 @@ defmodule SochoWeb.StudyLive.Builder do
   defp input_kind(%{"type" => "FLOAT"}), do: :number
   defp input_kind(%{"type" => "HTML_STRING"}), do: :html
   defp input_kind(%{"type" => "COMPLEX", "array" => true}), do: :complex_array
+  defp input_kind(%{"type" => "OBJECT"}), do: :json
   defp input_kind(%{"type" => "FUNCTION"}), do: :skip
   defp input_kind(%{"type" => "TIMELINE"}), do: :skip
   defp input_kind(_), do: :text
@@ -1476,6 +1501,53 @@ defmodule SochoWeb.StudyLive.Builder do
         data-value={@value || ""}
         class="tiptap-editor rounded border border-base-300"
       ></div>
+    </div>
+    """
+  end
+
+  defp param_field(%{kind: :json, param: "survey_json"} = assigns) do
+    field_name = "#{assigns.prefix}[#{assigns.param}]"
+    assigns = assign(assigns, field_name: field_name)
+
+    ~H"""
+    <div class="form-control">
+      <label class="label py-1">
+        <span class="label-text">survey_json</span>
+        <span class="label-text-alt opacity-50">Survey builder</span>
+      </label>
+      <.live_component
+        module={SurveyBuilderComponent}
+        id={"survey-builder-#{@prefix}"}
+        value={@value}
+        field_name={@field_name}
+      />
+    </div>
+    """
+  end
+
+  defp param_field(%{kind: :json} = assigns) do
+    json_value =
+      case assigns.value do
+        nil -> ""
+        "" -> ""
+        val when is_map(val) -> Jason.encode!(val, pretty: true)
+        val when is_binary(val) -> val
+      end
+
+    assigns = assign(assigns, json_value: json_value)
+
+    ~H"""
+    <div class="form-control">
+      <label class="label py-1">
+        <span class="label-text">{@param}</span>
+        <span class="label-text-alt opacity-50">JSON</span>
+      </label>
+      <textarea
+        class="textarea textarea-bordered textarea-sm font-mono text-xs"
+        name={"#{@prefix}[#{@param}]"}
+        rows="10"
+        placeholder={"{\n  \"elements\": []\n}"}
+      >{@json_value}</textarea>
     </div>
     """
   end
