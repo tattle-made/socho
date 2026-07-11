@@ -106,6 +106,43 @@ defmodule Socho.Studies do
     end)
   end
 
+  # ── Import / Export ──────────────────────────────────────────────────────────
+
+  def export_template(study_id) do
+    study = get_study!(study_id)
+
+    %{
+      "socho_version" => 1,
+      "title" => study.title,
+      "nodes" => Enum.map(study.trials, &serialize_node/1)
+    }
+  end
+
+  defp serialize_node(node) do
+    %{
+      "node_type" => node.node_type,
+      "plugin" => node.plugin,
+      "config" => node.config || %{},
+      "extensions" => node.extensions || %{},
+      "children" => Enum.map(node.children || [], &serialize_node/1)
+    }
+  end
+
+  def import_template(title, client_id, nodes_json) when is_list(nodes_json) do
+    nodes = Enum.map(nodes_json, &deserialize_node/1)
+    create_study_with_trials(title, client_id, nodes)
+  end
+
+  defp deserialize_node(node) when is_map(node) do
+    %{
+      node_type: node["node_type"] || "trial",
+      plugin: node["plugin"],
+      config: node["config"] || %{},
+      extensions: node["extensions"] || %{},
+      children: Enum.map(node["children"] || [], &deserialize_node/1)
+    }
+  end
+
   # ── Submissions ──────────────────────────────────────────────────────────────
 
   def record_submission(study_id, user_id, trial_list) when is_list(trial_list) do

@@ -40,6 +40,41 @@ defmodule SochoWeb.StudyController do
     end
   end
 
+  def export_template(conn, %{"id" => id}) do
+    template = Studies.export_template(id)
+    filename = template["title"]
+      |> String.downcase()
+      |> String.replace(~r/[^a-z0-9]+/, "-")
+      |> then(&"#{&1}-template.json")
+
+    conn
+    |> put_resp_content_type("application/json")
+    |> put_resp_header("content-disposition", ~s(attachment; filename="#{filename}"))
+    |> send_resp(200, Jason.encode!(template, pretty: true))
+  end
+
+  def import_template(conn, %{"file" => %Plug.Upload{path: path}}) do
+    with {:ok, content} <- File.read(path),
+         {:ok, %{"nodes" => nodes} = data} when is_list(nodes) <- Jason.decode(content),
+         title <- Map.get(data, "title", "Imported Study"),
+         {:ok, study} <- Studies.import_template(title, nil, nodes) do
+      conn
+      |> put_flash(:info, "\"#{study.title}\" imported successfully.")
+      |> redirect(to: ~p"/studies/#{study.id}/edit")
+    else
+      _ ->
+        conn
+        |> put_flash(:error, "Import failed — make sure the file is a valid Socho template.")
+        |> redirect(to: ~p"/studies")
+    end
+  end
+
+  def import_template(conn, _params) do
+    conn
+    |> put_flash(:error, "No file selected.")
+    |> redirect(to: ~p"/studies")
+  end
+
   def export(conn, %{"study_id" => study_id}) do
     study = Studies.get_study_meta!(study_id)
     csv = Studies.export_submissions_csv(study_id)

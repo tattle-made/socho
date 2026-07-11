@@ -68,6 +68,8 @@ defmodule SochoWeb.Router do
     end
 
     post "/users/update-password", UserSessionController, :update_password
+    get "/studies/:id/export-template", StudyController, :export_template
+    post "/studies/import-template", StudyController, :import_template
   end
 
   scope "/", SochoWeb do

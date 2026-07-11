@@ -35,7 +35,21 @@ defmodule SochoWeb.StudyLive.Index do
     <div class="max-w-3xl mx-auto p-6 space-y-6">
       <div class="flex items-center justify-between">
         <h1 class="text-2xl font-bold">Studies</h1>
-        <.link href="/studies/new" class="btn btn-primary btn-sm">+ New Study</.link>
+        <div class="flex items-center gap-2">
+          <details class="relative">
+            <summary class="btn btn-outline btn-sm list-none cursor-pointer">↑ Import</summary>
+            <div class="absolute right-0 top-full mt-2 z-10 bg-base-100 border border-base-300 rounded-lg shadow-lg p-4 w-72">
+              <p class="text-sm font-medium mb-2">Import study template</p>
+              <p class="text-xs opacity-50 mb-3">Upload a <code>.json</code> file exported from Socho. A new draft study will be created.</p>
+              <form action="/studies/import-template" method="post" enctype="multipart/form-data" class="flex flex-col gap-2">
+                <input type="hidden" name="_csrf_token" value={Plug.CSRFProtection.get_csrf_token()} />
+                <input type="file" name="file" accept=".json" class="file-input file-input-bordered file-input-sm w-full" required />
+                <button type="submit" class="btn btn-primary btn-sm w-full">Import</button>
+              </form>
+            </div>
+          </details>
+          <.link href="/studies/new" class="btn btn-primary btn-sm">+ New Study</.link>
+        </div>
       </div>
 
       <p :if={@studies == []} class="text-sm opacity-50">No studies yet.</p>

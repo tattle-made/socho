@@ -78,6 +78,21 @@ defmodule SochoWeb.StudyLive.Settings do
           </.form>
         </div>
 
+        <%!-- Export --%>
+        <div class="card bg-base-200 shadow p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-lg font-semibold">Export</h2>
+              <p class="text-sm opacity-60 mt-0.5">
+                Download this study as a JSON template that can be imported by any Socho user.
+              </p>
+            </div>
+            <a href={"/studies/#{@study.id}/export-template"} class="btn btn-outline btn-sm">
+              ↓ Export Template
+            </a>
+          </div>
+        </div>
+
         <%!-- Submissions --%>
         <div class="card bg-base-200 shadow p-6">
           <div class="flex items-center justify-between">
