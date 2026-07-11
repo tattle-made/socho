@@ -622,7 +622,7 @@ defmodule SochoWeb.StudyLive.Builder do
 
     ~H"""
     <Layouts.app flash={@flash} current_scope={@current_scope}>
-    <div class="flex flex-col gap-8 p-4" style="height: calc(100vh - 8rem);">
+    <div class="flex flex-col gap-6 p-4">
       <%!-- Header bar --%>
       <div class="flex items-center gap-3 shrink-0">
         <h1 class="text-xl font-bold shrink-0">Study Builder</h1>
@@ -654,50 +654,44 @@ defmodule SochoWeb.StudyLive.Builder do
         </button>
       </div>
 
-      <%!-- 3-column layout (4th column added when preview is open) --%>
-      <div
-        class="grid gap-4 flex-1 min-h-0"
-        style={if @show_preview && @study_id, do: "grid-template-columns: 180px 300px 1fr 360px", else: "grid-template-columns: 220px 400px 1fr"}
-      >
+      <%!-- Blocks / Templates strip --%>
+      <div class="shrink-0 border-b border-base-300 pb-3 flex flex-col gap-2">
 
-        <%!-- Column 1: Blocks / Templates --%>
-        <div class="flex flex-col gap-2 min-h-0 border-r border-base-300 pr-4">
+        <%!-- Tab bar --%>
+        <div role="tablist" class="tabs tabs-bordered tabs-sm">
+          <button
+            role="tab"
+            class={["tab", if(@sidebar_tab == :blocks, do: "tab-active")]}
+            phx-click="switch_sidebar_tab"
+            phx-value-tab="blocks"
+            type="button"
+          >
+            Blocks
+          </button>
+          <button
+            role="tab"
+            class={["tab", if(@sidebar_tab == :templates, do: "tab-active")]}
+            phx-click="switch_sidebar_tab"
+            phx-value-tab="templates"
+            type="button"
+          >
+            Templates
+          </button>
+        </div>
 
-          <%!-- Tab bar --%>
-          <div role="tablist" class="tabs tabs-boxed tabs-sm shrink-0">
+        <%!-- Blocks tab content --%>
+        <%= if @sidebar_tab == :blocks do %>
+          <div class="flex items-center gap-2 shrink-0">
             <button
-              role="tab"
-              class={["tab", if(@sidebar_tab == :blocks, do: "tab-active")]}
-              phx-click="switch_sidebar_tab"
-              phx-value-tab="blocks"
-              type="button"
-            >
-              Blocks
-            </button>
-            <button
-              role="tab"
-              class={["tab", if(@sidebar_tab == :templates, do: "tab-active")]}
-              phx-click="switch_sidebar_tab"
-              phx-value-tab="templates"
-              type="button"
-            >
-              Templates
-            </button>
-          </div>
-
-          <%!-- Blocks tab --%>
-          <%= if @sidebar_tab == :blocks do %>
-            <button
-              class="btn btn-sm btn-outline btn-secondary w-full shrink-0"
+              class="btn btn-sm btn-outline btn-secondary shrink-0"
               phx-click="add_timeline"
               type="button"
             >
               + Timeline Group
             </button>
-
-            <form phx-change="plugin_search" class="shrink-0">
+            <form phx-change="plugin_search">
               <input
-                class="input input-bordered input-sm w-full"
+                class="input input-bordered input-sm w-44"
                 type="text"
                 name="query"
                 placeholder="Search plugins…"
@@ -706,64 +700,63 @@ defmodule SochoWeb.StudyLive.Builder do
                 autocomplete="off"
               />
             </form>
+          </div>
+          <div class="flex gap-2 overflow-x-auto pb-1">
+            <p :if={@filtered_plugins == []} class="text-sm opacity-50 px-2 self-center">No plugins found.</p>
+            <%= for name <- @filtered_plugins do %>
+              <% meta = @registry[name] %>
+              <button
+                class="btn btn-ghost shrink-0 w-44 h-auto py-2 px-3 font-normal border border-base-200 hover:border-primary flex flex-col items-start text-left"
+                phx-click="add_plugin_trial"
+                phx-value-plugin={name}
+                type="button"
+              >
+                <div class="flex items-center gap-1 w-full">
+                  <span class="text-sm font-medium leading-tight">{name}</span>
+                  <span :if={meta["custom"]} class="badge badge-accent badge-xs ml-auto">custom</span>
+                </div>
+                <span :if={meta["description"]} class="text-xs opacity-50 leading-tight whitespace-normal text-left mt-0.5">
+                  {meta["description"]}
+                </span>
+              </button>
+            <% end %>
+          </div>
+        <% end %>
 
-            <div class="overflow-y-auto flex-1 space-y-0.5">
-              <p :if={@filtered_plugins == []} class="text-sm opacity-50 px-2 py-1">
-                No plugins found.
-              </p>
-              <%= for name <- @filtered_plugins do %>
-                <% meta = @registry[name] %>
-                <button
-                  class="btn btn-ghost w-full justify-start text-left h-auto py-2 px-2 font-normal"
-                  phx-click="add_plugin_trial"
-                  phx-value-plugin={name}
-                  type="button"
-                >
-                  <div class="flex flex-col items-start gap-0.5 w-full">
-                    <div class="flex items-center gap-1.5">
-                      <span class="text-sm font-medium leading-tight">{name}</span>
-                      <span :if={meta["custom"]} class="badge badge-accent badge-xs">custom</span>
-                    </div>
-                    <span :if={meta["description"]} class="text-xs opacity-50 leading-tight whitespace-normal text-left">{meta["description"]}</span>
-                  </div>
-                </button>
-              <% end %>
-            </div>
-          <% end %>
+        <%!-- Templates tab content --%>
+        <%= if @sidebar_tab == :templates do %>
+          <div class="flex gap-2 overflow-x-auto pb-1">
+            <%= for tpl <- @templates do %>
+              <button
+                class="btn btn-ghost shrink-0 w-52 h-auto py-2 px-3 font-normal border border-base-200 hover:border-primary flex flex-col items-start text-left"
+                phx-click="insert_template"
+                phx-value-id={tpl.id}
+                type="button"
+              >
+                <span class="text-sm font-semibold leading-tight">{tpl.name}</span>
+                <span class="text-xs opacity-50 leading-tight whitespace-normal text-left mt-0.5">{tpl.description}</span>
+              </button>
+            <% end %>
+          </div>
+        <% end %>
 
-          <%!-- Templates tab --%>
-          <%= if @sidebar_tab == :templates do %>
-            <p class="text-xs opacity-50 shrink-0">
-              Click a template to insert it. Edit its variables in the Configure panel.
-            </p>
-            <div class="overflow-y-auto flex-1 space-y-2">
-              <%= for tpl <- @templates do %>
-                <button
-                  class="btn btn-ghost w-full justify-start text-left h-auto py-2 px-2 font-normal border border-base-300 rounded-lg hover:border-primary"
-                  phx-click="insert_template"
-                  phx-value-id={tpl.id}
-                  type="button"
-                >
-                  <div class="flex flex-col items-start gap-0.5 w-full">
-                    <span class="text-sm font-semibold leading-tight">{tpl.name}</span>
-                    <span class="text-xs opacity-50 leading-tight whitespace-normal text-left">{tpl.description}</span>
-                  </div>
-                </button>
-              <% end %>
-            </div>
-          <% end %>
+      </div>
 
-        </div>
+      <%!-- 2-column layout (3rd column added when preview is open) --%>
+      <div
+        class="grid gap-6 items-start"
+        style={if @show_preview && @study_id, do: "grid-template-columns: 320px 1fr 360px", else: "grid-template-columns: 320px 1fr"}
+      >
 
-        <%!-- Column 2: Trial tree --%>
-        <div class="flex flex-col gap-2 min-h-0">
-          <p class="text-xs font-semibold uppercase tracking-wider opacity-50 shrink-0">
+        <%!-- Column 1: Trial tree --%>
+        <div class="flex flex-col gap-2">
+          <p class="text-xs font-semibold uppercase tracking-wider opacity-50">
             Trials <span class="badge badge-neutral ml-1">{length(@trials)}</span>
           </p>
 
-          <div class="overflow-y-auto flex-1 space-y-2">
+          <div class="space-y-2">
             <p :if={@trials == []} class="text-sm opacity-50">
-              Pick a plugin on the left to add a block.
+              Pick a plugin above to add a block.
             </p>
 
             <%= for {node, position} <- Enum.with_index(@trials, 1) do %>
@@ -772,13 +765,13 @@ defmodule SochoWeb.StudyLive.Builder do
           </div>
         </div>
 
-        <%!-- Column 3: Config panel --%>
-        <div class="flex flex-col gap-2 min-h-0 border-l border-base-300 pl-4">
+        <%!-- Column 2: Config panel --%>
+        <div class="flex flex-col gap-2 border-l border-base-300 pl-4">
           <%= if @selected_trial && @selected_trial.node_type == "template_group" do %>
             <p class="text-xs font-semibold uppercase tracking-wider opacity-50 shrink-0">Configure</p>
             <p class="text-sm font-medium text-accent shrink-0 -mt-1">{@selected_template && @selected_template.name}</p>
 
-            <div class="overflow-y-auto flex-1">
+            <div>
               <form
                 phx-change="template_vars_changed"
                 id={"template-vars-form-#{@template_group_key}"}
@@ -816,7 +809,7 @@ defmodule SochoWeb.StudyLive.Builder do
             <p class="text-xs font-semibold uppercase tracking-wider opacity-50 shrink-0">Configure</p>
             <p class="text-sm font-medium text-secondary shrink-0 -mt-1">Timeline Group</p>
 
-            <div class="overflow-y-auto flex-1">
+            <div>
               <form
                 phx-change="config_changed"
                 id={"config-form-#{@selected_trial.id}"}
@@ -908,7 +901,7 @@ defmodule SochoWeb.StudyLive.Builder do
               </p>
               <p class="text-sm font-medium text-primary shrink-0 -mt-1">{@selected_trial.plugin}</p>
 
-              <div class="overflow-y-auto flex-1">
+              <div>
                 <form
                   phx-change="config_changed"
                   id={"config-form-#{@selected_trial.id}"}
@@ -1058,10 +1051,10 @@ defmodule SochoWeb.StudyLive.Builder do
           <% end %>
         </div>
 
-        <%!-- Column 4: Phone preview --%>
+        <%!-- Column 3: Phone preview --%>
         <div
           :if={@show_preview && @study_id}
-          class="border-l border-base-300 pl-4 flex flex-col gap-3 min-h-0"
+          class="border-l border-base-300 pl-4 flex flex-col gap-3"
         >
           <div class="flex items-center justify-between shrink-0">
             <p class="text-xs font-semibold uppercase tracking-wider opacity-50">Live Preview</p>
@@ -1075,7 +1068,7 @@ defmodule SochoWeb.StudyLive.Builder do
             </button>
           </div>
 
-          <div class="overflow-y-auto flex-1 flex justify-center items-start">
+          <div class="flex justify-center items-start">
             <div class="mockup-phone shrink-0">
               <div class="camera"></div>
               <div class="display" style="width:300px; aspect-ratio:9/16;">
