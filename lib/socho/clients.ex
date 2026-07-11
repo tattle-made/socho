@@ -25,6 +25,7 @@ defmodule Socho.Clients do
     |> Repo.update()
   end
 
+
   def client_counts do
     from(c in Client,
       left_join: u in assoc(c, :users),

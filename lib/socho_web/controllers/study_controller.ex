@@ -2,6 +2,7 @@ defmodule SochoWeb.StudyController do
   use SochoWeb, :controller
 
   alias Socho.Accounts.{Scope, User}
+  alias Socho.AppSettings
   alias Socho.Studies
   alias Socho.Studies.JsGenerator
 
@@ -12,6 +13,7 @@ defmodule SochoWeb.StudyController do
       :ok ->
         conn
         |> assign(:page_title, study.title)
+        |> assign(:branding, AppSettings.get_branding())
         |> assign(:external_stylesheets, JsGenerator.required_stylesheets(study))
         |> assign(:external_scripts, JsGenerator.required_scripts(study))
         |> assign(:inline_js, JsGenerator.generate_inline_js(study))

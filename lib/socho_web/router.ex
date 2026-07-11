@@ -60,6 +60,7 @@ defmodule SochoWeb.Router do
       live "/studies/:id/edit", StudyLive.Builder, :edit
       live "/studies/:id/settings", StudyLive.Settings, :edit
       live "/clients", ClientLive.Management, :index
+      live "/settings/branding", SettingsLive.Branding, :index
     end
 
     live_session :require_participant,

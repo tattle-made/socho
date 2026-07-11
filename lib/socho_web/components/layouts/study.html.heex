@@ -12,8 +12,25 @@
     <%= if @inline_css != "" do %>
       <style><%= raw(@inline_css) %></style>
     <% end %>
+    <%= if branding = assigns[:branding] do %>
+      <%= if primary = branding["primary_color"] do %>
+        <style>
+          :root { --sjs-primary-backcolor: <%= primary %>; --sjs-primary-backcolor-dark: <%= primary %>; }
+          .sd-btn--action { background-color: <%= primary %> !important; }
+        </style>
+      <% end %>
+      <%= if bg = branding["background_color"] do %>
+        <style>body { background-color: <%= bg %>; }</style>
+      <% end %>
+    <% end %>
   </head>
   <body>
+    <%= if (assigns[:branding] || %{})["logo_url"] not in [nil, ""] do %>
+      <div style={"background-color: #{(assigns[:branding] || %{})["background_color"] || "transparent"};"} class="px-6 py-4">
+        <img src={(assigns[:branding] || %{})["logo_url"]} alt="Logo" class="h-10 object-contain" />
+      </div>
+    <% end %>
+
     {@inner_content}
 
     <%= for src <- @external_scripts do %>
