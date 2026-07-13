@@ -33,6 +33,7 @@ defmodule Socho.Studies.JsGenerator do
           touch-action: none;
           font-size: 6vw;
           background: rgba(255, 155, 145, 0.15);
+          box-shadow: none !important;
         }
         .jsTouchButtonLeft   { left: 0;  top: 0; width: 30%; height: 100%; }
         .jsTouchButtonRight  { right: 0; top: 0; width: 30%; height: 100%; }
@@ -54,6 +55,7 @@ defmodule Socho.Studies.JsGenerator do
           touch-action: none;
           font-size: 6vw;
           background: rgba(255, 155, 145, 0.15);
+          box-shadow: none !important;
         }
         .jsTouchButtonFillBottom  { left: 0; bottom: 0; width: 100%; height: 20%; }
         .jsTouchButtonLeftMiddle  { left: 0;  top: 30%; width: 30%; height: 40%; }
@@ -66,20 +68,22 @@ defmodule Socho.Studies.JsGenerator do
     iat_css =
       if "iat-image" in plugins do
         """
-        #trial_left_align {
-          top: 8em !important;
-          left: 8px !important;
-          font-size: clamp(0.6rem, 2vw, 0.8rem) !important;
-          max-width: 40% !important;
-          line-height: 1.3 !important;
-        }
-        #trial_right_align {
-          top: 8em !important;
-          right: 8px !important;
-          font-size: clamp(0.6rem, 2vw, 0.8rem) !important;
-          max-width: 40% !important;
-          text-align: right !important;
-          line-height: 1.3 !important;
+        @media (max-width: 768px) {
+          #trial_left_align {
+            top: 8em !important;
+            left: 8px !important;
+            font-size: clamp(0.6rem, 2vw, 0.8rem) !important;
+            max-width: 40% !important;
+            line-height: 1.3 !important;
+          }
+          #trial_right_align {
+            top: 8em !important;
+            right: 8px !important;
+            font-size: clamp(0.6rem, 2vw, 0.8rem) !important;
+            max-width: 40% !important;
+            text-align: right !important;
+            line-height: 1.3 !important;
+          }
         }
         #jspsych-iat-stim {
           display: block !important;
