@@ -29,7 +29,7 @@ defmodule Socho.Studies.JsGenerator do
         -webkit-user-select: none;
         touch-action: none;
         font-size: 6vw;
-        color: rgba(255,255,255,0.6);
+        background: rgba(255, 155, 145, 0.15);
       }
       .jsTouchButtonLeft   { left: 0;  top: 0; width: 30%; height: 100%; }
       .jsTouchButtonRight  { right: 0; top: 0; width: 30%; height: 100%; }
@@ -50,7 +50,7 @@ defmodule Socho.Studies.JsGenerator do
         -webkit-user-select: none;
         touch-action: none;
         font-size: 6vw;
-        color: rgba(255,255,255,0.6);
+        background: rgba(255, 155, 145, 0.15);
       }
       .jsTouchButtonFillBottom  { left: 0; bottom: 0; width: 100%; height: 20%; }
       .jsTouchButtonLeftMiddle  { left: 0;  top: 30%; width: 30%; height: 40%; }
@@ -180,11 +180,13 @@ defmodule Socho.Studies.JsGenerator do
     "tsb_#{keys}"
   end
 
-  # Custom presets not in the extension library — rendered via CSS class instead of the `preset` param.
+  # Custom presets not in the extension library — rendered via CSS class + inline style overrides.
+  # The extension sets inline left/bottom/width/height when no recognized preset is matched (l===null),
+  # so we must emit a style object to override those inline values with the correct dimensions.
   @custom_tsb_presets %{
-    "fill_bottom"   => "jsTouchButtonFillBottom",
-    "left_middle"   => "jsTouchButtonLeftMiddle",
-    "right_middle"  => "jsTouchButtonRightMiddle"
+    "fill_bottom"  => {"jsTouchButtonFillBottom", "left:'0',bottom:'0',top:'unset',right:'unset',width:'100%',height:'20%'"},
+    "left_middle"  => {"jsTouchButtonLeftMiddle",  "left:'0',top:'30%',bottom:'unset',right:'unset',width:'30%',height:'40%'"},
+    "right_middle" => {"jsTouchButtonRightMiddle", "right:'0',top:'30%',bottom:'unset',left:'unset',width:'30%',height:'40%'"}
   }
 
   defp btn_to_js(btn) do
@@ -198,8 +200,8 @@ defmodule Socho.Studies.JsGenerator do
       nil ->
         ~s({ key: '#{btn["key"]}', preset: '#{preset}'#{label_js}#{color_js} })
 
-      css_class ->
-        ~s({ key: '#{btn["key"]}', css: '#{css_class}'#{label_js}#{color_js} })
+      {css_class, style_js} ->
+        ~s({ key: '#{btn["key"]}', css: '#{css_class}', style: {#{style_js}}#{label_js}#{color_js} })
     end
   end
 
