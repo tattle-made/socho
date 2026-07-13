@@ -12,7 +12,7 @@ config :socho, SochoWeb.Endpoint, cache_static_manifest: "priv/static/cache_mani
 # Note `:force_ssl` is required to be set at compile-time.
 config :socho, SochoWeb.Endpoint,
   force_ssl: [
-    # rewrite_on: [:x_forwarded_proto],
+    rewrite_on: [:x_forwarded_proto],
     exclude: [
       # paths: ["/health"],
       hosts: ["localhost", "127.0.0.1"]
