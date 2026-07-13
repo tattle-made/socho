@@ -216,6 +216,12 @@ for (const pluginName of PLUGINS) {
 
   writeFileSync(join(VENDOR_DIR, `${pluginName}.js`), pluginSrc);
 
+  // Copy plugin CSS if present
+  const pluginCss = join(pkgDir, `css/${pluginName}.css`);
+  if (existsSync(pluginCss)) {
+    copyFileSync(pluginCss, join(VENDOR_DIR, `${pluginName}.css`));
+  }
+
   // Extract info schema
   try {
     const pkgJson = JSON.parse(readFileSync(join(pkgDir, 'package.json'), 'utf8'));
