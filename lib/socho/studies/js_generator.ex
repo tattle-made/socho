@@ -16,49 +16,83 @@ defmodule Socho.Studies.JsGenerator do
   end
 
   def required_inline_css(study) do
-    if collect_tsb_layouts(study.trials) != [] do
-      """
-      .jsTouchButton {
-        position: fixed;
-        z-index: 1000;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        user-select: none;
-        -webkit-user-select: none;
-        touch-action: none;
-        font-size: 6vw;
-        background: rgba(255, 155, 145, 0.15);
-      }
-      .jsTouchButtonLeft   { left: 0;  top: 0; width: 30%; height: 100%; }
-      .jsTouchButtonRight  { right: 0; top: 0; width: 30%; height: 100%; }
-      .jsTouchButtonLeftBottom  { left: 0;  bottom: 0; width: 35%; height: 35%; }
-      .jsTouchButtonRightBottom { right: 0; bottom: 0; width: 35%; height: 35%; }
-      .jsTouchButtonLeftTop     { left: 0;  top: 0;    width: 35%; height: 35%; }
-      .jsTouchButtonRightTop    { right: 0; top: 0;    width: 35%; height: 35%; }
-      .jsTouchButtonFillBottom,
-      .jsTouchButtonLeftMiddle,
-      .jsTouchButtonRightMiddle {
-        position: fixed;
-        z-index: 1000;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        user-select: none;
-        -webkit-user-select: none;
-        touch-action: none;
-        font-size: 6vw;
-        background: rgba(255, 155, 145, 0.15);
-      }
-      .jsTouchButtonFillBottom  { left: 0; bottom: 0; width: 100%; height: 20%; }
-      .jsTouchButtonLeftMiddle  { left: 0;  top: 30%; width: 30%; height: 40%; }
-      .jsTouchButtonRightMiddle { right: 0; top: 30%; width: 30%; height: 40%; }
-      """
-    else
-      ""
-    end
+    plugins = collect_plugins(study.trials)
+
+    tsb_css =
+      if collect_tsb_layouts(study.trials) != [] do
+        """
+        .jsTouchButton {
+          position: fixed;
+          z-index: 1000;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          user-select: none;
+          -webkit-user-select: none;
+          touch-action: none;
+          font-size: 6vw;
+          background: rgba(255, 155, 145, 0.15);
+        }
+        .jsTouchButtonLeft   { left: 0;  top: 0; width: 30%; height: 100%; }
+        .jsTouchButtonRight  { right: 0; top: 0; width: 30%; height: 100%; }
+        .jsTouchButtonLeftBottom  { left: 0;  bottom: 0; width: 35%; height: 35%; }
+        .jsTouchButtonRightBottom { right: 0; bottom: 0; width: 35%; height: 35%; }
+        .jsTouchButtonLeftTop     { left: 0;  top: 0;    width: 35%; height: 35%; }
+        .jsTouchButtonRightTop    { right: 0; top: 0;    width: 35%; height: 35%; }
+        .jsTouchButtonFillBottom,
+        .jsTouchButtonLeftMiddle,
+        .jsTouchButtonRightMiddle {
+          position: fixed;
+          z-index: 1000;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          user-select: none;
+          -webkit-user-select: none;
+          touch-action: none;
+          font-size: 6vw;
+          background: rgba(255, 155, 145, 0.15);
+        }
+        .jsTouchButtonFillBottom  { left: 0; bottom: 0; width: 100%; height: 20%; }
+        .jsTouchButtonLeftMiddle  { left: 0;  top: 30%; width: 30%; height: 40%; }
+        .jsTouchButtonRightMiddle { right: 0; top: 30%; width: 30%; height: 40%; }
+        """
+      else
+        ""
+      end
+
+    iat_css =
+      if "iat-image" in plugins do
+        """
+        #trial_left_align {
+          top: 8em !important;
+          left: 8px !important;
+          font-size: clamp(0.6rem, 2vw, 0.8rem) !important;
+          max-width: 40% !important;
+          line-height: 1.3 !important;
+        }
+        #trial_right_align {
+          top: 8em !important;
+          right: 8px !important;
+          font-size: clamp(0.6rem, 2vw, 0.8rem) !important;
+          max-width: 40% !important;
+          text-align: right !important;
+          line-height: 1.3 !important;
+        }
+        #jspsych-iat-stim {
+          display: block !important;
+          margin: 0 auto !important;
+          max-width: 100% !important;
+          height: auto !important;
+        }
+        """
+      else
+        ""
+      end
+
+    tsb_css <> iat_css
   end
 
   def required_scripts(study) do
