@@ -299,6 +299,21 @@ defmodule Socho.Studies.JsGenerator do
 
   defp config_to_js(config, _plugin) when map_size(config) == 0, do: ""
 
+  defp config_to_js(config, "survey") do
+    params_js =
+      config
+      |> Enum.map(fn {key, val} -> "  #{key}: #{value_to_js(val)}," end)
+      |> Enum.join("\n")
+
+    survey_fn = """
+      survey_function: function(survey) {
+        survey.onTextMarkdown.add(function(s, opts) { opts.html = opts.text; });
+      },
+    """
+
+    params_js <> "\n" <> survey_fn
+  end
+
   defp config_to_js(config, _plugin) do
     config
     |> Enum.map(fn {key, val} -> "  #{key}: #{value_to_js(val)}," end)

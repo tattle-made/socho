@@ -190,6 +190,7 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
                 phx-update="ignore"
                 data-index={to_string(idx)}
                 data-value={q["html"] || ""}
+                data-field="html"
                 data-component-id={@id}
                 class="tiptap-editor rounded border border-base-300"
               ></div>
@@ -197,16 +198,16 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
           <% else %>
             <div class="form-control">
               <label class="label py-0"><span class="label-text text-xs">Question text</span></label>
-              <input
-                type="text"
-                class="input input-bordered input-xs"
-                placeholder="Enter question..."
-                value={q["title"]}
-                phx-blur="sq_update_field"
-                phx-value-index={idx}
-                phx-value-field="title"
-                phx-target={"##{@id}"}
-              />
+              <div
+                id={"sq-title-#{@id}-#{idx}"}
+                phx-hook=".SurveyHtml"
+                phx-update="ignore"
+                data-index={to_string(idx)}
+                data-value={q["title"] || ""}
+                data-field="title"
+                data-component-id={@id}
+                class="tiptap-editor rounded border border-base-300"
+              ></div>
             </div>
 
             <div class="flex items-center gap-2">
@@ -334,6 +335,7 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
         export default {
           mounted() {
             const index = this.el.dataset.index
+            const field = this.el.dataset.field || "html"
             const componentId = this.el.dataset.componentId
             const initialValue = this.el.dataset.value || ""
 
@@ -377,7 +379,7 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
               content: initialValue,
               editorProps: { attributes: { class: "outline-none" } },
               onUpdate: ({ editor }) => {
-                this.pushEventTo("#" + componentId, "sq_update_field", { index: index, field: "html", value: editor.getHTML() })
+                this.pushEventTo("#" + componentId, "sq_update_field", { index: index, field: field, value: editor.getHTML() })
               },
               onTransaction: () => {
                 const btns = this.toolbar.querySelectorAll("button")
