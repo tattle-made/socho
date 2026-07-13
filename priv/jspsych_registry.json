@@ -1793,6 +1793,37 @@
       }
     }
   },
+  "survey": {
+    "name": "survey",
+    "version": "4.0.0",
+    "description": "A jsPsych plugin for complex surveys",
+    "parameters": {
+      "survey_json": {
+        "type": "OBJECT",
+        "default": {},
+        "description": "A SurveyJS-compatible object that defines the survey.",
+        "array": false
+      },
+      "survey_function": {
+        "type": "FUNCTION",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "validation_function": {
+        "type": "FUNCTION",
+        "default": null,
+        "description": null,
+        "array": false
+      },
+      "min_width": {
+        "type": "STRING",
+        "default": "min(100vw, 800px)",
+        "description": null,
+        "array": false
+      }
+    }
+  },
   "survey-html-form": {
     "name": "survey-html-form",
     "version": "2.1.0",
