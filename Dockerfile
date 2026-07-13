@@ -22,7 +22,7 @@ FROM ${BUILDER_IMAGE} AS builder
 
 # install build dependencies
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends build-essential git \
+  && apt-get install -y --no-install-recommends build-essential git npm \
   && rm -rf /var/lib/apt/lists/*
 
 # prepare build dir
@@ -46,6 +46,7 @@ RUN mkdir config
 COPY config/config.exs config/${MIX_ENV}.exs config/
 RUN mix deps.compile
 
+COPY assets/package.json assets/package-lock.json assets/setup_jspsych.mjs assets/
 RUN mix assets.setup
 
 COPY priv priv
