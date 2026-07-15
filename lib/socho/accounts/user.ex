@@ -138,6 +138,24 @@ defmodule Socho.Accounts.User do
   end
 
   @doc """
+  A changeset for directly creating a user with a password (no email verification flow).
+  Used when an admin sets credentials to share with a participant.
+  """
+  def direct_invite_changeset(user, attrs) do
+    user
+    |> cast(attrs, [:email, :username, :role, :password])
+    |> validate_required([:email])
+    |> validate_format(:email, ~r/^[^@,;\s]+@[^@,;\s]+$/,
+      message: "must have the @ sign and no spaces"
+    )
+    |> validate_length(:email, max: 160)
+    |> unsafe_validate_unique(:email, Socho.Repo)
+    |> unique_constraint(:email)
+    |> validate_inclusion(:role, Ecto.Enum.values(__MODULE__, :role))
+    |> validate_password([])
+  end
+
+  @doc """
   A changeset for creating a user with email, password, and role.
   Used by admin helpers to seed or provision users programmatically.
   """

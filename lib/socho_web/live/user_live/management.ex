@@ -17,6 +17,7 @@ defmodule SochoWeb.UserLive.Management do
         form: to_form(changeset, as: "invite"),
         assignable_roles: assignable_roles,
         invite_sent: nil,
+        invite_mode: :email,
         show_invite_form: false,
         show_import_form: false,
         import_results: nil
@@ -61,10 +62,43 @@ defmodule SochoWeb.UserLive.Management do
 
         <%!-- Invite Form --%>
         <div :if={@show_invite_form && @assignable_roles != []} class="card bg-base-200 shadow p-6">
-          <h2 class="text-lg font-semibold mb-4">Invite a new user</h2>
+          <h2 class="text-lg font-semibold mb-4">Add a new user</h2>
 
           <div :if={@invite_sent} class="alert alert-success mb-4">
-            <span>Invitation sent to <strong>{@invite_sent}</strong>.</span>
+            <span>
+              {case @invite_sent do
+                {email, :email} -> "Invitation sent to #{email}."
+                {email, :password} -> "User #{email} created successfully."
+              end}
+            </span>
+          </div>
+
+          <%!-- Mode toggle --%>
+          <div class="flex gap-6 mb-4">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="invite_mode"
+                value="email"
+                checked={@invite_mode == :email}
+                phx-click="set_invite_mode"
+                phx-value-mode="email"
+                class="radio radio-sm"
+              />
+              <span class="text-sm">Send invitation email</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="invite_mode"
+                value="password"
+                checked={@invite_mode == :password}
+                phx-click="set_invite_mode"
+                phx-value-mode="password"
+                class="radio radio-sm"
+              />
+              <span class="text-sm">Set password directly</span>
+            </label>
           </div>
 
           <.form for={@form} id="invite_form" phx-submit="invite" phx-change="validate">
@@ -99,11 +133,26 @@ defmodule SochoWeb.UserLive.Management do
                   options={Enum.map(@assignable_roles, &{String.capitalize(to_string(&1)), &1})}
                 />
               </div>
+
+              <div :if={@invite_mode == :password} class="form-control">
+                <label class="label">
+                  <span class="label-text">Password <span class="text-error">*</span></span>
+                </label>
+                <.input
+                  field={@form[:password]}
+                  type="password"
+                  placeholder="Min. 12 characters"
+                  autocomplete="new-password"
+                />
+              </div>
             </div>
 
             <div class="mt-4">
-              <.button phx-disable-with="Sending..." class="btn btn-primary">
-                Send Invitation
+              <.button
+                phx-disable-with={if @invite_mode == :email, do: "Sending...", else: "Creating..."}
+                class="btn btn-primary"
+              >
+                {if @invite_mode == :email, do: "Send Invitation", else: "Create User"}
               </.button>
             </div>
           </.form>
@@ -223,8 +272,22 @@ defmodule SochoWeb.UserLive.Management do
      assign(socket,
        show_invite_form: !socket.assigns.show_invite_form,
        show_import_form: false,
-       invite_sent: nil
+       invite_sent: nil,
+       invite_mode: :email,
+       form: to_form(User.invitation_changeset(%User{}, %{}), as: "invite")
      )}
+  end
+
+  def handle_event("set_invite_mode", %{"mode" => mode}, socket) do
+    mode = String.to_existing_atom(mode)
+
+    changeset =
+      case mode do
+        :email -> User.invitation_changeset(%User{}, %{})
+        :password -> User.direct_invite_changeset(%User{}, %{})
+      end
+
+    {:noreply, assign(socket, invite_mode: mode, form: to_form(changeset, as: "invite"), invite_sent: nil)}
   end
 
   def handle_event("toggle_import_form", _params, socket) do
@@ -238,8 +301,10 @@ defmodule SochoWeb.UserLive.Management do
 
   def handle_event("validate", %{"invite" => params}, socket) do
     changeset =
-      %User{}
-      |> User.invitation_changeset(params)
+      case socket.assigns.invite_mode do
+        :email -> User.invitation_changeset(%User{}, params)
+        :password -> User.direct_invite_changeset(%User{}, params)
+      end
       |> Map.put(:action, :validate)
 
     {:noreply, assign(socket, form: to_form(changeset, as: "invite"))}
@@ -250,17 +315,31 @@ defmodule SochoWeb.UserLive.Management do
   end
 
   def handle_event("invite", %{"invite" => params}, socket) do
-    url_fun = fn token -> url(~p"/users/log-in/#{token}") end
+    mode = socket.assigns.invite_mode
 
-    case Accounts.invite_user(socket.assigns.current_scope, params, url_fun) do
+    result =
+      case mode do
+        :email ->
+          url_fun = fn token -> url(~p"/users/log-in/#{token}") end
+          Accounts.invite_user(socket.assigns.current_scope, params, url_fun)
+
+        :password ->
+          Accounts.create_user_with_password(socket.assigns.current_scope, params)
+      end
+
+    case result do
       {:ok, user} ->
-        fresh_changeset = User.invitation_changeset(%User{}, %{})
+        fresh_changeset =
+          case mode do
+            :email -> User.invitation_changeset(%User{}, %{})
+            :password -> User.direct_invite_changeset(%User{}, %{})
+          end
 
         {:noreply,
          assign(socket,
            users: list_staff_and_unaffiliated(),
            form: to_form(fresh_changeset, as: "invite"),
-           invite_sent: user.email
+           invite_sent: {user.email, mode}
          )}
 
       {:error, %Ecto.Changeset{} = changeset} ->

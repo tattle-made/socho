@@ -215,6 +215,25 @@ defmodule Socho.Accounts do
   end
 
   @doc """
+  Creates a user with a pre-set password and marks them as confirmed immediately.
+  No email is sent — credentials are shared manually with the participant.
+  """
+  def create_user_with_password(inviter_scope, attrs) do
+    _inviter = inviter_scope.user
+
+    changeset = User.direct_invite_changeset(%User{}, attrs)
+
+    with {:ok, user} <- Repo.insert(changeset) do
+      {:ok, _confirmed} =
+        user
+        |> User.confirm_changeset()
+        |> Repo.update()
+
+      {:ok, user}
+    end
+  end
+
+  @doc """
   Imports users from a CSV string. Each row must have at least an `email` column.
   Optional columns: `username`, `role` (defaults to "participant").
 
