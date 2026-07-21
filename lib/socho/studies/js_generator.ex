@@ -85,11 +85,18 @@ defmodule Socho.Studies.JsGenerator do
             line-height: 1.3 !important;
           }
         }
+        #jspsych-iat-stim {
+          display: flex !important;
+          justify-content: center !important;
+          align-items: center !important;
+          min-height: 50vh !important;
+        }
         #jspsych-iat-stim img {
-          display: block !important;
-          margin: 0 auto !important;
-          max-width: 100% !important;
+          max-height: 50vh !important;
+          max-width: 90% !important;
+          width: auto !important;
           height: auto !important;
+          transform: translateY(-25%) !important;
         }
         """
       else
