@@ -228,7 +228,16 @@ defmodule Socho.Studies.Templates.Iat do
           iat_block.(combined1_vars, [cat1_label, att1_label], [cat2_label, att2_label], 4)
         ]
 
+        all_images = cat1_images ++ cat2_images ++ att1_images ++ att2_images
+
         [
+          %{
+            node_type: "trial",
+            plugin: "preload",
+            config: %{"images" => all_images, "auto_preload" => false},
+            extensions: %{},
+            children: []
+          },
           %{
             node_type: "trial",
             plugin: "instructions",
