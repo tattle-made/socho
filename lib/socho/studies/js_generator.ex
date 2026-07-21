@@ -347,6 +347,10 @@ defmodule Socho.Studies.JsGenerator do
         do: "\n  randomize_order: true,",
         else: nil
       ),
+      if(config["data"] not in [nil, %{}],
+        do: "\n  data: #{value_to_js(config["data"])},",
+        else: nil
+      ),
       if(config["conditional_function"] not in [nil, ""],
         do: "\n  conditional_function: function() {\n#{indent_js_body(config["conditional_function"])}\n  },",
         else: nil
@@ -385,8 +389,22 @@ defmodule Socho.Studies.JsGenerator do
   end
 
   defp config_to_js(config, _plugin) do
-    config
-    |> Enum.map(fn {key, val} -> "  #{key}: #{value_to_js(val)}," end)
+    {fn_entries, normal_entries} = Map.split(config, ["stimulus_function"])
+
+    normal_js =
+      normal_entries
+      |> Enum.map(fn {key, val} -> "  #{key}: #{value_to_js(val)}," end)
+      |> Enum.join("\n")
+
+    fn_js =
+      fn_entries
+      |> Enum.map(fn {_key, body} ->
+        "  stimulus: function() {\n#{indent_js_body(body)}\n  },"
+      end)
+      |> Enum.join("\n")
+
+    [normal_js, fn_js]
+    |> Enum.reject(&(&1 == ""))
     |> Enum.join("\n")
     |> then(&(&1 <> "\n"))
   end

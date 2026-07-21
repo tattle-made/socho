@@ -103,14 +103,15 @@ defmodule Socho.Studies.Templates.Iat do
           }
         end
 
-        iat_block = fn timeline_vars, left_labels, right_labels, reps ->
+        iat_block = fn timeline_vars, left_labels, right_labels, reps, data_type ->
           %{
             node_type: "timeline",
             plugin: nil,
             config: %{
               "timeline_variables" => timeline_vars,
               "repetitions" => reps,
-              "randomize_order" => true
+              "randomize_order" => true,
+              "data" => %{"iat_type" => data_type}
             },
             extensions: %{},
             children: [
@@ -183,31 +184,31 @@ defmodule Socho.Studies.Templates.Iat do
           block_intro.(
             "<h2>Category Practice</h2><p>Categorize each image as <strong>#{cat1_label}</strong> (press <strong>E</strong> or touch left) or <strong>#{cat2_label}</strong> (press <strong>I</strong> or touch right).</p>"
           ),
-          iat_block.(cat_vars, [cat1_label], [cat2_label], 2),
+          iat_block.(cat_vars, [cat1_label], [cat2_label], 2, "practice"),
           block_intro.(
             "<h2>Attribute Practice</h2><p>Categorize each image as <strong>#{att1_label}</strong> (press <strong>E</strong> or touch left) or <strong>#{att2_label}</strong> (press <strong>I</strong> or touch right).</p>"
           ),
-          iat_block.(att_vars, [att1_label], [att2_label], 2),
+          iat_block.(att_vars, [att1_label], [att2_label], 2, "practice"),
           block_intro.(
             "<h2>Combined Practice</h2><p>Press <strong>E</strong> or touch left for <strong>#{cat1_label}</strong> or <strong>#{att1_label}</strong>.</p><p>Press <strong>I</strong> or touch right for <strong>#{cat2_label}</strong> or <strong>#{att2_label}</strong>.</p>"
           ),
-          iat_block.(combined1_vars, [cat1_label, att1_label], [cat2_label, att2_label], combined_practice_reps),
+          iat_block.(combined1_vars, [cat1_label, att1_label], [cat2_label, att2_label], combined_practice_reps, "combined1_practice"),
           block_intro.(
             "<h2>Combined Test</h2><p>Press <strong>E</strong> or touch left for <strong>#{cat1_label}</strong> or <strong>#{att1_label}</strong>.</p><p>Press <strong>I</strong> or touch right for <strong>#{cat2_label}</strong> or <strong>#{att2_label}</strong>.</p><p>Go as fast as you can while remaining accurate.</p>"
           ),
-          iat_block.(combined1_vars, [cat1_label, att1_label], [cat2_label, att2_label], combined_test_reps),
+          iat_block.(combined1_vars, [cat1_label, att1_label], [cat2_label, att2_label], combined_test_reps, "combined1_test"),
           block_intro.(
             "<h2>Category Reversed Practice</h2><p>The categories have switched sides. Press <strong>E</strong> or touch left for <strong>#{cat2_label}</strong> and press <strong>I</strong> or touch right for <strong>#{cat1_label}</strong>.</p>"
           ),
-          iat_block.(cat_rev_vars, [cat2_label], [cat1_label], 2),
+          iat_block.(cat_rev_vars, [cat2_label], [cat1_label], 2, "practice"),
           block_intro.(
             "<h2>Combined Reversed Practice</h2><p>Press <strong>E</strong> or touch left for <strong>#{cat2_label}</strong> or <strong>#{att1_label}</strong>.</p><p>Press <strong>I</strong> or touch right for <strong>#{cat1_label}</strong> or <strong>#{att2_label}</strong>.</p>"
           ),
-          iat_block.(combined2_vars, [cat2_label, att1_label], [cat1_label, att2_label], combined_practice_reps),
+          iat_block.(combined2_vars, [cat2_label, att1_label], [cat1_label, att2_label], combined_practice_reps, "combined2_practice"),
           block_intro.(
             "<h2>Combined Reversed Test</h2><p>Press <strong>E</strong> or touch left for <strong>#{cat2_label}</strong> or <strong>#{att1_label}</strong>.</p><p>Press <strong>I</strong> or touch right for <strong>#{cat1_label}</strong> or <strong>#{att2_label}</strong>.</p><p>Go as fast as you can while remaining accurate.</p>"
           ),
-          iat_block.(combined2_vars, [cat2_label, att1_label], [cat1_label, att2_label], combined_test_reps)
+          iat_block.(combined2_vars, [cat2_label, att1_label], [cat1_label, att2_label], combined_test_reps, "combined2_test")
         ]
 
         # Version B: incompatible-first (cat2 left in combined blocks)
@@ -215,31 +216,31 @@ defmodule Socho.Studies.Templates.Iat do
           block_intro.(
             "<h2>Category Reversed Practice</h2><p>Categorize each image as <strong>#{cat2_label}</strong> (press <strong>E</strong> or touch left) or <strong>#{cat1_label}</strong> (press <strong>I</strong> or touch right).</p>"
           ),
-          iat_block.(cat_rev_vars, [cat2_label], [cat1_label], 2),
+          iat_block.(cat_rev_vars, [cat2_label], [cat1_label], 2, "practice"),
           block_intro.(
             "<h2>Attribute Practice</h2><p>Categorize each image as <strong>#{att1_label}</strong> (press <strong>E</strong> or touch left) or <strong>#{att2_label}</strong> (press <strong>I</strong> or touch right).</p>"
           ),
-          iat_block.(att_vars, [att1_label], [att2_label], 2),
+          iat_block.(att_vars, [att1_label], [att2_label], 2, "practice"),
           block_intro.(
             "<h2>Combined Reversed Practice</h2><p>Press <strong>E</strong> or touch left for <strong>#{cat2_label}</strong> or <strong>#{att1_label}</strong>.</p><p>Press <strong>I</strong> or touch right for <strong>#{cat1_label}</strong> or <strong>#{att2_label}</strong>.</p>"
           ),
-          iat_block.(combined2_vars, [cat2_label, att1_label], [cat1_label, att2_label], combined_practice_reps),
+          iat_block.(combined2_vars, [cat2_label, att1_label], [cat1_label, att2_label], combined_practice_reps, "combined2_practice"),
           block_intro.(
             "<h2>Combined Reversed Test</h2><p>Press <strong>E</strong> or touch left for <strong>#{cat2_label}</strong> or <strong>#{att1_label}</strong>.</p><p>Press <strong>I</strong> or touch right for <strong>#{cat1_label}</strong> or <strong>#{att2_label}</strong>.</p><p>Go as fast as you can while remaining accurate.</p>"
           ),
-          iat_block.(combined2_vars, [cat2_label, att1_label], [cat1_label, att2_label], combined_test_reps),
+          iat_block.(combined2_vars, [cat2_label, att1_label], [cat1_label, att2_label], combined_test_reps, "combined2_test"),
           block_intro.(
             "<h2>Category Practice</h2><p>Categorize each image as <strong>#{cat1_label}</strong> (press <strong>E</strong> or touch left) or <strong>#{cat2_label}</strong> (press <strong>I</strong> or touch right).</p>"
           ),
-          iat_block.(cat_vars, [cat1_label], [cat2_label], 2),
+          iat_block.(cat_vars, [cat1_label], [cat2_label], 2, "practice"),
           block_intro.(
             "<h2>Combined Practice</h2><p>Press <strong>E</strong> or touch left for <strong>#{cat1_label}</strong> or <strong>#{att1_label}</strong>.</p><p>Press <strong>I</strong> or touch right for <strong>#{cat2_label}</strong> or <strong>#{att2_label}</strong>.</p>"
           ),
-          iat_block.(combined1_vars, [cat1_label, att1_label], [cat2_label, att2_label], combined_practice_reps),
+          iat_block.(combined1_vars, [cat1_label, att1_label], [cat2_label, att2_label], combined_practice_reps, "combined1_practice"),
           block_intro.(
             "<h2>Combined Test</h2><p>Press <strong>E</strong> or touch left for <strong>#{cat1_label}</strong> or <strong>#{att1_label}</strong>.</p><p>Press <strong>I</strong> or touch right for <strong>#{cat2_label}</strong> or <strong>#{att2_label}</strong>.</p><p>Go as fast as you can while remaining accurate.</p>"
           ),
-          iat_block.(combined1_vars, [cat1_label, att1_label], [cat2_label, att2_label], combined_test_reps)
+          iat_block.(combined1_vars, [cat1_label, att1_label], [cat2_label, att2_label], combined_test_reps, "combined1_test")
         ]
 
         all_images =
@@ -278,6 +279,37 @@ defmodule Socho.Studies.Templates.Iat do
             config: %{"split" => length(version_a_children)},
             extensions: %{},
             children: version_a_children ++ version_b_children
+          },
+          %{
+            node_type: "trial",
+            plugin: "html-button-response",
+            config: %{
+              "stimulus_function" => """
+                var c1 = jsPsych.data.get().filter({iat_type: 'combined1_test'}).filterCustom(function(x){ return x.rt < 10000; });
+                var c2 = jsPsych.data.get().filter({iat_type: 'combined2_test'}).filterCustom(function(x){ return x.rt < 10000; });
+                var mean_c1 = c1.filter({correct: true}).select('rt').mean();
+                var mean_c2 = c2.filter({correct: true}).select('rt').mean();
+                var sd = c1.join(c2).filter({correct: true}).select('rt').sd();
+                var d = (mean_c2 - mean_c1) / sd;
+                return "<h2>You're done \u2014 thank you!</h2>" +
+                  "<p>When <strong>#{cat1_label}</strong> and <strong>#{att1_label}</strong> were paired, " +
+                  "your average response time was <strong>" + Math.floor(mean_c1) + " ms</strong>.</p>" +
+                  "<p>When <strong>#{cat2_label}</strong> and <strong>#{att1_label}</strong> were paired, " +
+                  "your average response time was <strong>" + Math.floor(mean_c2) + " ms</strong>.</p>" +
+                  "<p>Your D-score is <strong>" + d.toFixed(2) + "</strong>.</p>" +
+                  "<p style='font-size:0.85em;color:#555'>" +
+                  "A positive score suggests a stronger association between #{cat1_label} and #{att1_label}. " +
+                  "A negative score suggests a stronger association between #{cat2_label} and #{att1_label}. " +
+                  "Scores above 0.15 are slight, above 0.35 moderate, above 0.65 strong.</p>";
+              """,
+              "choices" => ["Finish"],
+              "button_layout" => "grid",
+              "grid_rows" => "1",
+              "grid_columns" => "",
+              "enable_button_after" => 0
+            },
+            extensions: %{},
+            children: []
           }
         ]
       end
