@@ -85,8 +85,6 @@ defmodule Socho.Studies.Templates.Iat do
               "stimulus" => html,
               "choices" => ["Begin Block"],
               "prompt" => "",
-              "stimulus_duration" => "",
-              "trial_duration" => "",
               "button_layout" => "grid",
               "grid_rows" => "1",
               "grid_columns" => "",
