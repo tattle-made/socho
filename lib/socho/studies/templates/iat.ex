@@ -11,30 +11,30 @@ defmodule Socho.Studies.Templates.Iat do
         %{key: "cat1_label", label: "Category 1 label", type: :text, default: "Category A"},
         %{
           key: "cat1_images",
-          label: "Category 1 images (one URL per line)",
+          label: "Category 1 stimuli (one image URL or word per line)",
           type: :text,
           default: "https://example.com/cat1_1.jpg\nhttps://example.com/cat1_2.jpg"
         },
         %{key: "cat2_label", label: "Category 2 label", type: :text, default: "Category B"},
         %{
           key: "cat2_images",
-          label: "Category 2 images (one URL per line)",
+          label: "Category 2 stimuli (one image URL or word per line)",
           type: :text,
           default: "https://example.com/cat2_1.jpg\nhttps://example.com/cat2_2.jpg"
         },
         %{key: "att1_label", label: "Attribute 1 label", type: :text, default: "Pleasant"},
         %{
           key: "att1_images",
-          label: "Attribute 1 images (one URL per line)",
+          label: "Attribute 1 stimuli (one image URL or word per line)",
           type: :text,
-          default: "https://example.com/att1_1.jpg\nhttps://example.com/att1_2.jpg"
+          default: "Pleasant\nJoyful\nHappy"
         },
         %{key: "att2_label", label: "Attribute 2 label", type: :text, default: "Unpleasant"},
         %{
           key: "att2_images",
-          label: "Attribute 2 images (one URL per line)",
+          label: "Attribute 2 stimuli (one image URL or word per line)",
           type: :text,
-          default: "https://example.com/att2_1.jpg\nhttps://example.com/att2_2.jpg"
+          default: "Unpleasant\nSad\nAngry"
         },
         %{
           key: "instructions_html",
@@ -51,20 +51,30 @@ defmodule Socho.Studies.Templates.Iat do
         att2_label = Map.get(vars, "att2_label", "Unpleasant")
         instructions = Map.get(vars, "instructions_html", "")
 
-        parse_urls = fn text ->
+        parse_lines = fn text ->
           text
           |> String.split("\n")
           |> Enum.map(&String.trim/1)
           |> Enum.reject(&(&1 == ""))
         end
 
-        cat1_images = parse_urls.(Map.get(vars, "cat1_images", ""))
-        cat2_images = parse_urls.(Map.get(vars, "cat2_images", ""))
-        att1_images = parse_urls.(Map.get(vars, "att1_images", ""))
-        att2_images = parse_urls.(Map.get(vars, "att2_images", ""))
+        cat1_images = parse_lines.(Map.get(vars, "cat1_images", ""))
+        cat2_images = parse_lines.(Map.get(vars, "cat2_images", ""))
+        att1_images = parse_lines.(Map.get(vars, "att1_images", ""))
+        att2_images = parse_lines.(Map.get(vars, "att2_images", ""))
 
-        make_stim_vars = fn image_list, association ->
-          Enum.map(image_list, &%{"stimulus" => &1, "stim_key_association" => association})
+        is_url = fn item ->
+          String.starts_with?(item, "http://") or String.starts_with?(item, "https://")
+        end
+
+        to_stimulus = fn item ->
+          if is_url.(item), do: "<img src='#{item}'>", else: item
+        end
+
+        make_stim_vars = fn item_list, association ->
+          Enum.map(item_list, fn item ->
+            %{"stimulus" => to_stimulus.(item), "stim_key_association" => association}
+          end)
         end
 
         block_intro = fn html ->
@@ -108,7 +118,7 @@ defmodule Socho.Studies.Templates.Iat do
             children: [
               %{
                 node_type: "trial",
-                plugin: "iat-image",
+                plugin: "iat-html",
                 config: %{
                   "stimulus" => "{{stimulus}}",
                   "stim_key_association" => "{{stim_key_association}}",
@@ -228,7 +238,9 @@ defmodule Socho.Studies.Templates.Iat do
           iat_block.(combined1_vars, [cat1_label, att1_label], [cat2_label, att2_label], 4)
         ]
 
-        all_images = cat1_images ++ cat2_images ++ att1_images ++ att2_images
+        all_images =
+          (cat1_images ++ cat2_images ++ att1_images ++ att2_images)
+          |> Enum.filter(is_url)
 
         [
           %{

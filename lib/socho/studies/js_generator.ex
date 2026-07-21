@@ -66,7 +66,7 @@ defmodule Socho.Studies.JsGenerator do
       end
 
     iat_css =
-      if "iat-image" in plugins do
+      if "iat-image" in plugins or "iat-html" in plugins do
         """
         @media (max-width: 768px) {
           #trial_left_align {
@@ -85,7 +85,7 @@ defmodule Socho.Studies.JsGenerator do
             line-height: 1.3 !important;
           }
         }
-        #jspsych-iat-stim {
+        #jspsych-iat-stim img {
           display: block !important;
           margin: 0 auto !important;
           max-width: 100% !important;
