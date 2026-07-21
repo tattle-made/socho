@@ -257,6 +257,29 @@ defmodule Socho.Studies.JsGenerator do
     end)
   end
 
+  defp emit_node(%{node_type: "counterbalanced_group"} = node, counter) do
+    var_name = "timeline#{counter}"
+    children = node.children || []
+    split = get_in(node.config || %{}, ["split"]) || div(length(children), 2)
+    {version_a_children, version_b_children} = Enum.split(children, split)
+
+    {counter_a, version_a_decls, version_a_vars} = emit_nodes(version_a_children, counter + 1)
+    {counter_b, version_b_decls, version_b_vars} = emit_nodes(version_b_children, counter_a)
+
+    version_a_js = Enum.join(version_a_vars, ", ")
+    version_b_js = Enum.join(version_b_vars, ", ")
+
+    own_decl = """
+    const #{var_name} = (function() {
+      const versionA = [#{version_a_js}];
+      const versionB = [#{version_b_js}];
+      return Math.random() < 0.5 ? { timeline: versionA } : { timeline: versionB };
+    })();\
+    """
+
+    {counter_b, version_a_decls ++ version_b_decls ++ [own_decl], var_name}
+  end
+
   defp emit_node(%{node_type: "template_group"} = node, counter) do
     var_name = "timeline#{counter}"
     {new_counter, child_decls, child_var_names} = emit_nodes(node.children || [], counter + 1)

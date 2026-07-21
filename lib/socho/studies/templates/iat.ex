@@ -164,6 +164,70 @@ defmodule Socho.Studies.Templates.Iat do
             make_stim_vars.(cat1_images, "right") ++
             make_stim_vars.(att2_images, "right")
 
+        # Version A: compatible-first (cat1 left in combined blocks)
+        version_a_children = [
+          block_intro.(
+            "<h2>Category Practice</h2><p>Categorize each image as <strong>#{cat1_label}</strong> (press <strong>E</strong> or touch left) or <strong>#{cat2_label}</strong> (press <strong>I</strong> or touch right).</p>"
+          ),
+          iat_block.(cat_vars, [cat1_label], [cat2_label], 2),
+          block_intro.(
+            "<h2>Attribute Practice</h2><p>Categorize each image as <strong>#{att1_label}</strong> (press <strong>E</strong> or touch left) or <strong>#{att2_label}</strong> (press <strong>I</strong> or touch right).</p>"
+          ),
+          iat_block.(att_vars, [att1_label], [att2_label], 2),
+          block_intro.(
+            "<h2>Combined Practice</h2><p>Press <strong>E</strong> or touch left for <strong>#{cat1_label}</strong> or <strong>#{att1_label}</strong>.</p><p>Press <strong>I</strong> or touch right for <strong>#{cat2_label}</strong> or <strong>#{att2_label}</strong>.</p>"
+          ),
+          iat_block.(combined1_vars, [cat1_label, att1_label], [cat2_label, att2_label], 2),
+          block_intro.(
+            "<h2>Combined Test</h2><p>Press <strong>E</strong> or touch left for <strong>#{cat1_label}</strong> or <strong>#{att1_label}</strong>.</p><p>Press <strong>I</strong> or touch right for <strong>#{cat2_label}</strong> or <strong>#{att2_label}</strong>.</p><p>Go as fast as you can while remaining accurate.</p>"
+          ),
+          iat_block.(combined1_vars, [cat1_label, att1_label], [cat2_label, att2_label], 4),
+          block_intro.(
+            "<h2>Category Reversed Practice</h2><p>The categories have switched sides. Press <strong>E</strong> or touch left for <strong>#{cat2_label}</strong> and press <strong>I</strong> or touch right for <strong>#{cat1_label}</strong>.</p>"
+          ),
+          iat_block.(cat_rev_vars, [cat2_label], [cat1_label], 2),
+          block_intro.(
+            "<h2>Combined Reversed Practice</h2><p>Press <strong>E</strong> or touch left for <strong>#{cat2_label}</strong> or <strong>#{att1_label}</strong>.</p><p>Press <strong>I</strong> or touch right for <strong>#{cat1_label}</strong> or <strong>#{att2_label}</strong>.</p>"
+          ),
+          iat_block.(combined2_vars, [cat2_label, att1_label], [cat1_label, att2_label], 2),
+          block_intro.(
+            "<h2>Combined Reversed Test</h2><p>Press <strong>E</strong> or touch left for <strong>#{cat2_label}</strong> or <strong>#{att1_label}</strong>.</p><p>Press <strong>I</strong> or touch right for <strong>#{cat1_label}</strong> or <strong>#{att2_label}</strong>.</p><p>Go as fast as you can while remaining accurate.</p>"
+          ),
+          iat_block.(combined2_vars, [cat2_label, att1_label], [cat1_label, att2_label], 4)
+        ]
+
+        # Version B: incompatible-first (cat2 left in combined blocks)
+        version_b_children = [
+          block_intro.(
+            "<h2>Category Reversed Practice</h2><p>Categorize each image as <strong>#{cat2_label}</strong> (press <strong>E</strong> or touch left) or <strong>#{cat1_label}</strong> (press <strong>I</strong> or touch right).</p>"
+          ),
+          iat_block.(cat_rev_vars, [cat2_label], [cat1_label], 2),
+          block_intro.(
+            "<h2>Attribute Practice</h2><p>Categorize each image as <strong>#{att1_label}</strong> (press <strong>E</strong> or touch left) or <strong>#{att2_label}</strong> (press <strong>I</strong> or touch right).</p>"
+          ),
+          iat_block.(att_vars, [att1_label], [att2_label], 2),
+          block_intro.(
+            "<h2>Combined Reversed Practice</h2><p>Press <strong>E</strong> or touch left for <strong>#{cat2_label}</strong> or <strong>#{att1_label}</strong>.</p><p>Press <strong>I</strong> or touch right for <strong>#{cat1_label}</strong> or <strong>#{att2_label}</strong>.</p>"
+          ),
+          iat_block.(combined2_vars, [cat2_label, att1_label], [cat1_label, att2_label], 2),
+          block_intro.(
+            "<h2>Combined Reversed Test</h2><p>Press <strong>E</strong> or touch left for <strong>#{cat2_label}</strong> or <strong>#{att1_label}</strong>.</p><p>Press <strong>I</strong> or touch right for <strong>#{cat1_label}</strong> or <strong>#{att2_label}</strong>.</p><p>Go as fast as you can while remaining accurate.</p>"
+          ),
+          iat_block.(combined2_vars, [cat2_label, att1_label], [cat1_label, att2_label], 4),
+          block_intro.(
+            "<h2>Category Practice</h2><p>Categorize each image as <strong>#{cat1_label}</strong> (press <strong>E</strong> or touch left) or <strong>#{cat2_label}</strong> (press <strong>I</strong> or touch right).</p>"
+          ),
+          iat_block.(cat_vars, [cat1_label], [cat2_label], 2),
+          block_intro.(
+            "<h2>Combined Practice</h2><p>Press <strong>E</strong> or touch left for <strong>#{cat1_label}</strong> or <strong>#{att1_label}</strong>.</p><p>Press <strong>I</strong> or touch right for <strong>#{cat2_label}</strong> or <strong>#{att2_label}</strong>.</p>"
+          ),
+          iat_block.(combined1_vars, [cat1_label, att1_label], [cat2_label, att2_label], 2),
+          block_intro.(
+            "<h2>Combined Test</h2><p>Press <strong>E</strong> or touch left for <strong>#{cat1_label}</strong> or <strong>#{att1_label}</strong>.</p><p>Press <strong>I</strong> or touch right for <strong>#{cat2_label}</strong> or <strong>#{att2_label}</strong>.</p><p>Go as fast as you can while remaining accurate.</p>"
+          ),
+          iat_block.(combined1_vars, [cat1_label, att1_label], [cat2_label, att2_label], 4)
+        ]
+
         [
           %{
             node_type: "trial",
@@ -183,34 +247,13 @@ defmodule Socho.Studies.Templates.Iat do
             extensions: %{},
             children: []
           },
-          block_intro.(
-            "<h2>Block 1 of 7: Category Practice</h2><p>Categorize each image as <strong>#{cat1_label}</strong> (press <strong>E</strong> or touch left) or <strong>#{cat2_label}</strong> (press <strong>I</strong> or touch right).</p>"
-          ),
-          iat_block.(cat_vars, [cat1_label], [cat2_label], 2),
-          block_intro.(
-            "<h2>Block 2 of 7: Attribute Practice</h2><p>Categorize each image as <strong>#{att1_label}</strong> (press <strong>E</strong> or touch left) or <strong>#{att2_label}</strong> (press <strong>I</strong> or touch right).</p>"
-          ),
-          iat_block.(att_vars, [att1_label], [att2_label], 2),
-          block_intro.(
-            "<h2>Block 3 of 7: Combined Practice</h2><p>Press <strong>E</strong> or touch left for <strong>#{cat1_label}</strong> or <strong>#{att1_label}</strong>.</p><p>Press <strong>I</strong> or touch right for <strong>#{cat2_label}</strong> or <strong>#{att2_label}</strong>.</p>"
-          ),
-          iat_block.(combined1_vars, [cat1_label, att1_label], [cat2_label, att2_label], 2),
-          block_intro.(
-            "<h2>Block 4 of 7: Combined Test</h2><p>Press <strong>E</strong> or touch left for <strong>#{cat1_label}</strong> or <strong>#{att1_label}</strong>.</p><p>Press <strong>I</strong> or touch right for <strong>#{cat2_label}</strong> or <strong>#{att2_label}</strong>.</p><p>Go as fast as you can while remaining accurate.</p>"
-          ),
-          iat_block.(combined1_vars, [cat1_label, att1_label], [cat2_label, att2_label], 4),
-          block_intro.(
-            "<h2>Block 5 of 7: Category Reversed Practice</h2><p>The categories have switched sides. Press <strong>E</strong> or touch left for <strong>#{cat2_label}</strong> and press <strong>I</strong> or touch right for <strong>#{cat1_label}</strong>.</p>"
-          ),
-          iat_block.(cat_rev_vars, [cat2_label], [cat1_label], 2),
-          block_intro.(
-            "<h2>Block 6 of 7: Combined Reversed Practice</h2><p>Press <strong>E</strong> or touch left for <strong>#{cat2_label}</strong> or <strong>#{att1_label}</strong>.</p><p>Press <strong>I</strong> or touch right for <strong>#{cat1_label}</strong> or <strong>#{att2_label}</strong>.</p>"
-          ),
-          iat_block.(combined2_vars, [cat2_label, att1_label], [cat1_label, att2_label], 2),
-          block_intro.(
-            "<h2>Block 7 of 7: Combined Reversed Test</h2><p>Press <strong>E</strong> or touch left for <strong>#{cat2_label}</strong> or <strong>#{att1_label}</strong>.</p><p>Press <strong>I</strong> or touch right for <strong>#{cat1_label}</strong> or <strong>#{att2_label}</strong>.</p><p>Go as fast as you can while remaining accurate.</p>"
-          ),
-          iat_block.(combined2_vars, [cat2_label, att1_label], [cat1_label, att2_label], 4)
+          %{
+            node_type: "counterbalanced_group",
+            plugin: nil,
+            config: %{"split" => length(version_a_children)},
+            extensions: %{},
+            children: version_a_children ++ version_b_children
+          }
         ]
       end
     }
