@@ -219,6 +219,7 @@ defmodule Socho.Studies do
 
   defp csv_cell(nil), do: ""
   defp csv_cell(v) when is_binary(v), do: v
+  defp csv_cell(v) when is_list(v) or is_map(v), do: Jason.encode!(v)
   defp csv_cell(v), do: to_string(v)
 
   defp csv_escape(value) do

@@ -16,7 +16,8 @@ defmodule SochoWeb.StudyLive.Settings do
        study: study,
        clients: clients,
        form: to_form(changeset),
-       submission_count: Studies.count_submissions(id)
+       submission_count: Studies.count_submissions(id),
+       study_url: SochoWeb.Endpoint.url() <> "/study/#{id}"
      )}
   end
 
@@ -67,6 +68,16 @@ defmodule SochoWeb.StudyLive.Settings do
               <p class="text-xs opacity-50 mt-1">
                 Only published studies appear in participant dashboards.
               </p>
+              <div :if={@study.status == :published} class="mt-3">
+                <p class="text-xs font-medium mb-1">Study URL</p>
+                <input
+                  type="text"
+                  class="input input-bordered input-sm font-mono text-xs w-full"
+                  value={@study_url}
+                  readonly
+                  onclick="this.select()"
+                />
+              </div>
             </div>
 
             <div class="pt-2">
