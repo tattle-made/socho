@@ -285,11 +285,11 @@ defmodule Socho.Studies.Templates.Iat do
             plugin: "html-button-response",
             config: %{
               "stimulus_function" => """
-                var c1 = jsPsych.data.get().filter({iat_type: 'combined1_test'}).filterCustom(function(x){ return x.rt < 10000; });
-                var c2 = jsPsych.data.get().filter({iat_type: 'combined2_test'}).filterCustom(function(x){ return x.rt < 10000; });
-                var mean_c1 = c1.filter({correct: true}).select('rt').mean();
-                var mean_c2 = c2.filter({correct: true}).select('rt').mean();
-                var sd = c1.join(c2).filter({correct: true}).select('rt').sd();
+                var c1 = jsPsych.data.get().filterCustom(function(x){ return (x.iat_type === 'combined1_test' || x.iat_type === 'combined1_practice') && x.rt >= 400 && x.rt < 10000; });
+                var c2 = jsPsych.data.get().filterCustom(function(x){ return (x.iat_type === 'combined2_test' || x.iat_type === 'combined2_practice') && x.rt >= 400 && x.rt < 10000; });
+                var mean_c1 = c1.select('rt').mean();
+                var mean_c2 = c2.select('rt').mean();
+                var sd = c1.join(c2).select('rt').sd();
                 var d = (mean_c2 - mean_c1) / sd;
                 return "<h2>You're done \u2014 thank you!</h2>" +
                   "<p>When <strong>#{cat1_label}</strong> and <strong>#{att1_label}</strong> were paired, " +
