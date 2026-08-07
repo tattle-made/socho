@@ -179,16 +179,29 @@ defmodule Socho.Studies.Templates.Iat do
         combined_practice_reps = max(1, trunc(Float.ceil(20 / n_combined)))
         combined_test_reps = max(1, trunc(Float.ceil(40 / n_combined)))
 
+        att_vars_flipped =
+          make_stim_vars.(att2_images, "left") ++
+            make_stim_vars.(att1_images, "right")
+
+        att_blocks = fn avars, left_label, right_label ->
+          [
+            block_intro.(
+              "<h2>Attribute Practice</h2><p>Categorize each image as <strong>#{left_label}</strong> (press <strong>E</strong> or touch left) or <strong>#{right_label}</strong> (press <strong>I</strong> or touch right).</p>"
+            ),
+            iat_block.(avars, [left_label], [right_label], 2, "practice")
+          ]
+        end
+
+        # Shared block sequences per category-order arm, excluding the attribute practice block.
         # Version A: compatible-first (cat1 left in combined blocks)
-        version_a_children = [
+        version_a_start = [
           block_intro.(
             "<h2>Category Practice</h2><p>Categorize each image as <strong>#{cat1_label}</strong> (press <strong>E</strong> or touch left) or <strong>#{cat2_label}</strong> (press <strong>I</strong> or touch right).</p>"
           ),
-          iat_block.(cat_vars, [cat1_label], [cat2_label], 2, "practice"),
-          block_intro.(
-            "<h2>Attribute Practice</h2><p>Categorize each image as <strong>#{att1_label}</strong> (press <strong>E</strong> or touch left) or <strong>#{att2_label}</strong> (press <strong>I</strong> or touch right).</p>"
-          ),
-          iat_block.(att_vars, [att1_label], [att2_label], 2, "practice"),
+          iat_block.(cat_vars, [cat1_label], [cat2_label], 2, "practice")
+        ]
+
+        version_a_end = [
           block_intro.(
             "<h2>Combined Practice</h2><p>Press <strong>E</strong> or touch left for <strong>#{cat1_label}</strong> or <strong>#{att1_label}</strong>.</p><p>Press <strong>I</strong> or touch right for <strong>#{cat2_label}</strong> or <strong>#{att2_label}</strong>.</p>"
           ),
@@ -212,15 +225,14 @@ defmodule Socho.Studies.Templates.Iat do
         ]
 
         # Version B: incompatible-first (cat2 left in combined blocks)
-        version_b_children = [
+        version_b_start = [
           block_intro.(
             "<h2>Category Reversed Practice</h2><p>Categorize each image as <strong>#{cat2_label}</strong> (press <strong>E</strong> or touch left) or <strong>#{cat1_label}</strong> (press <strong>I</strong> or touch right).</p>"
           ),
-          iat_block.(cat_rev_vars, [cat2_label], [cat1_label], 2, "practice"),
-          block_intro.(
-            "<h2>Attribute Practice</h2><p>Categorize each image as <strong>#{att1_label}</strong> (press <strong>E</strong> or touch left) or <strong>#{att2_label}</strong> (press <strong>I</strong> or touch right).</p>"
-          ),
-          iat_block.(att_vars, [att1_label], [att2_label], 2, "practice"),
+          iat_block.(cat_rev_vars, [cat2_label], [cat1_label], 2, "practice")
+        ]
+
+        version_b_end = [
           block_intro.(
             "<h2>Combined Reversed Practice</h2><p>Press <strong>E</strong> or touch left for <strong>#{cat2_label}</strong> or <strong>#{att1_label}</strong>.</p><p>Press <strong>I</strong> or touch right for <strong>#{cat1_label}</strong> or <strong>#{att2_label}</strong>.</p>"
           ),
@@ -242,6 +254,12 @@ defmodule Socho.Studies.Templates.Iat do
           ),
           iat_block.(combined1_vars, [cat1_label, att1_label], [cat2_label, att2_label], combined_test_reps, "combined1_test")
         ]
+
+        # 4 versions: category-order (A/B) × attribute-side (att1-left / att2-left)
+        version_aa = version_a_start ++ att_blocks.(att_vars, att1_label, att2_label) ++ version_a_end
+        version_ab = version_a_start ++ att_blocks.(att_vars_flipped, att2_label, att1_label) ++ version_a_end
+        version_ba = version_b_start ++ att_blocks.(att_vars, att1_label, att2_label) ++ version_b_end
+        version_bb = version_b_start ++ att_blocks.(att_vars_flipped, att2_label, att1_label) ++ version_b_end
 
         all_images =
           (cat1_images ++ cat2_images ++ att1_images ++ att2_images)
@@ -276,9 +294,16 @@ defmodule Socho.Studies.Templates.Iat do
           %{
             node_type: "counterbalanced_group",
             plugin: nil,
-            config: %{"split" => length(version_a_children)},
+            config: %{
+              "group_sizes" => [
+                length(version_aa),
+                length(version_ab),
+                length(version_ba),
+                length(version_bb)
+              ]
+            },
             extensions: %{},
-            children: version_a_children ++ version_b_children
+            children: version_aa ++ version_ab ++ version_ba ++ version_bb
           },
           %{
             node_type: "trial",

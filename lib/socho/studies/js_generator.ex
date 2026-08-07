@@ -267,24 +267,44 @@ defmodule Socho.Studies.JsGenerator do
   defp emit_node(%{node_type: "counterbalanced_group"} = node, counter) do
     var_name = "timeline#{counter}"
     children = node.children || []
-    split = get_in(node.config || %{}, ["split"]) || div(length(children), 2)
-    {version_a_children, version_b_children} = Enum.split(children, split)
+    config = node.config || %{}
 
-    {counter_a, version_a_decls, version_a_vars} = emit_nodes(version_a_children, counter + 1)
-    {counter_b, version_b_decls, version_b_vars} = emit_nodes(version_b_children, counter_a)
+    groups =
+      case get_in(config, ["group_sizes"]) do
+        sizes when is_list(sizes) ->
+          {groups, _} =
+            Enum.map_reduce(sizes, children, fn size, remaining ->
+              Enum.split(remaining, size)
+            end)
+          groups
 
-    version_a_js = Enum.join(version_a_vars, ", ")
-    version_b_js = Enum.join(version_b_vars, ", ")
+        _ ->
+          split = get_in(config, ["split"]) || div(length(children), 2)
+          {a, b} = Enum.split(children, split)
+          [a, b]
+      end
+
+    {final_counter, all_decls, group_var_lists} =
+      Enum.reduce(groups, {counter + 1, [], []}, fn group_children, {cnt, decls, var_lists} ->
+        {new_cnt, group_decls, group_vars} = emit_nodes(group_children, cnt)
+        {new_cnt, decls ++ group_decls, var_lists ++ [group_vars]}
+      end)
+
+    versions_js =
+      group_var_lists
+      |> Enum.map(fn vars -> "[#{Enum.join(vars, ", ")}]" end)
+      |> Enum.join(",\n      ")
 
     own_decl = """
     const #{var_name} = (function() {
-      const versionA = [#{version_a_js}];
-      const versionB = [#{version_b_js}];
-      return Math.random() < 0.5 ? { timeline: versionA } : { timeline: versionB };
+      const versions = [
+        #{versions_js}
+      ];
+      return { timeline: versions[Math.floor(Math.random() * versions.length)] };
     })();\
     """
 
-    {counter_b, version_a_decls ++ version_b_decls ++ [own_decl], var_name}
+    {final_counter, all_decls ++ [own_decl], var_name}
   end
 
   defp emit_node(%{node_type: "template_group"} = node, counter) do
