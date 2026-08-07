@@ -310,6 +310,17 @@ defmodule Socho.Studies.Templates.Iat do
             plugin: "html-button-response",
             config: %{
               "stimulus_function" => """
+                // DEBUG: set to false to disable automatic data download in preview mode
+                var DEBUG_DOWNLOAD_IN_PREVIEW = true;
+                if (DEBUG_DOWNLOAD_IN_PREVIEW && new URLSearchParams(window.location.search).get('preview') === 'true') {
+                  var blob = new Blob([jsPsych.data.get().json()], {type: 'application/json'});
+                  var a = document.createElement('a');
+                  a.href = URL.createObjectURL(blob);
+                  a.download = 'iat_data_debug.json';
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                }
                 var c1 = jsPsych.data.get().filterCustom(function(x){ return (x.iat_type === 'combined1_test' || x.iat_type === 'combined1_practice') && x.rt >= 400 && x.rt < 10000; });
                 var c2 = jsPsych.data.get().filterCustom(function(x){ return (x.iat_type === 'combined2_test' || x.iat_type === 'combined2_practice') && x.rt >= 400 && x.rt < 10000; });
                 var mean_c1 = c1.select('rt').mean();
