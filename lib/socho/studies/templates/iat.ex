@@ -333,6 +333,7 @@ defmodule Socho.Studies.Templates.Iat do
                 var d1 = (c2_practice.select('rt').mean() - c1_practice.select('rt').mean()) / sd1;
                 var d2 = (c2_test.select('rt').mean() - c1_test.select('rt').mean()) / sd2;
                 var d = (d1 + d2) / 2;
+                jsPsych.data.get().push({ iat_type: 'iat_summary', d_score: d, mean_c1: mean_c1, mean_c2: mean_c2 });
                 return "<h2>You're done \u2014 thank you!</h2>" +
                   "<p>When <strong>#{cat1_label}</strong> and <strong>#{att1_label}</strong> were paired, " +
                   "your average response time was <strong>" + Math.floor(mean_c1) + " ms</strong>.</p>" +
