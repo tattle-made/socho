@@ -72,7 +72,7 @@ defmodule SochoWeb.StudyLive.Index do
               <.link href={"/studies/#{study.id}/edit"} class="btn btn-sm btn-outline">
                 Edit
               </.link>
-              <.link href={"/study/#{study.id}"} class="btn btn-sm btn-ghost" target="_blank">
+              <.link href={"/study/#{study.id}?preview=true"} class="btn btn-sm btn-ghost" target="_blank">
                 Preview
               </.link>
               <button
