@@ -76,7 +76,8 @@ defmodule SochoWeb.Layouts do
               </span>
             </li>
             <div class="divider my-0.5" />
-            <li><a href={~p"/users/settings"}>Settings</a></li>
+            <li><a href={~p"/users/settings"}>Account Settings</a></li>
+            <li><a href={~p"/settings/branding"}>App Settings</a></li>
             <li>
               <.link href={~p"/users/log-out"} method="delete" class="text-error">Log out</.link>
             </li>

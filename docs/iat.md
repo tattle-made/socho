@@ -22,15 +22,46 @@ Socho randomises whether a participant sees the compatible or incompatible pairi
 
 The IAT does not report raw response times. Instead, it computes a **D-score** — a standardised difference score that tells you how much faster (or slower) someone responded in one combined condition versus the other.
 
-### The Formula
+### The pseudo code based on paper and the R implementation
+Input: trial latencies and correctness for Blocks 3, 4, 6, 7
+
+1. Remove any trial with latency > 10,000 ms.
+2. If using the recommended variant, remove any trial with latency < 400 ms.
+3. For each block, compute:
+   - mean latency of correct responses
+   - standard deviation of correct-response latencies
+4. Replace each error latency with:
+   - block mean(correct latencies) + 600 ms
+   OR
+   - block mean(correct latencies) + 2 * block SD(correct latencies)
+   OR, in the Web IAT procedure, just keep the error latency because it already includes a built-in penalty.
+5. For each block, average the resulting latencies.
+6. Compute:
+   - difference1 = mean(Block 6) - mean(Block 3)
+   - difference2 = mean(Block 7) - mean(Block 4)
+7. Divide each difference by its associated pooled SD:
+   - quotient1 = difference1 / SDpooled(Blocks 3 and 6)
+   - quotient2 = difference2 / SDpooled(Blocks 4 and 7)
+8. D score = average(quotient1, quotient2)
+
+### The Formula used
+
+The D-score is computed as the average of two intermediate scores — one from the practice combined blocks, one from the test combined blocks:
 
 ```
-D = (mean_RT_condition2 - mean_RT_condition1) / pooled_SD
+sd1    = SD of all trials in combined1_practice + combined2_practice
+sd2    = SD of all trials in combined1_test + combined2_test
+
+D1     = (mean_RT_combined2_practice - mean_RT_combined1_practice) / sd1
+D2     = (mean_RT_combined2_test     - mean_RT_combined1_test)     / sd2
+
+D      = (D1 + D2) / 2
 ```
 
-- **mean_RT_condition1**: average response time across all trials where Category 1 and Attribute 1 shared a key
-- **mean_RT_condition2**: average response time across all trials where Category 2 and Attribute 1 shared a key
-- **pooled_SD**: standard deviation computed across all trials from both conditions combined
+- **combined1** refers to the block where Category 1 and Attribute 1 share a key
+- **combined2** refers to the block where Category 2 and Attribute 1 share a key
+- **sd1** is pooled across both practice combined blocks; **sd2** is pooled across both test combined blocks
+- Pairing practice-with-practice and test-with-test for the SD (rather than pooling everything together) is what distinguishes the Greenwald 2003 D-score from simpler difference-score approaches
 
 ### Which Trials Are Included
 

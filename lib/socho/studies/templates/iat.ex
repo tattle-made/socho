@@ -91,14 +91,7 @@ defmodule Socho.Studies.Templates.Iat do
               "response_ends_trial" => true,
               "enable_button_after" => 0
             },
-            extensions: %{
-              "touchscreen-buttons" => %{
-                "enabled" => true,
-                "buttons" => [
-                  %{"key" => "ArrowRight", "preset" => "fill_bottom", "label" => "", "color" => "#FF9B91"}
-                ]
-              }
-            },
+            extensions: %{},
             children: []
           }
         end
@@ -138,8 +131,8 @@ defmodule Socho.Studies.Templates.Iat do
                   "touchscreen-buttons" => %{
                     "enabled" => true,
                     "buttons" => [
-                      %{"key" => "e", "preset" => "left_middle",  "label" => "←", "color" => "#FF9B91"},
-                      %{"key" => "i", "preset" => "right_middle", "label" => "→", "color" => "#FF9B91"}
+                      %{"key" => "e", "preset" => "left",  "label" => "←", "color" => "#FF9B91"},
+                      %{"key" => "i", "preset" => "right", "label" => "→", "color" => "#FF9B91"}
                     ]
                   }
                 },
@@ -288,7 +281,14 @@ defmodule Socho.Studies.Templates.Iat do
               "button_label_previous" => "Previous",
               "button_label_next" => "Next"
             },
-            extensions: %{},
+            extensions: %{
+              "touchscreen-buttons" => %{
+                "enabled" => true,
+                "buttons" => [
+                  %{"key" => "ArrowRight", "preset" => "fill_bottom", "label" => "", "color" => "#FF9B91"}
+                ]
+              }
+            },
             children: []
           },
           %{
@@ -321,12 +321,18 @@ defmodule Socho.Studies.Templates.Iat do
                   a.click();
                   document.body.removeChild(a);
                 }
-                var c1 = jsPsych.data.get().filterCustom(function(x){ return (x.iat_type === 'combined1_test' || x.iat_type === 'combined1_practice') && x.rt >= 400 && x.rt < 10000; });
-                var c2 = jsPsych.data.get().filterCustom(function(x){ return (x.iat_type === 'combined2_test' || x.iat_type === 'combined2_practice') && x.rt >= 400 && x.rt < 10000; });
-                var mean_c1 = c1.select('rt').mean();
-                var mean_c2 = c2.select('rt').mean();
-                var sd = c1.join(c2).select('rt').sd();
-                var d = (mean_c2 - mean_c1) / sd;
+                var c1_practice = jsPsych.data.get().filterCustom(function(x){ return x.iat_type === 'combined1_practice' && x.rt >= 400 && x.rt < 10000; });
+                var c1_test     = jsPsych.data.get().filterCustom(function(x){ return x.iat_type === 'combined1_test'     && x.rt >= 400 && x.rt < 10000; });
+                var c2_practice = jsPsych.data.get().filterCustom(function(x){ return x.iat_type === 'combined2_practice' && x.rt >= 400 && x.rt < 10000; });
+                var c2_test     = jsPsych.data.get().filterCustom(function(x){ return x.iat_type === 'combined2_test'     && x.rt >= 400 && x.rt < 10000; });
+                var mean_c1 = c1_practice.join(c1_test).select('rt').mean();
+                var mean_c2 = c2_practice.join(c2_test).select('rt').mean();
+                // Greenwald 2003: pool practice blocks together for sd1, test blocks together for sd2
+                var sd1 = c1_practice.join(c2_practice).select('rt').sd();
+                var sd2 = c1_test.join(c2_test).select('rt').sd();
+                var d1 = (c2_practice.select('rt').mean() - c1_practice.select('rt').mean()) / sd1;
+                var d2 = (c2_test.select('rt').mean() - c1_test.select('rt').mean()) / sd2;
+                var d = (d1 + d2) / 2;
                 return "<h2>You're done \u2014 thank you!</h2>" +
                   "<p>When <strong>#{cat1_label}</strong> and <strong>#{att1_label}</strong> were paired, " +
                   "your average response time was <strong>" + Math.floor(mean_c1) + " ms</strong>.</p>" +
