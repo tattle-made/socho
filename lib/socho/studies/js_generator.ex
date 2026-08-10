@@ -371,10 +371,14 @@ defmodule Socho.Studies.JsGenerator do
         do: "\n  data: #{value_to_js(config["data"])},",
         else: nil
       ),
-      if(config["conditional_function"] not in [nil, ""],
-        do: "\n  conditional_function: function() {\n#{indent_js_body(config["conditional_function"])}\n  },",
-        else: nil
-      ),
+      (case skip_unless_to_js(config["skip_unless"]) do
+        nil ->
+          if config["conditional_function"] not in [nil, ""],
+            do: "\n  conditional_function: function() {\n#{indent_js_body(config["conditional_function"])}\n  },",
+            else: nil
+        body ->
+          "\n  conditional_function: function() {\n#{indent_js_body(body)}\n  },"
+      end),
       if(config["loop_function"] not in [nil, ""],
         do: "\n  loop_function: function(data) {\n#{indent_js_body(config["loop_function"])}\n  },",
         else: nil
@@ -383,6 +387,45 @@ defmodule Socho.Studies.JsGenerator do
     |> Enum.reject(&is_nil/1)
     |> Enum.join("")
   end
+
+  defp skip_unless_to_js(%{"mode" => "gui", "conditions" => [_ | _] = conditions} = su) do
+    join = if su["join"] == "OR", do: " || ", else: " && "
+
+    indexed = Enum.with_index(conditions)
+
+    fetches =
+      Enum.map_join(indexed, "\n", fn {cond, i} ->
+        tag = Jason.encode!(cond["tag"] || "")
+        "const _su#{i} = jsPsych.data.get().filter({data_tag: #{tag}}).last(1).values()[0];"
+      end)
+
+    exprs =
+      Enum.map(indexed, fn {cond, i} ->
+        var = "_su#{i}"
+        field = cond["field"] || "response"
+        op = cond["op"] || "eq"
+        val = cond["value"] || ""
+        negate = cond["negate"] == true
+
+        inner =
+          case op do
+            "eq" -> "#{var} && #{var}.#{field} === #{Jason.encode!(val)}"
+            "neq" -> "#{var} && #{var}.#{field} !== #{Jason.encode!(val)}"
+            "contains" -> "#{var} && String(#{var}.#{field}).includes(#{Jason.encode!(val)})"
+            "is_true" -> "#{var} && #{var}.#{field} === true"
+            "is_false" -> "#{var} && #{var}.#{field} === false"
+            "lt" -> "#{var} && #{var}.#{field} < #{val}"
+            "gt" -> "#{var} && #{var}.#{field} > #{val}"
+            _ -> "false"
+          end
+
+        if negate, do: "!(#{inner})", else: inner
+      end)
+
+    "#{fetches}\nreturn #{Enum.join(exprs, join)};"
+  end
+
+  defp skip_unless_to_js(_), do: nil
 
   defp indent_js_body(body) do
     body

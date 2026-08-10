@@ -157,7 +157,8 @@ defmodule SochoWeb.StudyLive.Builder do
          node when not is_nil(node) <- find_node(socket.assigns.trials, id) do
       config =
         if node.node_type == "timeline" do
-          coerce_timeline_config(params)
+          base = coerce_timeline_config(params)
+          Map.put(base, "skip_unless", node.config["skip_unless"])
         else
           schema = socket.assigns.registry[node.plugin]
           coerce_config(params, schema["parameters"] || %{})
@@ -253,6 +254,96 @@ defmodule SochoWeb.StudyLive.Builder do
       idx = String.to_integer(idx_str)
       items = Map.get(node.config, param_name) |> ensure_list() |> List.delete_at(idx)
       new_config = Map.put(node.config, param_name, items)
+      {:noreply, assign(socket, trials: update_node_config(socket.assigns.trials, id, new_config))}
+    else
+      _ -> {:noreply, socket}
+    end
+  end
+
+  def handle_event("skip_add_condition", _params, socket) do
+    with id when not is_nil(id) <- socket.assigns.selected_trial_id,
+         node when not is_nil(node) <- find_node(socket.assigns.trials, id) do
+      skip = node.config["skip_unless"] || %{"mode" => "gui", "join" => "AND", "conditions" => []}
+      new_cond = %{"tag" => "", "field" => "response", "op" => "eq", "value" => "", "negate" => false}
+      updated = Map.update(skip, "conditions", [new_cond], &(&1 ++ [new_cond]))
+      new_config = Map.put(node.config, "skip_unless", updated)
+      {:noreply, assign(socket, trials: update_node_config(socket.assigns.trials, id, new_config))}
+    else
+      _ -> {:noreply, socket}
+    end
+  end
+
+  def handle_event("skip_remove_condition", %{"index" => idx_str}, socket) do
+    with id when not is_nil(id) <- socket.assigns.selected_trial_id,
+         node when not is_nil(node) <- find_node(socket.assigns.trials, id) do
+      skip = node.config["skip_unless"] || %{"mode" => "gui", "join" => "AND", "conditions" => []}
+      updated_conds = (skip["conditions"] || []) |> List.delete_at(String.to_integer(idx_str))
+      updated = if updated_conds == [], do: nil, else: Map.put(skip, "conditions", updated_conds)
+      new_config = Map.put(node.config, "skip_unless", updated)
+      {:noreply, assign(socket, trials: update_node_config(socket.assigns.trials, id, new_config))}
+    else
+      _ -> {:noreply, socket}
+    end
+  end
+
+  def handle_event("skip_update_condition", %{"skip_cond" => conds_map}, socket) do
+    with id when not is_nil(id) <- socket.assigns.selected_trial_id,
+         node when not is_nil(node) <- find_node(socket.assigns.trials, id) do
+      skip = node.config["skip_unless"] || %{"mode" => "gui", "join" => "AND", "conditions" => []}
+      existing_conds = skip["conditions"] || []
+
+      updated_conditions =
+        existing_conds
+        |> Enum.with_index()
+        |> Enum.map(fn {existing, idx} ->
+          case Map.get(conds_map, to_string(idx)) do
+            nil -> existing
+            form_vals -> Map.merge(existing, form_vals)
+          end
+        end)
+
+      updated = Map.put(skip, "conditions", updated_conditions)
+      new_config = Map.put(node.config, "skip_unless", updated)
+      {:noreply, assign(socket, trials: update_node_config(socket.assigns.trials, id, new_config))}
+    else
+      _ -> {:noreply, socket}
+    end
+  end
+
+  def handle_event("skip_toggle_negate", %{"index" => idx_str}, socket) do
+    with id when not is_nil(id) <- socket.assigns.selected_trial_id,
+         node when not is_nil(node) <- find_node(socket.assigns.trials, id) do
+      skip = node.config["skip_unless"] || %{"mode" => "gui", "join" => "AND", "conditions" => []}
+      idx = String.to_integer(idx_str)
+      conditions = skip["conditions"] || []
+      existing = Enum.at(conditions, idx, %{})
+      updated_cond = Map.put(existing, "negate", !existing["negate"])
+      updated = Map.put(skip, "conditions", List.replace_at(conditions, idx, updated_cond))
+      new_config = Map.put(node.config, "skip_unless", updated)
+      {:noreply, assign(socket, trials: update_node_config(socket.assigns.trials, id, new_config))}
+    else
+      _ -> {:noreply, socket}
+    end
+  end
+
+  def handle_event("skip_toggle_join", _params, socket) do
+    with id when not is_nil(id) <- socket.assigns.selected_trial_id,
+         node when not is_nil(node) <- find_node(socket.assigns.trials, id) do
+      skip = node.config["skip_unless"] || %{"mode" => "gui", "join" => "AND", "conditions" => []}
+      new_join = if skip["join"] == "OR", do: "AND", else: "OR"
+      new_config = Map.put(node.config, "skip_unless", Map.put(skip, "join", new_join))
+      {:noreply, assign(socket, trials: update_node_config(socket.assigns.trials, id, new_config))}
+    else
+      _ -> {:noreply, socket}
+    end
+  end
+
+  def handle_event("skip_toggle_mode", _params, socket) do
+    with id when not is_nil(id) <- socket.assigns.selected_trial_id,
+         node when not is_nil(node) <- find_node(socket.assigns.trials, id) do
+      skip = node.config["skip_unless"] || %{"mode" => "gui", "join" => "AND", "conditions" => []}
+      new_mode = if skip["mode"] == "raw", do: "gui", else: "raw"
+      new_config = Map.put(node.config, "skip_unless", Map.put(skip, "mode", new_mode))
       {:noreply, assign(socket, trials: update_node_config(socket.assigns.trials, id, new_config))}
     else
       _ -> {:noreply, socket}
@@ -384,6 +475,17 @@ defmodule SochoWeb.StudyLive.Builder do
     Enum.find_value(nodes, fn node ->
       if node.id == id, do: node, else: find_node(node.children, id)
     end)
+  end
+
+  defp collect_data_tags(nodes) do
+    nodes
+    |> Enum.flat_map(fn node ->
+      child_tags = collect_data_tags(node.children || [])
+      tag = get_in(node.config || %{}, ["data_tag"])
+      if tag && tag != "", do: [tag | child_tags], else: child_tags
+    end)
+    |> Enum.uniq()
+    |> Enum.sort()
   end
 
   defp update_node_config(nodes, id, new_config) do
@@ -617,7 +719,8 @@ defmodule SochoWeb.StudyLive.Builder do
       assign(assigns,
         selected_trial: selected_trial,
         selected_template: selected_template,
-        tsb_presets: @tsb_presets
+        tsb_presets: @tsb_presets,
+        data_tags: collect_data_tags(assigns.trials)
       )
 
     ~H"""
@@ -859,20 +962,135 @@ defmodule SochoWeb.StudyLive.Builder do
 
                 <div class="divider text-xs my-1">Conditional Logic</div>
 
-                <div class="form-control">
-                  <p class="text-sm font-medium leading-tight">Skip unless…</p>
-                  <p class="text-xs opacity-40 mt-0.5 mb-1">conditional_function</p>
-                  <textarea
-                    class="textarea textarea-bordered text-xs font-mono leading-snug w-full"
-                    name="config[conditional_function]"
-                    rows="4"
-                    placeholder={"// Return true to run this block, false to skip it\nconst d = jsPsych.data.get().last(1).values()[0];\nreturn d.response === \"yes\";"}
-                    phx-debounce="300"
-                  >{@selected_trial.config["conditional_function"] || ""}</textarea>
-                  <p class="text-xs opacity-50 mt-1 leading-snug">
-                    JS function body. Return <code class="font-mono">true</code> to run this block, <code class="font-mono">false</code> to skip it entirely.
-                    Use <code class="font-mono">jsPsych.data.get()</code> to access previous responses.
-                  </p>
+                <%!-- Skip Unless GUI builder --%>
+                <div class="form-control gap-2">
+                  <div class="flex items-center justify-between">
+                    <p class="text-sm font-medium leading-tight">Skip unless…</p>
+                    <button
+                      type="button"
+                      class="btn btn-xs btn-ghost opacity-50"
+                      phx-click="skip_toggle_mode"
+                      title={if (@selected_trial.config["skip_unless"] || %{})["mode"] == "raw", do: "Switch to visual builder", else: "Switch to raw JS"}
+                    >
+                      <%= if (@selected_trial.config["skip_unless"] || %{})["mode"] == "raw", do: "↩ visual", else: "⌨ raw JS" %>
+                    </button>
+                  </div>
+
+                  <% skip = @selected_trial.config["skip_unless"] %>
+                  <% mode = (skip || %{})["mode"] %>
+                  <% conditions = (skip || %{})["conditions"] || [] %>
+                  <% join = (skip || %{})["join"] || "AND" %>
+
+                  <%= if mode == "raw" do %>
+                    <textarea
+                      class="textarea textarea-bordered text-xs font-mono leading-snug w-full"
+                      name="config[conditional_function]"
+                      rows="4"
+                      placeholder={"// Return true to run this block, false to skip it\nconst d = jsPsych.data.get().last(1).values()[0];\nreturn d.response === \"yes\";"}
+                      phx-debounce="300"
+                    >{@selected_trial.config["conditional_function"] || ""}</textarea>
+                    <p class="text-xs opacity-50 leading-snug">
+                      JS function body. Return <code class="font-mono">true</code> to run this block, <code class="font-mono">false</code> to skip it.
+                    </p>
+                  <% else %>
+                    <%!-- Condition rows --%>
+                    <%= for {cond, i} <- Enum.with_index(conditions) do %>
+                      <% field = cond["field"] || "response" %>
+                      <% op = cond["op"] || "eq" %>
+                      <div class="flex items-center gap-1">
+                        <label class="flex items-center gap-1 cursor-pointer shrink-0" title="NOT">
+                          <input
+                            type="checkbox"
+                            class="checkbox checkbox-xs"
+                            checked={cond["negate"] == true}
+                            phx-click="skip_toggle_negate"
+                            phx-value-index={i}
+                          />
+                          <span class="text-xs opacity-40">!</span>
+                        </label>
+                        <select
+                          class="select select-xs select-bordered w-auto shrink-0"
+                          phx-change="skip_update_condition"
+                          name={"skip_cond[#{i}][tag]"}
+                        >
+                          <option value="" disabled={cond["tag"] != ""}>tag…</option>
+                          <%= for tag <- @data_tags do %>
+                            <option value={tag} selected={cond["tag"] == tag}>{tag}</option>
+                          <% end %>
+                          <%= if cond["tag"] != "" && cond["tag"] not in @data_tags do %>
+                            <option value={cond["tag"]} selected>{cond["tag"]}</option>
+                          <% end %>
+                        </select>
+                        <select
+                          class="select select-xs select-bordered w-auto shrink-0"
+                          phx-change="skip_update_condition"
+                          name={"skip_cond[#{i}][field]"}
+                        >
+                          <option value="response" selected={field == "response"}>response</option>
+                          <option value="correct" selected={field == "correct"}>correct</option>
+                          <option value="rt" selected={field == "rt"}>rt</option>
+                        </select>
+                        <select
+                          class="select select-xs select-bordered w-auto shrink-0"
+                          phx-change="skip_update_condition"
+                          name={"skip_cond[#{i}][op]"}
+                        >
+                          <%= if field == "correct" do %>
+                            <option value="is_true" selected={op == "is_true"}>true</option>
+                            <option value="is_false" selected={op == "is_false"}>false</option>
+                          <% else %>
+                            <option value="eq" selected={op == "eq"}>=</option>
+                            <option value="neq" selected={op == "neq"}>≠</option>
+                            <%= if field == "response" do %>
+                              <option value="contains" selected={op == "contains"}>has</option>
+                            <% end %>
+                            <%= if field == "rt" do %>
+                              <option value="lt" selected={op == "lt"}>&#60;</option>
+                              <option value="gt" selected={op == "gt"}>&#62;</option>
+                            <% end %>
+                          <% end %>
+                        </select>
+                        <%= if op not in ["is_true", "is_false"] do %>
+                          <input
+                            type="text"
+                            class="input input-xs input-bordered w-20 shrink-0"
+                            value={cond["value"] || ""}
+                            placeholder="val"
+                            phx-change="skip_update_condition"
+                            phx-debounce="300"
+                            name={"skip_cond[#{i}][value]"}
+                          />
+                        <% end %>
+                        <button
+                          type="button"
+                          class="btn btn-xs btn-ghost text-error shrink-0"
+                          phx-click="skip_remove_condition"
+                          phx-value-index={i}
+                        >✕</button>
+                      </div>
+                      <%!-- Join badge between conditions --%>
+                      <%= if i < length(conditions) - 1 do %>
+                        <div class="flex justify-start">
+                          <button
+                            type="button"
+                            class="badge badge-sm cursor-pointer bg-base-200 border-base-200 hover:bg-base-300 hover:border-base-300 my-1"
+                            phx-click="skip_toggle_join"
+                            title="Click to toggle AND / OR"
+                          >{join}</button>
+                        </div>
+                      <% end %>
+                    <% end %>
+
+                    <button
+                      type="button"
+                      class="btn btn-xs btn-outline w-full"
+                      phx-click="skip_add_condition"
+                    >+ Add condition</button>
+
+                    <%= if conditions == [] do %>
+                      <p class="text-xs opacity-40 text-center">No conditions — block always runs.</p>
+                    <% end %>
+                  <% end %>
                 </div>
 
                 <div class="form-control">
