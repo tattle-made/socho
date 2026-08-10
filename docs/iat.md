@@ -92,3 +92,4 @@ General benchmarks (Greenwald et al. 2003):
 ### Reference
 
 Greenwald, A. G., Nosek, B. A., & Banaji, M. R. (2003). Understanding and using the Implicit Association Test: I. An improved scoring algorithm. *Journal of Personality and Social Psychology, 85*(2), 197–216.
+
