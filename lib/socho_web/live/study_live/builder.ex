@@ -6,6 +6,7 @@ defmodule SochoWeb.StudyLive.Builder do
   alias Socho.Studies.Registry
   alias Socho.Studies.Templates
   alias SochoWeb.StudyLive.SurveyBuilderComponent
+  alias SochoWeb.StudyLive.TrialTree
 
   # ── Mount ──────────────────────────────────────────────────────────────────
 
@@ -458,113 +459,17 @@ defmodule SochoWeb.StudyLive.Builder do
 
   # ── Tree Helpers ────────────────────────────────────────────────────────────
 
-  defp stamp_ids(nodes) do
-    Enum.map(nodes, fn node ->
-      node
-      |> Map.put(:id, System.unique_integer([:positive]))
-      |> Map.update(:children, [], &stamp_ids/1)
-    end)
-  end
-
-  defp db_trial_to_node(trial) do
-    %{
-      id: System.unique_integer([:positive]),
-      node_type: trial.node_type,
-      plugin: trial.plugin,
-      config: trial.config,
-      extensions: trial.extensions || %{},
-      children: Enum.map(trial.children, &db_trial_to_node/1)
-    }
-  end
-
-  defp node_to_map(node) do
-    %{
-      node_type: node.node_type,
-      plugin: node.plugin,
-      config: node.config,
-      extensions: node.extensions || %{},
-      children: Enum.map(node.children || [], &node_to_map/1)
-    }
-  end
-
-  defp find_node(_nodes, nil), do: nil
-
-  defp find_node(nodes, id) do
-    Enum.find_value(nodes, fn node ->
-      if node.id == id, do: node, else: find_node(node.children, id)
-    end)
-  end
-
+  defp stamp_ids(nodes), do: TrialTree.stamp_ids(nodes)
+  defp db_trial_to_node(trial), do: TrialTree.db_trial_to_node(trial)
+  defp node_to_map(node), do: TrialTree.node_to_map(node)
+  defp find_node(nodes, id), do: TrialTree.find_node(nodes, id)
   defp collect_data_tags(nodes), do: SochoWeb.StudyLive.DataTags.collect(nodes)
-
-  defp update_node_config(nodes, id, new_config) do
-    Enum.map(nodes, fn node ->
-      if node.id == id do
-        %{node | config: new_config}
-      else
-        %{node | children: update_node_config(node.children, id, new_config)}
-      end
-    end)
-  end
-
-  defp update_node_children(nodes, id, new_children) do
-    Enum.map(nodes, fn node ->
-      if node.id == id do
-        %{node | children: new_children}
-      else
-        %{node | children: update_node_children(node.children, id, new_children)}
-      end
-    end)
-  end
-
-  defp update_node_extensions(nodes, id, new_extensions) do
-    Enum.map(nodes, fn node ->
-      if node.id == id do
-        %{node | extensions: new_extensions}
-      else
-        %{node | children: update_node_extensions(node.children, id, new_extensions)}
-      end
-    end)
-  end
-
-  defp remove_node_from_tree(nodes, id) do
-    nodes
-    |> Enum.reject(&(&1.id == id))
-    |> Enum.map(fn node -> %{node | children: remove_node_from_tree(node.children, id)} end)
-  end
-
-  defp add_child_to_node(nodes, parent_id, new_node) do
-    Enum.map(nodes, fn node ->
-      if node.id == parent_id do
-        %{node | children: node.children ++ [new_node]}
-      else
-        %{node | children: add_child_to_node(node.children, parent_id, new_node)}
-      end
-    end)
-  end
-
-  defp move_node_in_tree(nodes, id, direction) do
-    idx = Enum.find_index(nodes, &(&1.id == id))
-
-    if idx != nil do
-      do_move(nodes, idx, direction)
-    else
-      Enum.map(nodes, fn node ->
-        %{node | children: move_node_in_tree(node.children, id, direction)}
-      end)
-    end
-  end
-
-  defp do_move(nodes, 0, :up), do: nodes
-  defp do_move(nodes, idx, :down) when idx == length(nodes) - 1, do: nodes
-  defp do_move(nodes, idx, :up), do: swap(nodes, idx - 1, idx)
-  defp do_move(nodes, idx, :down), do: swap(nodes, idx, idx + 1)
-
-  defp swap(list, i, j) do
-    a = Enum.at(list, i)
-    b = Enum.at(list, j)
-    list |> List.replace_at(i, b) |> List.replace_at(j, a)
-  end
+  defp update_node_config(nodes, id, cfg), do: TrialTree.update_node_config(nodes, id, cfg)
+  defp update_node_children(nodes, id, ch), do: TrialTree.update_node_children(nodes, id, ch)
+  defp update_node_extensions(nodes, id, ext), do: TrialTree.update_node_extensions(nodes, id, ext)
+  defp remove_node_from_tree(nodes, id), do: TrialTree.remove_node_from_tree(nodes, id)
+  defp add_child_to_node(nodes, pid, node), do: TrialTree.add_child_to_node(nodes, pid, node)
+  defp move_node_in_tree(nodes, id, dir), do: TrialTree.move_node_in_tree(nodes, id, dir)
 
   # ── Config Helpers ──────────────────────────────────────────────────────────
 
