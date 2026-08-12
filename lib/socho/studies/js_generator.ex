@@ -403,19 +403,28 @@ defmodule Socho.Studies.JsGenerator do
       Enum.map(indexed, fn {cond, i} ->
         var = "_su#{i}"
         field = cond["field"] || "response"
+        question = cond["question"]
         op = cond["op"] || "eq"
         val = cond["value"] || ""
         negate = cond["negate"] == true
 
+        # When a specific survey question is selected, access response.questionName
+        access =
+          if field == "response" && question && question != "" do
+            "#{var}.response && #{var}.response.#{question}"
+          else
+            "#{var}.#{field}"
+          end
+
         inner =
           case op do
-            "eq" -> "#{var} && #{var}.#{field} === #{Jason.encode!(val)}"
-            "neq" -> "#{var} && #{var}.#{field} !== #{Jason.encode!(val)}"
-            "contains" -> "#{var} && String(#{var}.#{field}).includes(#{Jason.encode!(val)})"
-            "is_true" -> "#{var} && #{var}.#{field} === true"
-            "is_false" -> "#{var} && #{var}.#{field} === false"
-            "lt" -> "#{var} && #{var}.#{field} < #{val}"
-            "gt" -> "#{var} && #{var}.#{field} > #{val}"
+            "eq" -> "#{var} && #{access} === #{Jason.encode!(val)}"
+            "neq" -> "#{var} && #{access} !== #{Jason.encode!(val)}"
+            "contains" -> "#{var} && String(#{access}).includes(#{Jason.encode!(val)})"
+            "is_true" -> "#{var} && #{access} === true"
+            "is_false" -> "#{var} && #{access} === false"
+            "lt" -> "#{var} && #{access} < #{val}"
+            "gt" -> "#{var} && #{access} > #{val}"
             _ -> "false"
           end
 

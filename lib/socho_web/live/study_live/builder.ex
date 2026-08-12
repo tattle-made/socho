@@ -161,10 +161,22 @@ defmodule SochoWeb.StudyLive.Builder do
           Map.put(base, "skip_unless", node.config["skip_unless"])
         else
           schema = socket.assigns.registry[node.plugin]
-          coerce_config(params, schema["parameters"] || %{})
+          new_config = coerce_config(params, schema["parameters"] || %{})
+          # data_tag is managed via its own event handler; preserve the server-side value
+          Map.put(new_config, "data_tag", node.config["data_tag"] || "")
         end
 
       {:noreply, assign(socket, trials: update_node_config(socket.assigns.trials, id, config))}
+    else
+      _ -> {:noreply, socket}
+    end
+  end
+
+  def handle_event("data_tag_changed", %{"data_tag" => tag}, socket) do
+    with id when not is_nil(id) <- socket.assigns.selected_trial_id,
+         node when not is_nil(node) <- find_node(socket.assigns.trials, id) do
+      new_config = Map.put(node.config, "data_tag", tag)
+      {:noreply, assign(socket, trials: update_node_config(socket.assigns.trials, id, new_config))}
     else
       _ -> {:noreply, socket}
     end
@@ -264,7 +276,7 @@ defmodule SochoWeb.StudyLive.Builder do
     with id when not is_nil(id) <- socket.assigns.selected_trial_id,
          node when not is_nil(node) <- find_node(socket.assigns.trials, id) do
       skip = node.config["skip_unless"] || %{"mode" => "gui", "join" => "AND", "conditions" => []}
-      new_cond = %{"tag" => "", "field" => "response", "op" => "eq", "value" => "", "negate" => false}
+      new_cond = %{"tag" => "", "field" => "response", "question" => "", "op" => "eq", "value" => "", "negate" => false}
       updated = Map.update(skip, "conditions", [new_cond], &(&1 ++ [new_cond]))
       new_config = Map.put(node.config, "skip_unless", updated)
       {:noreply, assign(socket, trials: update_node_config(socket.assigns.trials, id, new_config))}
@@ -297,8 +309,14 @@ defmodule SochoWeb.StudyLive.Builder do
         |> Enum.with_index()
         |> Enum.map(fn {existing, idx} ->
           case Map.get(conds_map, to_string(idx)) do
-            nil -> existing
-            form_vals -> Map.merge(existing, form_vals)
+            nil ->
+              existing
+
+            form_vals ->
+              merged = Map.merge(existing, form_vals)
+              if Map.has_key?(form_vals, "tag") && form_vals["tag"] != existing["tag"],
+                do: Map.put(merged, "question", ""),
+                else: merged
           end
         end)
 
@@ -477,16 +495,7 @@ defmodule SochoWeb.StudyLive.Builder do
     end)
   end
 
-  defp collect_data_tags(nodes) do
-    nodes
-    |> Enum.flat_map(fn node ->
-      child_tags = collect_data_tags(node.children || [])
-      tag = get_in(node.config || %{}, ["data_tag"])
-      if tag && tag != "", do: [tag | child_tags], else: child_tags
-    end)
-    |> Enum.uniq()
-    |> Enum.sort()
-  end
+  defp collect_data_tags(nodes), do: SochoWeb.StudyLive.DataTags.collect(nodes)
 
   defp update_node_config(nodes, id, new_config) do
     Enum.map(nodes, fn node ->
@@ -997,7 +1006,12 @@ defmodule SochoWeb.StudyLive.Builder do
                     <%= for {cond, i} <- Enum.with_index(conditions) do %>
                       <% field = cond["field"] || "response" %>
                       <% op = cond["op"] || "eq" %>
-                      <div class="flex items-center gap-1">
+                      <% tag_meta = Enum.find(@data_tags, fn dt -> dt["tag"] == cond["tag"] end) %>
+                      <% is_survey_tag = tag_meta && tag_meta["plugin"] == "survey" %>
+                      <% survey_questions = if is_survey_tag, do: tag_meta["questions"] || [], else: [] %>
+                      <% selected_question = Enum.find(survey_questions, fn q -> q["name"] == cond["question"] end) %>
+                      <% question_choices = if selected_question, do: selected_question["choices"] || [], else: [] %>
+                      <div class="flex flex-wrap items-center gap-1">
                         <label class="flex items-center gap-1 cursor-pointer shrink-0" title="NOT">
                           <input
                             type="checkbox"
@@ -1014,10 +1028,10 @@ defmodule SochoWeb.StudyLive.Builder do
                           name={"skip_cond[#{i}][tag]"}
                         >
                           <option value="" disabled={cond["tag"] != ""}>tag…</option>
-                          <%= for tag <- @data_tags do %>
-                            <option value={tag} selected={cond["tag"] == tag}>{tag}</option>
+                          <%= for dt <- @data_tags do %>
+                            <option value={dt["tag"]} selected={cond["tag"] == dt["tag"]}>{dt["tag"]}</option>
                           <% end %>
-                          <%= if cond["tag"] != "" && cond["tag"] not in @data_tags do %>
+                          <%= if cond["tag"] != "" && !Enum.any?(@data_tags, fn dt -> dt["tag"] == cond["tag"] end) do %>
                             <option value={cond["tag"]} selected>{cond["tag"]}</option>
                           <% end %>
                         </select>
@@ -1030,6 +1044,21 @@ defmodule SochoWeb.StudyLive.Builder do
                           <option value="correct" selected={field == "correct"}>correct</option>
                           <option value="rt" selected={field == "rt"}>rt</option>
                         </select>
+                        <%!-- Question picker — only for survey tags + response field --%>
+                        <%= if is_survey_tag && field == "response" && survey_questions != [] do %>
+                          <select
+                            class="select select-xs select-bordered w-auto shrink-0"
+                            phx-change="skip_update_condition"
+                            name={"skip_cond[#{i}][question]"}
+                          >
+                            <option value="" disabled={cond["question"] != ""}>question…</option>
+                            <%= for q <- survey_questions do %>
+                              <option value={q["name"]} selected={cond["question"] == q["name"]}>
+                                {if q["title"] && q["title"] != "", do: q["title"], else: q["name"]}
+                              </option>
+                            <% end %>
+                          </select>
+                        <% end %>
                         <select
                           class="select select-xs select-bordered w-auto shrink-0"
                           phx-change="skip_update_condition"
@@ -1041,7 +1070,7 @@ defmodule SochoWeb.StudyLive.Builder do
                           <% else %>
                             <option value="eq" selected={op == "eq"}>=</option>
                             <option value="neq" selected={op == "neq"}>≠</option>
-                            <%= if field == "response" do %>
+                            <%= if field == "response" && !selected_question do %>
                               <option value="contains" selected={op == "contains"}>has</option>
                             <% end %>
                             <%= if field == "rt" do %>
@@ -1051,15 +1080,29 @@ defmodule SochoWeb.StudyLive.Builder do
                           <% end %>
                         </select>
                         <%= if op not in ["is_true", "is_false"] do %>
-                          <input
-                            type="text"
-                            class="input input-xs input-bordered w-20 shrink-0"
-                            value={cond["value"] || ""}
-                            placeholder="val"
-                            phx-change="skip_update_condition"
-                            phx-debounce="300"
-                            name={"skip_cond[#{i}][value]"}
-                          />
+                          <%= if question_choices != [] do %>
+                            <%!-- Dropdown of predefined choices --%>
+                            <select
+                              class="select select-xs select-bordered w-auto shrink-0"
+                              phx-change="skip_update_condition"
+                              name={"skip_cond[#{i}][value]"}
+                            >
+                              <option value="" disabled={cond["value"] != ""}>value…</option>
+                              <%= for choice <- question_choices do %>
+                                <option value={choice} selected={cond["value"] == choice}>{choice}</option>
+                              <% end %>
+                            </select>
+                          <% else %>
+                            <input
+                              type="text"
+                              class="input input-xs input-bordered w-20 shrink-0"
+                              value={cond["value"] || ""}
+                              placeholder="val"
+                              phx-change="skip_update_condition"
+                              phx-debounce="300"
+                              name={"skip_cond[#{i}][value]"}
+                            />
+                          <% end %>
                         <% end %>
                         <button
                           type="button"
@@ -1089,6 +1132,11 @@ defmodule SochoWeb.StudyLive.Builder do
 
                     <%= if conditions == [] do %>
                       <p class="text-xs opacity-40 text-center">No conditions — block always runs.</p>
+                    <% end %>
+                    <%= if @data_tags == [] do %>
+                      <p class="text-xs opacity-50 leading-snug mt-1">
+                        Tip: set a <strong>Tag</strong> on any block (in its Identification section) to reference its response here.
+                      </p>
                     <% end %>
                   <% end %>
                 </div>
@@ -1149,14 +1197,17 @@ defmodule SochoWeb.StudyLive.Builder do
                     <input
                       type="text"
                       class="input input-bordered input-sm font-mono w-full"
-                      name="config[data_tag]"
+                      name="data_tag"
                       value={@selected_trial.config["data_tag"] || ""}
                       placeholder="e.g. screening-question"
+                      phx-change="data_tag_changed"
                       phx-debounce="300"
                     />
                     <p class="text-xs opacity-50 mt-1 leading-snug">
-                      Optional identifier. Filter this trial's response with
-                      <code class="font-mono">jsPsych.data.get().filter(&#123; tag: "your-tag" &#125;)</code>.
+                      Optional identifier used to reference this block's response in <strong>Skip unless</strong> conditions on other blocks.
+                      <%= if @selected_trial.plugin == "survey" do %>
+                        Set a tag here, then select it in a timeline's Skip unless condition to branch on individual survey question answers.
+                      <% end %>
                     </p>
                   </div>
                 </form>
