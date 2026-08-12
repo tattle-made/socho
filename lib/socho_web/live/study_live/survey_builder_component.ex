@@ -79,12 +79,13 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
     {:noreply, socket}
   end
 
-  def handle_event("sq_toggle_required", %{"index" => idx}, socket) do
+  def handle_event("sq_toggle_required", %{"index" => idx} = params, socket) do
     idx = String.to_integer(idx)
+    is_required = Map.has_key?(params, "required")
 
     socket =
       update(socket, :questions, fn qs ->
-        List.update_at(qs, idx, fn q -> Map.update(q, "isRequired", true, fn v -> !v end) end)
+        List.update_at(qs, idx, fn q -> Map.put(q, "isRequired", is_required) end)
       end)
 
     notify_parent(socket)
@@ -210,17 +211,18 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
               ></div>
             </div>
 
-            <div class="flex items-center gap-2">
-              <input
-                type="checkbox"
-                class="checkbox checkbox-xs"
-                checked={q["isRequired"]}
-                phx-click="sq_toggle_required"
-                phx-value-index={idx}
-                phx-target={"##{@id}"}
-              />
-              <span class="text-xs">Required</span>
-            </div>
+            <form phx-change="sq_toggle_required" phx-target={"##{@id}"}>
+              <input type="hidden" name="index" value={to_string(idx)} />
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  name="required"
+                  class="checkbox checkbox-xs"
+                  checked={q["isRequired"]}
+                />
+                <span class="text-xs">Required</span>
+              </label>
+            </form>
           <% end %>
 
           <div class="form-control">
