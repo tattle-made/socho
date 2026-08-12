@@ -501,6 +501,13 @@ defmodule SochoWeb.StudyLive.Builder do
               ensure_list(val)
             end
 
+          "HTML_STRING" ->
+            if spec["array"] do
+              if is_list(val), do: val, else: [val]
+            else
+              val
+            end
+
           _ ->
             if spec && spec["array"] && is_binary(val) do
               val |> String.split(",") |> Enum.map(&String.trim/1) |> Enum.reject(&(&1 == ""))

@@ -311,7 +311,11 @@ defmodule SochoWeb.StudyLive.BuilderComponents do
 
   def param_field(%{kind: :html} = assigns) do
     safe_id = String.replace("tiptap-#{assigns.prefix}-#{assigns.param}", ~r/[\[\]]/, "_")
-    assigns = assign(assigns, safe_id: safe_id)
+    display_value = case assigns.value do
+      [first | _] -> first
+      v -> v || ""
+    end
+    assigns = assign(assigns, safe_id: safe_id, display_value: display_value)
 
     ~H"""
     <div class="form-control">
@@ -322,7 +326,7 @@ defmodule SochoWeb.StudyLive.BuilderComponents do
         phx-hook=".TipTap"
         phx-update="ignore"
         data-field-name={"#{@prefix}[#{@param}]"}
-        data-value={@value || ""}
+        data-value={@display_value}
         class="tiptap-editor rounded border border-base-300"
       ></div>
     </div>

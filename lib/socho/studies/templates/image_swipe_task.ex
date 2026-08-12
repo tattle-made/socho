@@ -6,8 +6,14 @@ defmodule Socho.Studies.Templates.ImageSwipeTask do
       id: "image_swipe_task",
       name: "Image Swipe Task",
       description:
-        "Participants swipe images left or right. Edit the timeline variables to add your image URLs.",
+        "Participants swipe images left or right. Add your image URLs and configure labels.",
       variables: [
+        %{
+          key: "image_urls",
+          label: "Image URLs",
+          type: :list,
+          default: ["https://example.com/image1.jpg"]
+        },
         %{key: "left_label", label: "Left label", type: :text, default: "No"},
         %{key: "right_label", label: "Right label", type: :text, default: "Yes"},
         %{
@@ -18,6 +24,7 @@ defmodule Socho.Studies.Templates.ImageSwipeTask do
         }
       ],
       build: fn vars ->
+        image_urls = (vars["image_urls"] || ["https://example.com/image1.jpg"]) |> Enum.reject(&(&1 == ""))
         left_label = Map.get(vars, "left_label", "No")
         right_label = Map.get(vars, "right_label", "Yes")
         instructions = Map.get(vars, "instructions_html", "")
@@ -30,7 +37,7 @@ defmodule Socho.Studies.Templates.ImageSwipeTask do
               "pages" => [instructions],
               "allow_backward" => true,
               "allow_keys" => true,
-              "show_clickable_nav" => false,
+              "show_clickable_nav" => true,
               "show_page_number" => false,
               "key_forward" => "ArrowRight",
               "key_backward" => "ArrowLeft",
@@ -45,7 +52,7 @@ defmodule Socho.Studies.Templates.ImageSwipeTask do
             node_type: "timeline",
             plugin: nil,
             config: %{
-              "timeline_variables" => [%{"stimulus" => "https://example.com/image1.jpg"}],
+              "timeline_variables" => Enum.map(image_urls, &%{"stimulus" => &1}),
               "repetitions" => 1,
               "randomize_order" => false
             },
