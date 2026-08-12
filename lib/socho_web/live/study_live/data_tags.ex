@@ -45,9 +45,10 @@ defmodule SochoWeb.StudyLive.DataTags do
       elements
       |> Enum.reject(fn el -> el["type"] == "html" end)
       |> Enum.map(fn el ->
+        plain_title = el["title"] |> strip_html() |> then(fn t -> if t == "", do: el["name"] || "", else: t end)
         %{
           "name" => el["name"] || "",
-          "title" => el["title"] || el["name"] || "",
+          "title" => plain_title,
           "type" => el["type"] || "text",
           "choices" => normalise_choices(el["choices"] || [])
         }
@@ -56,6 +57,9 @@ defmodule SochoWeb.StudyLive.DataTags do
       []
     end
   end
+
+  defp strip_html(nil), do: ""
+  defp strip_html(html), do: html |> String.replace(~r/<[^>]+>/, "") |> String.trim()
 
   defp normalise_choices(choices) do
     Enum.map(choices, fn

@@ -333,7 +333,7 @@ defmodule Socho.Studies.JsGenerator do
     data_tag_js =
       if data_tag && data_tag != "" do
         escaped = String.replace(data_tag, "`", "\\`")
-        "  data: { tag: `#{escaped}` },\n"
+        "  data: { data_tag: `#{escaped}` },\n"
       else
         ""
       end

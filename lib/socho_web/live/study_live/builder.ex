@@ -184,7 +184,7 @@ defmodule SochoWeb.StudyLive.Builder do
     end
   end
 
-  def handle_event("data_tag_changed", %{"data_tag" => tag}, socket) do
+  def handle_event("data_tag_changed", %{"value" => tag}, socket) do
     with id when not is_nil(id) <- socket.assigns.selected_trial_id,
          node when not is_nil(node) <- find_node(socket.assigns.trials, id) do
       new_config = Map.put(node.config, "data_tag", tag)
@@ -933,8 +933,7 @@ defmodule SochoWeb.StudyLive.Builder do
                       name="data_tag"
                       value={@selected_trial.config["data_tag"] || ""}
                       placeholder="e.g. screening-question"
-                      phx-change="data_tag_changed"
-                      phx-debounce="300"
+                      phx-blur="data_tag_changed"
                     />
                     <p class="text-xs opacity-50 mt-1 leading-snug">
                       Optional identifier used to reference this block's response in <strong>Skip unless</strong> conditions on other blocks.

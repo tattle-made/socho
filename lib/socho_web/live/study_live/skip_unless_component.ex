@@ -168,7 +168,7 @@ defmodule SochoWeb.StudyLive.SkipUnlessComponent do
                 <option value="" disabled={cond["question"] != ""}>question…</option>
                 <%= for q <- survey_questions do %>
                   <option value={q["name"]} selected={cond["question"] == q["name"]}>
-                    {if q["title"] && q["title"] != "", do: q["title"], else: q["name"]}
+                    {q["name"]}
                   </option>
                 <% end %>
               </select>
