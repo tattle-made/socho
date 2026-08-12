@@ -346,10 +346,11 @@ defmodule SochoWeb.StudyLive.Builder do
      )}
   end
 
-  def handle_event("template_vars_changed", %{"vars" => vars}, socket) do
+  def handle_event("template_vars_changed", %{"vars" => raw_vars}, socket) do
     with id when not is_nil(id) <- socket.assigns.selected_trial_id,
          %{node_type: "template_group"} = node <- find_node(socket.assigns.trials, id) do
       tpl = Templates.get(node.config["template_id"])
+      vars = coerce_template_vars(raw_vars, tpl.variables)
       children = tpl.build.(vars) |> stamp_ids()
       new_config = %{"template_id" => node.config["template_id"], "template_name" => node.config["template_name"], "vars" => vars}
 
@@ -358,6 +359,37 @@ defmodule SochoWeb.StudyLive.Builder do
         |> update_node_config(id, new_config)
         |> update_node_children(id, children)
 
+      {:noreply, assign(socket, trials: trials)}
+    else
+      _ -> {:noreply, socket}
+    end
+  end
+
+  def handle_event("template_var_list_add", %{"key" => key}, socket) do
+    with id when not is_nil(id) <- socket.assigns.selected_trial_id,
+         %{node_type: "template_group"} = node <- find_node(socket.assigns.trials, id) do
+      tpl = Templates.get(node.config["template_id"])
+      vars = node.config["vars"] || %{}
+      new_vars = Map.update(vars, key, [""], &(&1 ++ [""]))
+      children = tpl.build.(new_vars) |> stamp_ids()
+      new_config = %{"template_id" => node.config["template_id"], "template_name" => node.config["template_name"], "vars" => new_vars}
+      trials = socket.assigns.trials |> update_node_config(id, new_config) |> update_node_children(id, children)
+      {:noreply, assign(socket, trials: trials)}
+    else
+      _ -> {:noreply, socket}
+    end
+  end
+
+  def handle_event("template_var_list_remove", %{"key" => key, "index" => idx_str}, socket) do
+    with id when not is_nil(id) <- socket.assigns.selected_trial_id,
+         %{node_type: "template_group"} = node <- find_node(socket.assigns.trials, id) do
+      tpl = Templates.get(node.config["template_id"])
+      vars = node.config["vars"] || %{}
+      new_list = Map.get(vars, key, []) |> ensure_list() |> List.delete_at(String.to_integer(idx_str))
+      new_vars = Map.put(vars, key, new_list)
+      children = tpl.build.(new_vars) |> stamp_ids()
+      new_config = %{"template_id" => node.config["template_id"], "template_name" => node.config["template_name"], "vars" => new_vars}
+      trials = socket.assigns.trials |> update_node_config(id, new_config) |> update_node_children(id, children)
       {:noreply, assign(socket, trials: trials)}
     else
       _ -> {:noreply, socket}
@@ -484,6 +516,22 @@ defmodule SochoWeb.StudyLive.Builder do
   defp ensure_list(nil), do: []
   defp ensure_list(list) when is_list(list), do: list
   defp ensure_list(_), do: []
+
+  defp coerce_template_vars(raw_vars, var_defs) do
+    Map.new(raw_vars, fn {key, val} ->
+      var_def = Enum.find(var_defs, fn v -> v.key == key end)
+      coerced =
+        if var_def && var_def.type == :list && is_map(val) do
+          val
+          |> Enum.filter(fn {k, _} -> match?({_, ""}, Integer.parse(k)) end)
+          |> Enum.sort_by(fn {k, _} -> String.to_integer(k) end)
+          |> Enum.map(fn {_, v} -> v end)
+        else
+          val
+        end
+      {key, coerced}
+    end)
+  end
 
   defp sorted_params(parameters) do
     Enum.sort_by(parameters, fn {_, spec} ->
@@ -703,25 +751,55 @@ defmodule SochoWeb.StudyLive.Builder do
                   <% current_vars = @selected_trial.config["vars"] || %{} %>
                   <div class="form-control">
                     <p class="text-sm font-medium leading-tight">{var.label}</p>
-                    <p class="text-xs opacity-40 mt-0.5 mb-1">
-                      {if var.type == :int, do: "INT", else: "TEXT"}
-                    </p>
-                    <textarea
-                      :if={var.type == :text}
-                      id={"tvar-#{@template_group_key}-#{var.key}"}
-                      class="textarea textarea-bordered textarea-sm text-xs font-mono leading-snug w-full"
-                      name={"vars[#{var.key}]"}
-                      rows="4"
-                    >{Map.get(current_vars, var.key, var.default)}</textarea>
-                    <input
-                      :if={var.type == :int}
-                      id={"tvar-#{@template_group_key}-#{var.key}"}
-                      type="number"
-                      class="input input-bordered input-sm w-full"
-                      name={"vars[#{var.key}]"}
-                      value={Map.get(current_vars, var.key, var.default)}
-                      step="1"
-                    />
+                    <%= if var.type == :list do %>
+                      <% items = Map.get(current_vars, var.key, var.default) |> ensure_list() %>
+                      <div class="space-y-1 mt-1">
+                        <%= for {item, idx} <- Enum.with_index(items) do %>
+                          <div class="flex items-center gap-2">
+                            <input
+                              type="text"
+                              class="input input-bordered input-sm flex-1"
+                              name={"vars[#{var.key}][#{idx}]"}
+                              value={item}
+                              phx-debounce="300"
+                            />
+                            <button
+                              type="button"
+                              class="btn btn-xs btn-ghost text-error shrink-0"
+                              phx-click="template_var_list_remove"
+                              phx-value-key={var.key}
+                              phx-value-index={idx}
+                            >✕</button>
+                          </div>
+                        <% end %>
+                        <button
+                          type="button"
+                          class="btn btn-xs btn-outline w-full"
+                          phx-click="template_var_list_add"
+                          phx-value-key={var.key}
+                        >+ Add</button>
+                      </div>
+                    <% else %>
+                      <p class="text-xs opacity-40 mt-0.5 mb-1">
+                        {if var.type == :int, do: "INT", else: "TEXT"}
+                      </p>
+                      <textarea
+                        :if={var.type == :text}
+                        id={"tvar-#{@template_group_key}-#{var.key}"}
+                        class="textarea textarea-bordered textarea-sm text-xs font-mono leading-snug w-full"
+                        name={"vars[#{var.key}]"}
+                        rows="4"
+                      >{Map.get(current_vars, var.key, var.default)}</textarea>
+                      <input
+                        :if={var.type == :int}
+                        id={"tvar-#{@template_group_key}-#{var.key}"}
+                        type="number"
+                        class="input input-bordered input-sm w-full"
+                        name={"vars[#{var.key}]"}
+                        value={Map.get(current_vars, var.key, var.default)}
+                        step="1"
+                      />
+                    <% end %>
                   </div>
                 <% end %>
               </form>
