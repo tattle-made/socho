@@ -5,9 +5,10 @@ defmodule Socho.Studies.Templates do
     ConsentGate,
     ConsentAndInstructions,
     SimpleSurvey,
+    LikertSurvey,
+    MultiChoiceGroup,
     ImageSwipeTask,
-    Iat,
-    LikertSurvey
+    Iat
   }
 
   def all do
@@ -16,6 +17,7 @@ defmodule Socho.Studies.Templates do
       ConsentAndInstructions.definition(),
       SimpleSurvey.definition(),
       LikertSurvey.definition(),
+      MultiChoiceGroup.definition(),
       ImageSwipeTask.definition(),
       Iat.definition()
     ]
