@@ -10,10 +10,12 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
     {"checkbox", "Multiple choice"},
     {"dropdown", "Dropdown"},
     {"rating", "Rating scale"},
-    {"boolean", "Yes / No"}
+    {"boolean", "Yes / No"},
+    {"matrix_multiselect", "Multi-Select Matrix"}
   ]
 
   @choice_types ["radiogroup", "checkbox", "dropdown"]
+  @matrix_types ["matrix_multiselect"]
 
   @impl true
   def update(%{value: value, field_name: field_name} = assigns, socket) do
@@ -29,7 +31,8 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
           questions: parsed.questions,
           complete_text: parsed.complete_text,
           question_types: @question_types,
-          choice_types: @choice_types
+          choice_types: @choice_types,
+          matrix_types: @matrix_types
         )
       end
 
@@ -50,7 +53,10 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
       "isRequired" => false,
       "choices" => [],
       "minValue" => "",
-      "maxValue" => ""
+      "maxValue" => "",
+      "rows" => [],
+      "columns" => [],
+      "cellType" => "checkbox"
     }
 
     socket = update(socket, :questions, fn qs -> qs ++ [new_q] end)
@@ -126,6 +132,64 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
         List.update_at(qs, q_i, fn q -> Map.update(q, "choices", [], fn cs -> List.replace_at(cs, c_i, val) end) end)
       end)
 
+    notify_parent(socket)
+    {:noreply, socket}
+  end
+
+  def handle_event("sq_add_row", %{"index" => idx}, socket) do
+    idx = String.to_integer(idx)
+    socket = update(socket, :questions, fn qs ->
+      List.update_at(qs, idx, fn q -> Map.update(q, "rows", [""], fn rs -> rs ++ [""] end) end)
+    end)
+    notify_parent(socket)
+    {:noreply, socket}
+  end
+
+  def handle_event("sq_remove_row", %{"q" => q_i, "r" => r_i}, socket) do
+    q_i = String.to_integer(q_i)
+    r_i = String.to_integer(r_i)
+    socket = update(socket, :questions, fn qs ->
+      List.update_at(qs, q_i, fn q -> Map.update(q, "rows", [], fn rs -> List.delete_at(rs, r_i) end) end)
+    end)
+    notify_parent(socket)
+    {:noreply, socket}
+  end
+
+  def handle_event("sq_update_row", %{"q" => q_i, "r" => r_i, "value" => val}, socket) do
+    q_i = String.to_integer(q_i)
+    r_i = String.to_integer(r_i)
+    socket = update(socket, :questions, fn qs ->
+      List.update_at(qs, q_i, fn q -> Map.update(q, "rows", [], fn rs -> List.replace_at(rs, r_i, val) end) end)
+    end)
+    notify_parent(socket)
+    {:noreply, socket}
+  end
+
+  def handle_event("sq_add_column", %{"index" => idx}, socket) do
+    idx = String.to_integer(idx)
+    socket = update(socket, :questions, fn qs ->
+      List.update_at(qs, idx, fn q -> Map.update(q, "columns", [""], fn cs -> cs ++ [""] end) end)
+    end)
+    notify_parent(socket)
+    {:noreply, socket}
+  end
+
+  def handle_event("sq_remove_column", %{"q" => q_i, "c" => c_i}, socket) do
+    q_i = String.to_integer(q_i)
+    c_i = String.to_integer(c_i)
+    socket = update(socket, :questions, fn qs ->
+      List.update_at(qs, q_i, fn q -> Map.update(q, "columns", [], fn cs -> List.delete_at(cs, c_i) end) end)
+    end)
+    notify_parent(socket)
+    {:noreply, socket}
+  end
+
+  def handle_event("sq_update_column", %{"q" => q_i, "c" => c_i, "value" => val}, socket) do
+    q_i = String.to_integer(q_i)
+    c_i = String.to_integer(c_i)
+    socket = update(socket, :questions, fn qs ->
+      List.update_at(qs, q_i, fn q -> Map.update(q, "columns", [], fn cs -> List.replace_at(cs, c_i, val) end) end)
+    end)
     notify_parent(socket)
     {:noreply, socket}
   end
@@ -304,6 +368,74 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
               </button>
             </div>
           <% end %>
+
+          <%= if q["type"] in @matrix_types do %>
+            <div class="space-y-2">
+              <div class="space-y-1">
+                <label class="label py-0"><span class="label-text text-xs">Rows</span></label>
+                <%= for {row, r_idx} <- Enum.with_index(q["rows"] || []) do %>
+                  <div class="flex gap-1 items-center">
+                    <input
+                      type="text"
+                      class="input input-bordered input-xs flex-1"
+                      value={row}
+                      phx-blur="sq_update_row"
+                      phx-value-q={idx}
+                      phx-value-r={r_idx}
+                      phx-target={"##{@id}"}
+                    />
+                    <button
+                      type="button"
+                      class="btn btn-xs btn-ghost text-error"
+                      phx-click="sq_remove_row"
+                      phx-value-q={idx}
+                      phx-value-r={r_idx}
+                      phx-target={"##{@id}"}
+                    >✕</button>
+                  </div>
+                <% end %>
+                <button
+                  type="button"
+                  class="btn btn-xs btn-outline"
+                  phx-click="sq_add_row"
+                  phx-value-index={idx}
+                  phx-target={"##{@id}"}
+                >+ Add row</button>
+              </div>
+
+              <div class="space-y-1">
+                <label class="label py-0"><span class="label-text text-xs">Columns</span></label>
+                <%= for {col, c_idx} <- Enum.with_index(q["columns"] || []) do %>
+                  <div class="flex gap-1 items-center">
+                    <input
+                      type="text"
+                      class="input input-bordered input-xs flex-1"
+                      value={col}
+                      phx-blur="sq_update_column"
+                      phx-value-q={idx}
+                      phx-value-c={c_idx}
+                      phx-target={"##{@id}"}
+                    />
+                    <button
+                      type="button"
+                      class="btn btn-xs btn-ghost text-error"
+                      phx-click="sq_remove_column"
+                      phx-value-q={idx}
+                      phx-value-c={c_idx}
+                      phx-target={"##{@id}"}
+                    >✕</button>
+                  </div>
+                <% end %>
+                <button
+                  type="button"
+                  class="btn btn-xs btn-outline"
+                  phx-click="sq_add_column"
+                  phx-value-index={idx}
+                  phx-target={"##{@id}"}
+                >+ Add column</button>
+              </div>
+            </div>
+          <% end %>
         </div>
       <% end %>
 
@@ -444,6 +576,18 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
     %{"type" => "html", "name" => q["name"], "html" => q["html"] || ""}
   end
 
+  defp question_to_element(%{"type" => "matrix_multiselect"} = q) do
+    %{
+      "type" => "matrix",
+      "multiSelect" => true,
+      "name" => q["name"],
+      "title" => q["title"],
+      "isRequired" => q["isRequired"] || false,
+      "rows" => q["rows"] || [],
+      "columns" => q["columns"] || []
+    }
+  end
+
   defp question_to_element(q) do
     %{
       "type" => survey_js_type(q["type"]),
@@ -525,6 +669,22 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
       "choices" => [],
       "minValue" => "",
       "maxValue" => ""
+    }
+  end
+
+  defp element_to_question(%{"type" => "matrix", "multiSelect" => true} = el, i) do
+    %{
+      "type" => "matrix_multiselect",
+      "name" => el["name"] || "question#{i + 1}",
+      "title" => el["title"] || "",
+      "html" => "",
+      "isRequired" => el["isRequired"] || false,
+      "choices" => [],
+      "minValue" => "",
+      "maxValue" => "",
+      "rows" => el["rows"] || [],
+      "columns" => el["columns"] || [],
+      "cellType" => "checkbox"
     }
   end
 
