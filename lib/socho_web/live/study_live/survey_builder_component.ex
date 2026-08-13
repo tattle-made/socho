@@ -11,10 +11,11 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
     {"dropdown", "Dropdown"},
     {"rating", "Rating scale"},
     {"boolean", "Yes / No"},
+    {"ranking", "Ranking"},
     {"matrix_multiselect", "Multi-Select Matrix"}
   ]
 
-  @choice_types ["radiogroup", "checkbox", "dropdown"]
+  @choice_types ["radiogroup", "checkbox", "dropdown", "ranking"]
   @matrix_types ["matrix_multiselect"]
 
   @impl true
