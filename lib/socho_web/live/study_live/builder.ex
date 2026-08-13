@@ -960,6 +960,7 @@ defmodule SochoWeb.StudyLive.Builder do
                       kind={input_kind(spec)}
                       value={@selected_trial.config[param_name]}
                       trial_id={@selected_trial.id}
+                      data_tags={@data_tags}
                     />
                   <% end %>
 

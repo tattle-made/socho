@@ -12,17 +12,20 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
     {"rating", "Rating scale"},
     {"boolean", "Yes / No"},
     {"ranking", "Ranking"},
-    {"matrix_multiselect", "Multi-Select Matrix"}
+    {"matrix_multiselect", "Multi-Select Matrix"},
+    {"dynamic_matrix", "Dynamic Multi Matrix Select"}
   ]
 
   @choice_types ["radiogroup", "checkbox", "dropdown", "ranking"]
-  @matrix_types ["matrix_multiselect"]
+  @matrix_types ["matrix_multiselect", "dynamic_matrix"]
 
   @impl true
   def update(%{value: value, field_name: field_name} = assigns, socket) do
+    data_tags = assigns[:data_tags] || []
+
     socket =
       if Map.has_key?(socket.assigns, :questions) do
-        assign(socket, id: assigns.id, field_name: field_name)
+        assign(socket, id: assigns.id, field_name: field_name, data_tags: data_tags)
       else
         parsed = parse_survey_json(value)
 
@@ -33,7 +36,8 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
           complete_text: parsed.complete_text,
           question_types: @question_types,
           choice_types: @choice_types,
-          matrix_types: @matrix_types
+          matrix_types: @matrix_types,
+          data_tags: data_tags
         )
       end
 
@@ -57,7 +61,11 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
       "maxValue" => "",
       "rows" => [],
       "columns" => [],
-      "cellType" => "checkbox"
+      "cellType" => "checkbox",
+      "dyn_source_tag" => "",
+      "dyn_source_question" => "",
+      "dyn_filter_column" => "",
+      "static_columns" => []
     }
 
     socket = update(socket, :questions, fn qs -> qs ++ [new_q] end)
@@ -190,6 +198,35 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
     c_i = String.to_integer(c_i)
     socket = update(socket, :questions, fn qs ->
       List.update_at(qs, q_i, fn q -> Map.update(q, "columns", [], fn cs -> List.replace_at(cs, c_i, val) end) end)
+    end)
+    notify_parent(socket)
+    {:noreply, socket}
+  end
+
+  def handle_event("sq_add_static_column", %{"index" => idx}, socket) do
+    idx = String.to_integer(idx)
+    socket = update(socket, :questions, fn qs ->
+      List.update_at(qs, idx, fn q -> Map.update(q, "static_columns", [""], fn cs -> cs ++ [""] end) end)
+    end)
+    notify_parent(socket)
+    {:noreply, socket}
+  end
+
+  def handle_event("sq_remove_static_column", %{"q" => q_i, "c" => c_i}, socket) do
+    q_i = String.to_integer(q_i)
+    c_i = String.to_integer(c_i)
+    socket = update(socket, :questions, fn qs ->
+      List.update_at(qs, q_i, fn q -> Map.update(q, "static_columns", [], fn cs -> List.delete_at(cs, c_i) end) end)
+    end)
+    notify_parent(socket)
+    {:noreply, socket}
+  end
+
+  def handle_event("sq_update_static_column", %{"q" => q_i, "c" => c_i, "value" => val}, socket) do
+    q_i = String.to_integer(q_i)
+    c_i = String.to_integer(c_i)
+    socket = update(socket, :questions, fn qs ->
+      List.update_at(qs, q_i, fn q -> Map.update(q, "static_columns", [], fn cs -> List.replace_at(cs, c_i, val) end) end)
     end)
     notify_parent(socket)
     {:noreply, socket}
@@ -404,37 +441,119 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
                 >+ Add row</button>
               </div>
 
-              <div class="space-y-1">
-                <label class="label py-0"><span class="label-text text-xs">Columns</span></label>
-                <%= for {col, c_idx} <- Enum.with_index(q["columns"] || []) do %>
-                  <div class="flex gap-1 items-center">
-                    <input
-                      type="text"
-                      class="input input-bordered input-xs flex-1"
-                      value={col}
-                      phx-blur="sq_update_column"
-                      phx-value-q={idx}
-                      phx-value-c={c_idx}
-                      phx-target={"##{@id}"}
-                    />
+              <%= if q["type"] == "matrix_multiselect" do %>
+                <div class="space-y-1">
+                  <label class="label py-0"><span class="label-text text-xs">Columns</span></label>
+                  <%= for {col, c_idx} <- Enum.with_index(q["columns"] || []) do %>
+                    <div class="flex gap-1 items-center">
+                      <input
+                        type="text"
+                        class="input input-bordered input-xs flex-1"
+                        value={col}
+                        phx-blur="sq_update_column"
+                        phx-value-q={idx}
+                        phx-value-c={c_idx}
+                        phx-target={"##{@id}"}
+                      />
+                      <button
+                        type="button"
+                        class="btn btn-xs btn-ghost text-error"
+                        phx-click="sq_remove_column"
+                        phx-value-q={idx}
+                        phx-value-c={c_idx}
+                        phx-target={"##{@id}"}
+                      >✕</button>
+                    </div>
+                  <% end %>
+                  <button
+                    type="button"
+                    class="btn btn-xs btn-outline"
+                    phx-click="sq_add_column"
+                    phx-value-index={idx}
+                    phx-target={"##{@id}"}
+                  >+ Add column</button>
+                </div>
+              <% end %>
+
+              <%= if q["type"] == "dynamic_matrix" do %>
+                <% dyn_tag_meta = Enum.find(@data_tags, fn dt -> dt["tag"] == q["dyn_source_tag"] end) %>
+                <% dyn_matrix_qs = if dyn_tag_meta, do: Enum.filter(dyn_tag_meta["questions"] || [], fn qq -> qq["type"] == "matrix" end), else: [] %>
+                <% dyn_selected_q = Enum.find(dyn_matrix_qs, fn qq -> qq["name"] == q["dyn_source_question"] end) %>
+                <% dyn_columns = if dyn_selected_q, do: dyn_selected_q["columns"] || [], else: [] %>
+                <div class="space-y-2 border-l-2 border-info pl-3 pt-1">
+                  <p class="text-xs opacity-60">Columns are populated at runtime from a previous survey's matrix response.</p>
+                  <div class="form-control">
+                    <label class="label py-0"><span class="label-text text-xs">Source data tag</span></label>
+                    <form phx-change="sq_update_field" phx-target={"##{@id}"}>
+                      <input type="hidden" name="index" value={to_string(idx)} />
+                      <input type="hidden" name="field" value="dyn_source_tag" />
+                      <select name="value" class="select select-bordered select-xs w-full font-mono">
+                        <option value="">tag…</option>
+                        <%= for dt <- @data_tags do %>
+                          <option value={dt["tag"]} selected={q["dyn_source_tag"] == dt["tag"]}>{dt["tag"]}</option>
+                        <% end %>
+                      </select>
+                    </form>
+                  </div>
+                  <div class="form-control">
+                    <label class="label py-0"><span class="label-text text-xs">Source question</span></label>
+                    <form phx-change="sq_update_field" phx-target={"##{@id}"}>
+                      <input type="hidden" name="index" value={to_string(idx)} />
+                      <input type="hidden" name="field" value="dyn_source_question" />
+                      <select name="value" class="select select-bordered select-xs w-full font-mono">
+                        <option value="">question…</option>
+                        <%= for qq <- dyn_matrix_qs do %>
+                          <option value={qq["name"]} selected={q["dyn_source_question"] == qq["name"]}>{qq["name"]}</option>
+                        <% end %>
+                      </select>
+                    </form>
+                  </div>
+                  <div class="form-control">
+                    <label class="label py-0"><span class="label-text text-xs">Filter by column value</span></label>
+                    <form phx-change="sq_update_field" phx-target={"##{@id}"}>
+                      <input type="hidden" name="index" value={to_string(idx)} />
+                      <input type="hidden" name="field" value="dyn_filter_column" />
+                      <select name="value" class="select select-bordered select-xs w-full">
+                        <option value="">column…</option>
+                        <%= for col <- dyn_columns do %>
+                          <option value={col} selected={q["dyn_filter_column"] == col}>{col}</option>
+                        <% end %>
+                      </select>
+                    </form>
+                  </div>
+                  <div class="space-y-1">
+                    <label class="label py-0"><span class="label-text text-xs">Fixed columns (always shown)</span></label>
+                    <%= for {col, c_idx} <- Enum.with_index(q["static_columns"] || []) do %>
+                      <div class="flex gap-1 items-center">
+                        <input
+                          type="text"
+                          class="input input-bordered input-xs flex-1"
+                          value={col}
+                          phx-blur="sq_update_static_column"
+                          phx-value-q={idx}
+                          phx-value-c={c_idx}
+                          phx-target={"##{@id}"}
+                        />
+                        <button
+                          type="button"
+                          class="btn btn-xs btn-ghost text-error"
+                          phx-click="sq_remove_static_column"
+                          phx-value-q={idx}
+                          phx-value-c={c_idx}
+                          phx-target={"##{@id}"}
+                        >✕</button>
+                      </div>
+                    <% end %>
                     <button
                       type="button"
-                      class="btn btn-xs btn-ghost text-error"
-                      phx-click="sq_remove_column"
-                      phx-value-q={idx}
-                      phx-value-c={c_idx}
+                      class="btn btn-xs btn-outline"
+                      phx-click="sq_add_static_column"
+                      phx-value-index={idx}
                       phx-target={"##{@id}"}
-                    >✕</button>
+                    >+ Add fixed column</button>
                   </div>
-                <% end %>
-                <button
-                  type="button"
-                  class="btn btn-xs btn-outline"
-                  phx-click="sq_add_column"
-                  phx-value-index={idx}
-                  phx-target={"##{@id}"}
-                >+ Add column</button>
-              </div>
+                </div>
+              <% end %>
             </div>
           <% end %>
         </div>
@@ -577,6 +696,23 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
     %{"type" => "html", "name" => q["name"], "html" => q["html"] || ""}
   end
 
+  defp question_to_element(%{"type" => "dynamic_matrix"} = q) do
+    %{
+      "type" => "matrix",
+      "multiSelect" => true,
+      "name" => q["name"],
+      "title" => q["title"],
+      "isRequired" => q["isRequired"] || false,
+      "eachRowRequired" => q["isRequired"] || false,
+      "rows" => q["rows"] || [],
+      "columns" => [],
+      "dyn_source_tag" => q["dyn_source_tag"] || "",
+      "dyn_source_question" => q["dyn_source_question"] || "",
+      "dyn_filter_column" => q["dyn_filter_column"] || "",
+      "static_columns" => q["static_columns"] || []
+    }
+  end
+
   defp question_to_element(%{"type" => "matrix_multiselect"} = q) do
     %{
       "type" => "matrix",
@@ -671,6 +807,35 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
       "choices" => [],
       "minValue" => "",
       "maxValue" => ""
+    }
+  end
+
+  defp element_to_question(%{"type" => "matrix", "multiSelect" => true, "dyn_source_tag" => tag} = el, i)
+       when is_binary(tag) and tag != "" do
+    rows =
+      (el["rows"] || [])
+      |> Enum.map(fn
+        r when is_binary(r) -> r
+        %{"text" => t} -> t
+        _ -> ""
+      end)
+
+    %{
+      "type" => "dynamic_matrix",
+      "name" => el["name"] || "question#{i + 1}",
+      "title" => el["title"] || "",
+      "html" => "",
+      "isRequired" => el["isRequired"] || false,
+      "choices" => [],
+      "minValue" => "",
+      "maxValue" => "",
+      "rows" => rows,
+      "columns" => [],
+      "cellType" => "checkbox",
+      "dyn_source_tag" => tag,
+      "dyn_source_question" => el["dyn_source_question"] || "",
+      "dyn_filter_column" => el["dyn_filter_column"] || "",
+      "static_columns" => el["static_columns"] || []
     }
   end
 

@@ -446,8 +446,23 @@ defmodule Socho.Studies.JsGenerator do
   defp config_to_js(config, _plugin) when map_size(config) == 0, do: ""
 
   defp config_to_js(config, "survey") do
+    survey_json = config["survey_json"] || %{}
+    elements = survey_json["elements"] || []
+
+    {dynamic_elements, _} =
+      Enum.split_with(elements, fn el ->
+        is_binary(el["dyn_source_tag"]) and el["dyn_source_tag"] != ""
+      end)
+
+    clean_elements =
+      Enum.map(elements, fn el ->
+        Map.drop(el, ["dyn_source_tag", "dyn_source_question", "dyn_filter_column", "static_columns"])
+      end)
+
+    clean_config = Map.put(config, "survey_json", Map.put(survey_json, "elements", clean_elements))
+
     params_js =
-      config
+      clean_config
       |> Enum.map(fn {key, val} -> "  #{key}: #{value_to_js(val)}," end)
       |> Enum.join("\n")
 
@@ -457,7 +472,31 @@ defmodule Socho.Studies.JsGenerator do
       },
     """
 
-    params_js <> "\n" <> survey_fn
+    on_start_js =
+      if dynamic_elements != [] do
+        patches =
+          Enum.map_join(dynamic_elements, "\n", fn el ->
+            tag = Jason.encode!(el["dyn_source_tag"])
+            question = Jason.encode!(el["dyn_source_question"] || "")
+            filter_col = Jason.encode!(el["dyn_filter_column"] || "")
+            q_name = Jason.encode!(el["name"] || "")
+
+            "    (function() {\n" <>
+            "      var _src = jsPsych.data.get().filter({data_tag: #{tag}}).last(1).values()[0];\n" <>
+            "      var _resp = _src && _src.response && _src.response[#{question}];\n" <>
+            "      var _dyn = _resp ? Object.keys(_resp).filter(function(row) { var v = _resp[row]; return v === #{filter_col} || (Array.isArray(v) && v.indexOf(#{filter_col}) > -1); }) : [];\n" <>
+            "      var _static = #{Jason.encode!(el["static_columns"] || [])};\n" <>
+            "      var _el = trial.survey_json.elements.find(function(e) { return e.name === #{q_name}; });\n" <>
+            "      if (_el) _el.columns = _dyn.concat(_static);\n" <>
+            "    })();"
+          end)
+
+        "  on_start: function(trial) {\n#{patches}\n  },\n"
+      else
+        ""
+      end
+
+    params_js <> "\n" <> survey_fn <> on_start_js
   end
 
   defp config_to_js(config, _plugin) do

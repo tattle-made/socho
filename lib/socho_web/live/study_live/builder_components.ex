@@ -203,6 +203,7 @@ defmodule SochoWeb.StudyLive.BuilderComponents do
   attr :kind, :atom, required: true
   attr :value, :any, default: nil
   attr :trial_id, :any, default: nil
+  attr :data_tags, :list, default: []
 
   def param_field(%{kind: :complex_array} = assigns) do
     items =
@@ -438,6 +439,7 @@ defmodule SochoWeb.StudyLive.BuilderComponents do
         id={"survey-builder-#{@trial_id || @prefix}"}
         value={@value}
         field_name={@field_name}
+        data_tags={@data_tags}
       />
     </div>
     """

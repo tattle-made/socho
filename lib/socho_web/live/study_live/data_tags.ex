@@ -51,7 +51,8 @@ defmodule SochoWeb.StudyLive.DataTags do
           "title" => plain_title,
           "type" => el["type"] || "text",
           "inputType" => el["inputType"],
-          "choices" => normalise_choices(el["choices"] || [])
+          "choices" => normalise_choices(el["choices"] || []),
+          "columns" => normalise_choices(el["columns"] || [])
         }
       end)
     else
