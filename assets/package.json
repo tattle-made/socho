@@ -17,6 +17,7 @@
     "@jspsych/plugin-html-button-response": "2.1.0",
     "@jspsych/plugin-html-keyboard-response": "2.1.0",
     "@jspsych/plugin-iat-html": "*",
+    "@jspsych/plugin-iat-image": "2.1.0",
     "@jspsych/plugin-image-button-response": "*",
     "@jspsych/plugin-image-keyboard-response": "*",
     "@jspsych/plugin-instructions": "*",
@@ -37,12 +38,12 @@
     "@jspsych/plugin-video-button-response": "*",
     "@jspsych/plugin-video-keyboard-response": "*",
     "@jspsych/plugin-virtual-chinrest": "*",
-    "@jspsych/plugin-iat-image": "2.1.0",
     "@tiptap/core": "^3.26.1",
     "@tiptap/extension-image": "^3.26.1",
     "@tiptap/extension-link": "^3.26.1",
     "@tiptap/starter-kit": "^3.26.1",
-    "jspsych": "8.2.3"
+    "jspsych": "8.2.3",
+    "sortablejs": "^1.15.7"
   },
   "devDependencies": {
     "esbuild": "0.25.4"

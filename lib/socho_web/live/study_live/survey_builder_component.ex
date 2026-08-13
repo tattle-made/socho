@@ -674,6 +674,14 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
   end
 
   defp element_to_question(%{"type" => "matrix", "multiSelect" => true} = el, i) do
+    rows =
+      (el["rows"] || [])
+      |> Enum.map(fn
+        r when is_binary(r) -> r
+        %{"text" => t} -> t
+        _ -> ""
+      end)
+
     %{
       "type" => "matrix_multiselect",
       "name" => el["name"] || "question#{i + 1}",
@@ -683,7 +691,7 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
       "choices" => [],
       "minValue" => "",
       "maxValue" => "",
-      "rows" => el["rows"] || [],
+      "rows" => rows,
       "columns" => el["columns"] || [],
       "cellType" => "checkbox"
     }

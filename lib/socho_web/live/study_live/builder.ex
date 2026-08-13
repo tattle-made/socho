@@ -89,11 +89,16 @@ defmodule SochoWeb.StudyLive.Builder do
       children: []
     }
 
-    {:noreply,
-     assign(socket,
-       trials: socket.assigns.trials ++ [node],
-       selected_trial_id: node.id
-     )}
+    selected = find_node(socket.assigns.trials, socket.assigns.selected_trial_id)
+
+    trials =
+      if selected && selected.node_type == "timeline" do
+        add_child_to_node(socket.assigns.trials, selected.id, node)
+      else
+        socket.assigns.trials ++ [node]
+      end
+
+    {:noreply, assign(socket, trials: trials, selected_trial_id: node.id)}
   end
 
   def handle_event("add_plugin_trial", %{"plugin" => name}, socket) do
@@ -297,6 +302,39 @@ defmodule SochoWeb.StudyLive.Builder do
     {:noreply, assign(socket, trials: trials, selected_trial_id: selected)}
   end
 
+  def handle_event("duplicate_trial", %{"id" => id_str}, socket) do
+    id = String.to_integer(id_str)
+    {:noreply, assign(socket, trials: duplicate_node(socket.assigns.trials, id))}
+  end
+
+  def handle_event("reorder_node", %{"id" => id_str, "from" => from_id, "to" => to_id, "new_index" => new_idx_str}, socket) do
+    id = String.to_integer(id_str)
+    new_idx = String.to_integer(new_idx_str)
+
+    trials =
+      if from_id == to_id do
+        reorder_node_in_tree(socket.assigns.trials, id, new_idx)
+      else
+        move_node_to_parent(socket.assigns.trials, id, parse_container_id(to_id), new_idx)
+      end
+
+    {:noreply, assign(socket, trials: trials)}
+  end
+
+  defp parse_container_id("trial-root-list"), do: nil
+  defp parse_container_id("tl-children-" <> id), do: String.to_integer(id)
+  defp parse_container_id("tpl-children-" <> id), do: String.to_integer(id)
+
+  def handle_event("rename_node", %{"id" => id_str, "label" => label}, socket) do
+    id = String.to_integer(id_str)
+    with node when not is_nil(node) <- find_node(socket.assigns.trials, id) do
+      new_config = Map.put(node.config, "label", label)
+      {:noreply, assign(socket, trials: update_node_config(socket.assigns.trials, id, new_config))}
+    else
+      _ -> {:noreply, socket}
+    end
+  end
+
   def handle_event("save_study", _params, socket) do
     %{study_id: study_id, study_client_id: client_id, trials: trials} = socket.assigns
     title = if socket.assigns.study_title == "", do: "Untitled Study", else: socket.assigns.study_title
@@ -417,6 +455,9 @@ defmodule SochoWeb.StudyLive.Builder do
   defp remove_node_from_tree(nodes, id), do: TrialTree.remove_node_from_tree(nodes, id)
   defp add_child_to_node(nodes, pid, node), do: TrialTree.add_child_to_node(nodes, pid, node)
   defp move_node_in_tree(nodes, id, dir), do: TrialTree.move_node_in_tree(nodes, id, dir)
+  defp duplicate_node(nodes, id), do: TrialTree.duplicate_node(nodes, id)
+  defp reorder_node_in_tree(nodes, id, idx), do: TrialTree.reorder_node_in_tree(nodes, id, idx)
+  defp move_node_to_parent(nodes, id, parent_id, idx), do: TrialTree.move_node_to_parent(nodes, id, parent_id, idx)
 
   # ── Config Helpers ──────────────────────────────────────────────────────────
 
@@ -731,7 +772,7 @@ defmodule SochoWeb.StudyLive.Builder do
             Trials <span class="badge badge-neutral ml-1">{length(@trials)}</span>
           </p>
 
-          <div class="space-y-2">
+          <div id="trial-root-list" phx-hook="Sortable" class="space-y-2">
             <p :if={@trials == []} class="text-sm opacity-50">
               Pick a plugin above to add a block.
             </p>

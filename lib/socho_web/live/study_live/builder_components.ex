@@ -23,13 +23,14 @@ defmodule SochoWeb.StudyLive.BuilderComponents do
 
   def node_block(%{node: %{node_type: "template_group"}} = assigns) do
     ~H"""
-    <div class="space-y-1">
+    <div class="space-y-1" data-node-id={@node.id}>
       <div class={"card shadow-sm border-2 transition-colors " <>
         if(@selected_id == @node.id,
           do: "bg-accent/10 border-accent",
           else: "bg-base-300 border-transparent"
         )}>
-        <div class="flex items-center gap-2 p-3">
+        <div class="flex items-center gap-1 p-3">
+          <span class="drag-handle cursor-grab text-base-content/30 hover:text-base-content px-0.5 shrink-0 select-none">⠿</span>
           <button
             class="btn btn-xs btn-ghost px-1 shrink-0"
             phx-click={
@@ -41,44 +42,30 @@ defmodule SochoWeb.StudyLive.BuilderComponents do
           >
             <span id={"tpl-chevron-#{@node.id}"} class="inline-block transition-transform">▾</span>
           </button>
+          <span class="badge badge-accent shrink-0">TPL</span>
           <div
-            class="flex items-center gap-2 flex-1 min-w-0 cursor-pointer"
+            class="flex items-center gap-1 flex-1 min-w-0 cursor-pointer"
             phx-click="select_trial"
             phx-value-id={@node.id}
           >
-            <span class="badge badge-accent shrink-0">TPL</span>
-            <span class="text-sm font-medium truncate">
-              {@node.config["template_name"] || "Template"}
-            </span>
-            <span class="text-xs opacity-40">({length(@node.children)} blocks)</span>
+            <form phx-change="rename_node" class="flex-1 min-w-0">
+              <input type="hidden" name="id" value={to_string(@node.id)} />
+              <input
+                type="text"
+                class="input input-ghost input-xs w-full text-sm font-medium px-1"
+                name="label"
+                value={@node.config["label"] || ""}
+                placeholder={@node.config["template_name"] || "Template"}
+                phx-debounce="500"
+              />
+            </form>
+            <span class="text-xs opacity-40 shrink-0">({length(@node.children)} blocks)</span>
           </div>
-          <div class="flex items-center gap-0.5 shrink-0">
-            <button
-              class="btn btn-xs btn-ghost px-1"
-              phx-click="move_trial_up"
-              phx-value-id={@node.id}
-              type="button"
-              title="Move up"
-            >↑</button>
-            <button
-              class="btn btn-xs btn-ghost px-1"
-              phx-click="move_trial_down"
-              phx-value-id={@node.id}
-              type="button"
-              title="Move down"
-            >↓</button>
-            <button
-              class="btn btn-xs btn-ghost px-1 text-error"
-              phx-click="remove_trial"
-              phx-value-id={@node.id}
-              type="button"
-              title="Remove"
-            >✕</button>
-          </div>
+          <.node_menu node={@node} />
         </div>
       </div>
 
-      <div id={"tpl-children-#{@node.id}"} class="ml-4 pl-3 border-l-2 border-accent/30 space-y-1">
+      <div id={"tpl-children-#{@node.id}"} phx-hook="Sortable" class="ml-4 pl-3 border-l-2 border-accent/30 space-y-1">
         <%= for {child, child_pos} <- Enum.with_index(@node.children, 1) do %>
           <.node_block node={child} position={child_pos} selected_id={@selected_id} />
         <% end %>
@@ -89,13 +76,14 @@ defmodule SochoWeb.StudyLive.BuilderComponents do
 
   def node_block(%{node: %{node_type: "timeline"}} = assigns) do
     ~H"""
-    <div class="space-y-1">
+    <div class="space-y-1" data-node-id={@node.id}>
       <div class={"card shadow-sm border-2 transition-colors " <>
         if(@selected_id == @node.id,
           do: "bg-secondary/10 border-secondary",
           else: "bg-base-300 border-transparent"
         )}>
-        <div class="flex items-center gap-2 p-3">
+        <div class="flex items-center gap-1 p-3">
+          <span class="drag-handle cursor-grab text-base-content/30 hover:text-base-content px-0.5 shrink-0 select-none">⠿</span>
           <button
             class="btn btn-xs btn-ghost px-1 shrink-0"
             phx-click={
@@ -107,42 +95,30 @@ defmodule SochoWeb.StudyLive.BuilderComponents do
           >
             <span id={"tl-chevron-#{@node.id}"} class="inline-block transition-transform">▾</span>
           </button>
+          <span class="badge badge-secondary shrink-0">TL</span>
           <div
-            class="flex items-center gap-2 flex-1 min-w-0 cursor-pointer"
+            class="flex items-center gap-1 flex-1 min-w-0 cursor-pointer"
             phx-click="select_trial"
             phx-value-id={@node.id}
           >
-            <span class="badge badge-secondary shrink-0">TL</span>
-            <span class="text-sm font-medium truncate">Timeline Group</span>
-            <span class="text-xs opacity-40">({length(@node.children)} trials)</span>
+            <form phx-change="rename_node" class="flex-1 min-w-0">
+              <input type="hidden" name="id" value={to_string(@node.id)} />
+              <input
+                type="text"
+                class="input input-ghost input-xs w-full text-sm font-medium px-1"
+                name="label"
+                value={@node.config["label"] || ""}
+                placeholder="Timeline"
+                phx-debounce="500"
+              />
+            </form>
+            <span class="text-xs opacity-40 shrink-0">({length(@node.children)} trials)</span>
           </div>
-          <div class="flex items-center gap-0.5 shrink-0">
-            <button
-              class="btn btn-xs btn-ghost px-1"
-              phx-click="move_trial_up"
-              phx-value-id={@node.id}
-              type="button"
-              title="Move up"
-            >↑</button>
-            <button
-              class="btn btn-xs btn-ghost px-1"
-              phx-click="move_trial_down"
-              phx-value-id={@node.id}
-              type="button"
-              title="Move down"
-            >↓</button>
-            <button
-              class="btn btn-xs btn-ghost px-1 text-error"
-              phx-click="remove_trial"
-              phx-value-id={@node.id}
-              type="button"
-              title="Remove"
-            >✕</button>
-          </div>
+          <.node_menu node={@node} />
         </div>
       </div>
 
-      <div id={"tl-children-#{@node.id}"} class="ml-4 pl-3 border-l-2 border-secondary/30 space-y-1">
+      <div id={"tl-children-#{@node.id}"} phx-hook="Sortable" class="ml-4 pl-3 border-l-2 border-secondary/30 space-y-1">
         <p :if={@node.children == []} class="text-xs opacity-40 py-1 italic">
           Select this group then click a plugin to add trials here.
         </p>
@@ -160,46 +136,61 @@ defmodule SochoWeb.StudyLive.BuilderComponents do
       if(@selected_id == @node.id,
         do: "bg-primary/10 border-primary",
         else: "bg-base-200 border-transparent"
-      )}>
-      <div class="flex items-center gap-2 p-3">
+      )} data-node-id={@node.id}>
+      <div class="flex items-center gap-1 p-3">
+        <span class="drag-handle cursor-grab text-base-content/30 hover:text-base-content px-0.5 shrink-0 select-none">⠿</span>
+        <span class="badge badge-neutral shrink-0">#{@position}</span>
         <div
-          class="flex items-center gap-2 flex-1 min-w-0 cursor-pointer"
+          class="flex items-center gap-1 flex-1 min-w-0 cursor-pointer"
           phx-click="select_trial"
           phx-value-id={@node.id}
         >
-          <span class="badge badge-neutral shrink-0">#{@position}</span>
-          <span class="text-sm font-medium truncate">{@node.plugin}</span>
+          <form phx-change="rename_node" class="flex-1 min-w-0">
+            <input type="hidden" name="id" value={to_string(@node.id)} />
+            <input
+              type="text"
+              class="input input-ghost input-xs w-full text-sm font-medium px-1"
+              name="label"
+              value={@node.config["label"] || ""}
+              placeholder={@node.plugin}
+              phx-debounce="500"
+            />
+          </form>
         </div>
-        <div class="flex items-center gap-0.5 shrink-0">
-          <button
-            class="btn btn-xs btn-ghost px-1"
-            phx-click="move_trial_up"
-            phx-value-id={@node.id}
-            type="button"
-            title="Move up"
-          >
-            ↑
-          </button>
-          <button
-            class="btn btn-xs btn-ghost px-1"
-            phx-click="move_trial_down"
-            phx-value-id={@node.id}
-            type="button"
-            title="Move down"
-          >
-            ↓
-          </button>
-          <button
-            class="btn btn-xs btn-ghost px-1 text-error"
-            phx-click="remove_trial"
-            phx-value-id={@node.id}
-            type="button"
-            title="Remove"
-          >
-            ✕
-          </button>
-        </div>
+        <.node_menu node={@node} />
       </div>
+    </div>
+    """
+  end
+
+  attr :node, :map, required: true
+
+  defp node_menu(assigns) do
+    ~H"""
+    <div class="dropdown dropdown-end shrink-0">
+      <button tabindex="0" type="button" class="btn btn-xs btn-ghost px-1" title="Actions">⋯</button>
+      <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box shadow-lg z-10 w-44 p-1 text-sm">
+        <li>
+          <button type="button" phx-click="move_trial_up" phx-value-id={@node.id} class="flex gap-2">
+            <span>↑</span> Move up
+          </button>
+        </li>
+        <li>
+          <button type="button" phx-click="move_trial_down" phx-value-id={@node.id} class="flex gap-2">
+            <span>↓</span> Move down
+          </button>
+        </li>
+        <li>
+          <button type="button" phx-click="duplicate_trial" phx-value-id={@node.id} class="flex gap-2">
+            <span>⧉</span> Duplicate
+          </button>
+        </li>
+        <li>
+          <button type="button" phx-click="remove_trial" phx-value-id={@node.id} class="flex gap-2 text-error">
+            <span>✕</span> Delete
+          </button>
+        </li>
+      </ul>
     </div>
     """
   end
@@ -509,6 +500,7 @@ defmodule SochoWeb.StudyLive.BuilderComponents do
         }
       />
     </div>
+
     """
   end
 end

@@ -106,4 +106,60 @@ defmodule SochoWeb.StudyLive.TrialTree do
     b = Enum.at(list, j)
     list |> List.replace_at(i, b) |> List.replace_at(j, a)
   end
+
+  def duplicate_node(nodes, id) do
+    case Enum.find_index(nodes, &(&1.id == id)) do
+      nil ->
+        Enum.map(nodes, fn node ->
+          %{node | children: duplicate_node(node.children, id)}
+        end)
+
+      idx ->
+        original = Enum.at(nodes, idx)
+        clone =
+          original
+          |> Map.put(:id, System.unique_integer([:positive]))
+          |> Map.update(:children, [], &stamp_ids/1)
+        List.insert_at(nodes, idx + 1, clone)
+    end
+  end
+
+  def move_node_to_parent(nodes, id, target_parent_id, new_idx) do
+    node = find_node(nodes, id)
+
+    case node do
+      nil -> nodes
+      _ ->
+        nodes_without = remove_node_from_tree(nodes, id)
+
+        if target_parent_id == nil do
+          List.insert_at(nodes_without, new_idx, node)
+        else
+          target = find_node(nodes_without, target_parent_id)
+
+          case target do
+            nil -> nodes
+            _ ->
+              new_children = List.insert_at(target.children, new_idx, node)
+              update_node_children(nodes_without, target_parent_id, new_children)
+          end
+        end
+    end
+  end
+
+  def reorder_node_in_tree(nodes, id, new_idx) do
+    case Enum.find_index(nodes, &(&1.id == id)) do
+      nil ->
+        Enum.map(nodes, fn node ->
+          %{node | children: reorder_node_in_tree(node.children, id, new_idx)}
+        end)
+
+      old_idx ->
+        node = Enum.at(nodes, old_idx)
+
+        nodes
+        |> List.delete_at(old_idx)
+        |> List.insert_at(new_idx, node)
+    end
+  end
 end
