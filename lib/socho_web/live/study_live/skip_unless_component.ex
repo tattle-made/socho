@@ -121,6 +121,7 @@ defmodule SochoWeb.StudyLive.SkipUnlessComponent do
           <% survey_questions = if is_survey_tag, do: tag_meta["questions"] || [], else: [] %>
           <% selected_question = Enum.find(survey_questions, fn q -> q["name"] == cond["question"] end) %>
           <% question_choices = if selected_question, do: selected_question["choices"] || [], else: [] %>
+          <% is_numeric_question = selected_question != nil && (selected_question["inputType"] == "number" || selected_question["type"] == "rating") %>
           <div class="flex flex-wrap items-center gap-1">
             <label class="flex items-center gap-1 cursor-pointer shrink-0" title="NOT">
               <input
@@ -188,7 +189,7 @@ defmodule SochoWeb.StudyLive.SkipUnlessComponent do
                 <%= if field == "response" && !selected_question do %>
                   <option value="contains" selected={op == "contains"}>has</option>
                 <% end %>
-                <%= if field == "rt" do %>
+                <%= if field == "rt" || is_numeric_question do %>
                   <option value="lt" selected={op == "lt"}>&#60;</option>
                   <option value="gt" selected={op == "gt"}>&#62;</option>
                 <% end %>
