@@ -584,6 +584,7 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
       "name" => q["name"],
       "title" => q["title"],
       "isRequired" => q["isRequired"] || false,
+      "eachRowRequired" => q["isRequired"] || false,
       "rows" => q["rows"] || [],
       "columns" => q["columns"] || []
     }
