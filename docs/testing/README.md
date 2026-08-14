@@ -12,6 +12,39 @@ Step-by-step testing scripts for the Socho survey platform. Each guide covers on
 | 04 | [Export Data](04-export-data.md) | Export submissions CSV and study template JSON; verify structure and accuracy; test template import |
 | 05 | [User Creation & Access Control](05-user-creation-and-access-control.md) | Create Admin/Manager/Participant users, verify role-based permissions and client scoping |
 
+## Creating Test Users (iex)
+
+Several guides require Admin, Manager, or Participant accounts to already exist. The quickest way to bootstrap them is via the `UserAdmin` helper in an iex shell.
+
+**Start the shell:**
+
+```bash
+iex -S mix
+```
+
+**Create users:**
+
+```elixir
+alias Socho.Accounts.UserAdmin
+
+# Admin — can manage everything
+UserAdmin.create_user("admin@example.com", "AdminTestPass123", :admin)
+
+# Manager — can create participants and manage studies
+UserAdmin.create_user("manager@example.com", "ManagerTestPass123", :manager)
+
+# Participant — scoped to a client; assign client_id separately via the UI
+# or create one per client needed
+UserAdmin.create_user("participant_a@example.com", "ParticipantPass123", :participant)
+UserAdmin.create_user("participant_b@example.com", "ParticipantPass456", :participant)
+```
+
+Each call returns `{:ok, %User{}}` on success or `{:error, changeset}` on failure (e.g., duplicate email or password too short — minimum 12 characters).
+
+After creating participant accounts, log in as Admin and go to **Users** to assign each participant to the correct **Client** before running guides that test client scoping.
+
+---
+
 ## Running Order
 
 Run the guides in order — later guides depend on data created by earlier ones:
