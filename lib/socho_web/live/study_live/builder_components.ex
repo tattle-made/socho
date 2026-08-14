@@ -49,7 +49,7 @@ defmodule SochoWeb.StudyLive.BuilderComponents do
             phx-value-id={@node.id}
           >
             <form phx-change="rename_node" class="flex-1 min-w-0">
-              <input type="hidden" name="id" value={to_string(@node.id)} />
+              <input type="hidden" name="node_id" value={to_string(@node.id)} />
               <input
                 type="text"
                 class="input input-ghost input-xs w-full text-sm font-medium px-1"
@@ -102,7 +102,7 @@ defmodule SochoWeb.StudyLive.BuilderComponents do
             phx-value-id={@node.id}
           >
             <form phx-change="rename_node" class="flex-1 min-w-0">
-              <input type="hidden" name="id" value={to_string(@node.id)} />
+              <input type="hidden" name="node_id" value={to_string(@node.id)} />
               <input
                 type="text"
                 class="input input-ghost input-xs w-full text-sm font-medium px-1"
@@ -146,7 +146,7 @@ defmodule SochoWeb.StudyLive.BuilderComponents do
           phx-value-id={@node.id}
         >
           <form phx-change="rename_node" class="flex-1 min-w-0">
-            <input type="hidden" name="id" value={to_string(@node.id)} />
+            <input type="hidden" name="node_id" value={to_string(@node.id)} />
             <input
               type="text"
               class="input input-ghost input-xs w-full text-sm font-medium px-1"

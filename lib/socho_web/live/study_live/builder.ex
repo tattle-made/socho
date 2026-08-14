@@ -325,7 +325,7 @@ defmodule SochoWeb.StudyLive.Builder do
   defp parse_container_id("tl-children-" <> id), do: String.to_integer(id)
   defp parse_container_id("tpl-children-" <> id), do: String.to_integer(id)
 
-  def handle_event("rename_node", %{"id" => id_str, "label" => label}, socket) do
+  def handle_event("rename_node", %{"node_id" => id_str, "label" => label}, socket) do
     id = String.to_integer(id_str)
     with node when not is_nil(node) <- find_node(socket.assigns.trials, id) do
       new_config = Map.put(node.config, "label", label)
