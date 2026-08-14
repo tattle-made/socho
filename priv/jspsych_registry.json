@@ -1793,37 +1793,6 @@
       }
     }
   },
-  "survey": {
-    "name": "survey",
-    "version": "4.0.0",
-    "description": "A jsPsych plugin for complex surveys",
-    "parameters": {
-      "survey_json": {
-        "type": "OBJECT",
-        "default": {},
-        "description": "A SurveyJS-compatible object that defines the survey.",
-        "array": false
-      },
-      "survey_function": {
-        "type": "FUNCTION",
-        "default": null,
-        "description": null,
-        "array": false
-      },
-      "validation_function": {
-        "type": "FUNCTION",
-        "default": null,
-        "description": null,
-        "array": false
-      },
-      "min_width": {
-        "type": "STRING",
-        "default": "min(100vw, 800px)",
-        "description": null,
-        "array": false
-      }
-    }
-  },
   "survey-html-form": {
     "name": "survey-html-form",
     "version": "2.1.0",
@@ -1944,7 +1913,7 @@
   },
   "survey-multi-choice": {
     "name": "survey-multi-choice",
-    "version": "2.2.0",
+    "version": "2.2.1",
     "description": "a jspsych plugin for multiple choice survey questions",
     "parameters": {
       "questions": {
@@ -2013,7 +1982,7 @@
   },
   "survey-multi-select": {
     "name": "survey-multi-select",
-    "version": "2.1.0",
+    "version": "2.1.1",
     "description": "a jspsych plugin for multiple choice survey questions",
     "parameters": {
       "questions": {
@@ -2088,7 +2057,7 @@
   },
   "survey-text": {
     "name": "survey-text",
-    "version": "2.1.0",
+    "version": "2.1.1",
     "description": "a jspsych plugin for free response survey questions",
     "parameters": {
       "questions": {

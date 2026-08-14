@@ -87,10 +87,10 @@
     },
     "custom": true
   },
-  "multiple-images": {
-    "name": "multiple-images",
-    "version": "1.0.0",
-    "description": "Shows a configurable grid of images with a free-text response box.",
+  "multi-image-select": {
+    "name": "multi-image-select",
+    "version": "2.0.0",
+    "description": "Shows a configurable grid of images; participants click to select one or more.",
     "parameters": {
       "images": {
         "type": "IMAGE",
@@ -104,12 +104,6 @@
         "description": "Instructions or question shown above the image grid (HTML allowed).",
         "array": false
       },
-      "placeholder": {
-        "type": "STRING",
-        "default": "Enter your response...",
-        "description": "Placeholder text for the response box.",
-        "array": false
-      },
       "button_label": {
         "type": "STRING",
         "default": "Continue",
@@ -119,7 +113,13 @@
       "required": {
         "type": "BOOL",
         "default": false,
-        "description": "If true, participant must enter text before continuing.",
+        "description": "If true, participant must select at least one image before continuing.",
+        "array": false
+      },
+      "multiple_select": {
+        "type": "BOOL",
+        "default": false,
+        "description": "If true, participant may select more than one image.",
         "array": false
       },
       "columns": {
