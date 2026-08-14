@@ -244,6 +244,32 @@ for (const pluginName of PLUGINS) {
   }
 }
 
+// --- Hardcoded fallbacks for plugins that crash on Node.js import ---
+// @jspsych/plugin-survey calls window.addEventListener at import time, which the DOM
+// stubs above don't support. Rather than lose the entry every time this script runs,
+// we inject the known parameter schema directly when the import fails.
+
+const PLUGIN_FALLBACKS = {
+  survey: {
+    name: 'survey',
+    version: '4.0.0',
+    description: 'A jsPsych plugin for complex surveys',
+    parameters: {
+      survey_json: { type: 'OBJECT', default: {}, description: 'A SurveyJS-compatible object that defines the survey.', array: false },
+      survey_function: { type: 'FUNCTION', default: null, description: null, array: false },
+      validation_function: { type: 'FUNCTION', default: null, description: null, array: false },
+      min_width: { type: 'STRING', default: 'min(100vw, 800px)', description: null, array: false },
+    },
+  },
+};
+
+for (const [name, fallback] of Object.entries(PLUGIN_FALLBACKS)) {
+  if (!registry[name]) {
+    registry[name] = fallback;
+    console.log(`✓ ${name} (fallback)`);
+  }
+}
+
 // --- Write registry ---
 
 writeFileSync(REGISTRY_PATH, JSON.stringify(registry, null, 2));
