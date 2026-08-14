@@ -277,13 +277,8 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
 
   @impl true
   def render(assigns) do
-    assigns = assign(assigns, :encoded, Jason.encode!(to_survey_json(assigns.questions, assigns.complete_text)))
-
     ~H"""
     <div id={@id} class="space-y-3">
-      <%!-- Hidden input carries the serialized survey_json into the parent form submit --%>
-      <input type="hidden" name={@field_name} value={@encoded} />
-
       <%= for {q, idx} <- Enum.with_index(@questions) do %>
         <div class="border border-base-300 rounded-lg p-3 space-y-2">
           <div class="flex justify-between items-center">

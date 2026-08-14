@@ -179,8 +179,10 @@ defmodule SochoWeb.StudyLive.Builder do
         else
           schema = socket.assigns.registry[node.plugin]
           new_config = coerce_config(params, schema["parameters"] || %{})
-          # data_tag is managed via its own event handler; preserve the server-side value
-          Map.put(new_config, "data_tag", node.config["data_tag"] || "")
+          # data_tag and survey_json are managed via their own event handlers; preserve server-side values
+          new_config
+          |> Map.put("data_tag", node.config["data_tag"] || "")
+          |> Map.put("survey_json", node.config["survey_json"])
         end
 
       {:noreply, assign(socket, trials: update_node_config(socket.assigns.trials, id, config))}
@@ -953,7 +955,7 @@ defmodule SochoWeb.StudyLive.Builder do
                   >
                     No configurable parameters.
                   </p>
-                  <%= for {param_name, spec} <- params, input_kind(spec) != :skip do %>
+                  <%= for {param_name, spec} <- params, input_kind(spec) != :skip, param_name != "survey_json" do %>
                     <.param_field
                       param={param_name}
                       spec={spec}
@@ -985,6 +987,17 @@ defmodule SochoWeb.StudyLive.Builder do
                     </p>
                   </div>
                 </form>
+
+                <%= for {param_name, spec} <- params, param_name == "survey_json", input_kind(spec) != :skip do %>
+                  <.param_field
+                    param={param_name}
+                    spec={spec}
+                    kind={input_kind(spec)}
+                    value={@selected_trial.config[param_name]}
+                    trial_id={@selected_trial.id}
+                    data_tags={@data_tags}
+                  />
+                <% end %>
 
                 <div class="divider text-xs mt-3 mb-2">Extensions</div>
 
