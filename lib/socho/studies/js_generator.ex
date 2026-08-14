@@ -253,7 +253,13 @@ defmodule Socho.Studies.JsGenerator do
   defp collect_plugins(nodes) do
     Enum.flat_map(nodes, fn node ->
       child_plugins = collect_plugins(node.children || [])
-      if node.plugin, do: [node.plugin | child_plugins], else: child_plugins
+      own =
+        case node.plugin do
+          "pairwise-compare" -> ["multi-image-select"]
+          p when not is_nil(p) -> [p]
+          _ -> []
+        end
+      own ++ child_plugins
     end)
   end
 
@@ -322,6 +328,55 @@ defmodule Socho.Studies.JsGenerator do
     extra_js = timeline_config_to_js(node.config || %{})
     own_decl = "const #{var_name} = {\n  timeline: [#{children_js}],#{extra_js}\n};"
     {new_counter, child_decls ++ [own_decl], var_name}
+  end
+
+  defp emit_node(%{plugin: "pairwise-compare"} = node, counter) do
+    var_name = "timeline#{counter}"
+    config = node.config || %{}
+    images = config["images"] || []
+    image_width = config["image_width"] || 300
+    image_height = config["image_height"] || 300
+    prompt = config["prompt"]
+    data_tag = config["data_tag"]
+
+    images_js = Jason.encode!(images)
+
+    prompt_js =
+      if prompt && prompt != "",
+        do: "`#{String.replace(prompt, "`", "\\`")}`",
+        else: "null"
+
+    data_js =
+      if data_tag && data_tag != "" do
+        escaped = String.replace(data_tag, "`", "\\`")
+        "        data: { data_tag: `#{escaped}` },\n"
+      else
+        ""
+      end
+
+    own_decl = """
+    const #{var_name} = (function() {
+      var _images = #{images_js};
+      var _shuffled = jsPsych.randomization.shuffle(_images.slice());
+      var _pairs = [];
+      for (var i = 0; i + 1 < _shuffled.length; i += 2) {
+        _pairs.push({ _pw_images: [_shuffled[i], _shuffled[i + 1]] });
+      }
+      return {
+        timeline: [{
+          type: jsPsychMultiImageSelect,
+          images: jsPsych.timelineVariable('_pw_images'),
+          columns: 2,
+          image_width: #{image_width},
+          image_height: #{image_height},
+          prompt: #{prompt_js},
+    #{data_js}    }],
+        timeline_variables: _pairs,
+      };
+    })();\
+    """
+
+    {counter + 1, [own_decl], var_name}
   end
 
   defp emit_node(node, counter) do

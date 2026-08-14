@@ -1,4 +1,36 @@
 {
+  "pairwise-compare": {
+    "name": "pairwise-compare",
+    "version": "1.0.0",
+    "description": "Shuffles a list of images, splits them into sequential pairs, and presents each pair as a multi-image-select trial.",
+    "parameters": {
+      "images": {
+        "type": "IMAGE",
+        "default": null,
+        "description": "Array of image URLs to compare. Shuffled at runtime and split into sequential pairs.",
+        "array": true
+      },
+      "prompt": {
+        "type": "HTML_STRING",
+        "default": null,
+        "description": "Instructions shown above each image pair (HTML allowed).",
+        "array": false
+      },
+      "image_width": {
+        "type": "INT",
+        "default": 300,
+        "description": "Width of each image in pixels.",
+        "array": false
+      },
+      "image_height": {
+        "type": "INT",
+        "default": 300,
+        "description": "Height of each image in pixels.",
+        "array": false
+      }
+    },
+    "custom": true
+  },
   "example-rating": {
     "name": "example-rating",
     "version": "1.0.0",

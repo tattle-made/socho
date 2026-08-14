@@ -8,6 +8,7 @@ defmodule Socho.Studies.Templates do
     LikertSurvey,
     MultiChoiceGroup,
     ImageSwipeTask,
+    PairwiseImageCompare,
     Iat
   }
 
@@ -19,6 +20,7 @@ defmodule Socho.Studies.Templates do
       LikertSurvey.definition(),
       MultiChoiceGroup.definition(),
       ImageSwipeTask.definition(),
+      PairwiseImageCompare.definition(),
       Iat.definition()
     ]
   end
