@@ -65,7 +65,8 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
       "dyn_source_tag" => "",
       "dyn_source_question" => "",
       "dyn_filter_column" => "",
-      "static_columns" => []
+      "static_columns" => [],
+      "randomize_rows" => false
     }
 
     socket = update(socket, :questions, fn qs -> qs ++ [new_q] end)
@@ -101,6 +102,19 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
     socket =
       update(socket, :questions, fn qs ->
         List.update_at(qs, idx, fn q -> Map.put(q, "isRequired", is_required) end)
+      end)
+
+    notify_parent(socket)
+    {:noreply, socket}
+  end
+
+  def handle_event("sq_toggle_randomize_rows", %{"index" => idx} = params, socket) do
+    idx = String.to_integer(idx)
+    randomize = Map.has_key?(params, "randomize_rows")
+
+    socket =
+      update(socket, :questions, fn qs ->
+        List.update_at(qs, idx, fn q -> Map.put(q, "randomize_rows", randomize) end)
       end)
 
     notify_parent(socket)
@@ -441,6 +455,19 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
                 >+ Add row</button>
               </div>
 
+              <form phx-change="sq_toggle_randomize_rows" phx-target={"##{@id}"}>
+                <input type="hidden" name="index" value={to_string(idx)} />
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    name="randomize_rows"
+                    class="checkbox checkbox-xs"
+                    checked={q["randomize_rows"]}
+                  />
+                  <span class="label-text text-xs">Randomize row order</span>
+                </label>
+              </form>
+
               <%= if q["type"] == "matrix_multiselect" do %>
                 <div class="space-y-1">
                   <label class="label py-0"><span class="label-text text-xs">Columns</span></label>
@@ -706,6 +733,7 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
       "eachRowRequired" => q["isRequired"] || false,
       "rows" => q["rows"] || [],
       "columns" => [],
+      "rowsOrder" => if(q["randomize_rows"], do: "random", else: "initial"),
       "dyn_source_tag" => q["dyn_source_tag"] || "",
       "dyn_source_question" => q["dyn_source_question"] || "",
       "dyn_filter_column" => q["dyn_filter_column"] || "",
@@ -722,7 +750,8 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
       "isRequired" => q["isRequired"] || false,
       "eachRowRequired" => q["isRequired"] || false,
       "rows" => q["rows"] || [],
-      "columns" => q["columns"] || []
+      "columns" => q["columns"] || [],
+      "rowsOrder" => if(q["randomize_rows"], do: "random", else: "initial")
     }
   end
 
@@ -835,7 +864,8 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
       "dyn_source_tag" => tag,
       "dyn_source_question" => el["dyn_source_question"] || "",
       "dyn_filter_column" => el["dyn_filter_column"] || "",
-      "static_columns" => el["static_columns"] || []
+      "static_columns" => el["static_columns"] || [],
+      "randomize_rows" => el["rowsOrder"] == "random"
     }
   end
 
@@ -859,7 +889,8 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
       "maxValue" => "",
       "rows" => rows,
       "columns" => el["columns"] || [],
-      "cellType" => "checkbox"
+      "cellType" => "checkbox",
+      "randomize_rows" => el["rowsOrder"] == "random"
     }
   end
 
