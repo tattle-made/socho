@@ -26,11 +26,11 @@ The participant never sees the machinery — they just see a matrix whose column
 
 1. Add a **survey** block to your study. Give it a meaningful name, for example **Fruit Frequency Survey**.
 
-2. In the **Identification** section at the bottom of the config panel, set a **Tag** on this block — for example `fruit-frequency`. This tag is how the second survey finds this block's data at runtime.
+2. In the **Identification** section at the bottom of the config panel, set a **Tag** on this block — for example `fruit-survey`. This tag is how the second survey finds this block's data at runtime.
 
 3. Inside the survey builder, click **+ Add question** and choose **Multi-Select Matrix**.
 
-4. Set the **Field name** to something clear, for example `fruit_frequency`.
+4. Set the **Field name** to something clear, for example `fruit-frequency`.
 
 5. Add the following **Rows** (one per fruit):
 
@@ -80,8 +80,8 @@ The participant will see a grid where they can check one or more frequency value
 
    | Field | Value |
    |-------|-------|
-   | **Source data tag** | `fruit-frequency` ← the tag you set on Survey 1 |
-   | **Source question** | `fruit_frequency` ← the field name of the matrix question |
+   | **Source data tag** | `fruit-survey` ← the tag you set on Survey 1 |
+   | **Source question** | `fruit-frequency` ← the field name of the matrix question |
    | **Filter by column value** | `Daily` ← only fruits marked Daily become columns |
 
    These dropdowns are populated from the tagged blocks already in your study, so they only show valid options once Survey 1 has a tag and has been saved.
@@ -95,6 +95,8 @@ The participant will see a grid where they can check one or more frequency value
    This column will appear for every participant regardless of which fruits they selected.
 
 7. Optionally mark the question **Required** to enforce that participants fill every row.
+
+![Dynamic survey configurations](assets/dynamic-multiselect-matrix/dynamic-multiselect-config.png)
 
 ---
 
