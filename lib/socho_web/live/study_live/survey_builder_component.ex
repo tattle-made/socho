@@ -162,7 +162,9 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
   def handle_event("sq_add_row", %{"index" => idx}, socket) do
     idx = String.to_integer(idx)
     socket = update(socket, :questions, fn qs ->
-      List.update_at(qs, idx, fn q -> Map.update(q, "rows", [""], fn rs -> rs ++ [""] end) end)
+      List.update_at(qs, idx, fn q ->
+        Map.update(q, "rows", [new_row()], fn rs -> rs ++ [new_row()] end)
+      end)
     end)
     notify_parent(socket)
     {:noreply, socket}
@@ -182,7 +184,26 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
     q_i = String.to_integer(q_i)
     r_i = String.to_integer(r_i)
     socket = update(socket, :questions, fn qs ->
-      List.update_at(qs, q_i, fn q -> Map.update(q, "rows", [], fn rs -> List.replace_at(rs, r_i, val) end) end)
+      List.update_at(qs, q_i, fn q ->
+        Map.update(q, "rows", [], fn rs ->
+          List.update_at(rs, r_i, fn row -> Map.put(normalize_row(row), "text", val) end)
+        end)
+      end)
+    end)
+    notify_parent(socket)
+    {:noreply, socket}
+  end
+
+  def handle_event("sq_toggle_row_reversed", %{"q" => q_i, "r" => r_i} = params, socket) do
+    q_i = String.to_integer(q_i)
+    r_i = String.to_integer(r_i)
+    reversed = Map.has_key?(params, "reversed")
+    socket = update(socket, :questions, fn qs ->
+      List.update_at(qs, q_i, fn q ->
+        Map.update(q, "rows", [], fn rs ->
+          List.update_at(rs, r_i, fn row -> Map.put(normalize_row(row), "reversed", reversed) end)
+        end)
+      end)
     end)
     notify_parent(socket)
     {:noreply, socket}
@@ -426,16 +447,30 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
               <div class="space-y-1">
                 <label class="label py-0"><span class="label-text text-xs">Rows</span></label>
                 <%= for {row, r_idx} <- Enum.with_index(q["rows"] || []) do %>
+                  <% row_map = normalize_row(row) %>
                   <div class="flex gap-1 items-center">
                     <input
                       type="text"
                       class="input input-bordered input-xs flex-1"
-                      value={row}
+                      value={row_map["text"]}
                       phx-blur="sq_update_row"
                       phx-value-q={idx}
                       phx-value-r={r_idx}
                       phx-target={"##{@id}"}
                     />
+                    <form phx-change="sq_toggle_row_reversed" phx-target={"##{@id}"}>
+                      <input type="hidden" name="q" value={to_string(idx)} />
+                      <input type="hidden" name="r" value={to_string(r_idx)} />
+                      <label class="flex items-center gap-1 cursor-pointer whitespace-nowrap">
+                        <input
+                          type="checkbox"
+                          name="reversed"
+                          class="checkbox checkbox-xs"
+                          checked={row_map["reversed"]}
+                        />
+                        <span class="text-xs">Rev</span>
+                      </label>
+                    </form>
                     <button
                       type="button"
                       class="btn btn-xs btn-ghost text-error"
@@ -703,6 +738,19 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
     """
   end
 
+  defp new_row, do: %{"text" => "", "reversed" => false}
+
+  defp normalize_row(r) when is_binary(r), do: %{"text" => r, "reversed" => false}
+  defp normalize_row(%{"text" => _} = r), do: r
+  defp normalize_row(_), do: new_row()
+
+  defp rows_to_surveyjs(rows) do
+    Enum.map(rows, fn row ->
+      r = normalize_row(row)
+      %{"value" => r["text"], "text" => r["text"], "reversed" => r["reversed"] || false}
+    end)
+  end
+
   defp notify_parent(socket) do
     json = to_survey_json(socket.assigns.questions, socket.assigns.complete_text)
     send(self(), {:survey_builder_update, json})
@@ -731,7 +779,7 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
       "title" => q["title"],
       "isRequired" => q["isRequired"] || false,
       "eachRowRequired" => q["isRequired"] || false,
-      "rows" => q["rows"] || [],
+      "rows" => rows_to_surveyjs(q["rows"] || []),
       "columns" => [],
       "rowsOrder" => if(q["randomize_rows"], do: "random", else: "initial"),
       "dyn_source_tag" => q["dyn_source_tag"] || "",
@@ -749,7 +797,7 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
       "title" => q["title"],
       "isRequired" => q["isRequired"] || false,
       "eachRowRequired" => q["isRequired"] || false,
-      "rows" => q["rows"] || [],
+      "rows" => rows_to_surveyjs(q["rows"] || []),
       "columns" => q["columns"] || [],
       "rowsOrder" => if(q["randomize_rows"], do: "random", else: "initial")
     }
@@ -844,9 +892,10 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
     rows =
       (el["rows"] || [])
       |> Enum.map(fn
-        r when is_binary(r) -> r
-        %{"text" => t} -> t
-        _ -> ""
+        r when is_binary(r) -> %{"text" => r, "reversed" => false}
+        %{"text" => t, "reversed" => rev} -> %{"text" => t, "reversed" => rev || false}
+        %{"text" => t} -> %{"text" => t, "reversed" => false}
+        _ -> new_row()
       end)
 
     %{
@@ -873,9 +922,10 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
     rows =
       (el["rows"] || [])
       |> Enum.map(fn
-        r when is_binary(r) -> r
-        %{"text" => t} -> t
-        _ -> ""
+        r when is_binary(r) -> %{"text" => r, "reversed" => false}
+        %{"text" => t, "reversed" => rev} -> %{"text" => t, "reversed" => rev || false}
+        %{"text" => t} -> %{"text" => t, "reversed" => false}
+        _ -> new_row()
       end)
 
     %{
