@@ -21,8 +21,8 @@ defmodule SochoWeb.Router do
     pipe_through :browser
 
     get "/", PageController, :home
-    get "/study/:study_id", StudyController, :show
-    post "/study/:study_id/user-data", StudyController, :save_data
+    get "/study/:study_id", StudyController, :show, constraints: [study_id: ~r/^\d+$/]
+    post "/study/:study_id/user-data", StudyController, :save_data, constraints: [study_id: ~r/^\d+$/]
     get "/studies/:study_id/export", StudyController, :export
   end
 

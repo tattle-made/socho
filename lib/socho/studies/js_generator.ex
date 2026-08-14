@@ -411,7 +411,7 @@ defmodule Socho.Studies.JsGenerator do
         # When a specific survey question is selected, access response.questionName
         access =
           if field == "response" && question && question != "" do
-            "#{var}.response && #{var}.response.#{question}"
+            "#{var}.response && #{var}.response[#{Jason.encode!(question)}]"
           else
             "#{var}.#{field}"
           end
