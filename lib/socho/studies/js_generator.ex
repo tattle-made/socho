@@ -542,7 +542,7 @@ defmodule Socho.Studies.JsGenerator do
             "      var _dyn = _resp ? Object.keys(_resp).filter(function(row) { var v = _resp[row]; return v === #{filter_col} || (Array.isArray(v) && v.indexOf(#{filter_col}) > -1); }) : [];\n" <>
             "      var _static = #{Jason.encode!(el["static_columns"] || [])};\n" <>
             "      var _el = trial.survey_json.elements.find(function(e) { return e.name === #{q_name}; });\n" <>
-            "      if (_el) _el.columns = _dyn.concat(_static);\n" <>
+            "      if (_el) _el.columns = _static.concat(_dyn);\n" <>
             "    })();"
           end)
 
