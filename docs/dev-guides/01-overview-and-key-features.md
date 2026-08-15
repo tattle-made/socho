@@ -7,7 +7,7 @@ The platform is built around the **jsPsych** JavaScript framework — a widely u
 
 ```mermaid
 flowchart TD
-    A[Researcher builds study\nin visual builder] --> B[Study published\nto a Client org]
+    A[Researcher builds study\nin visual builder and publishes it] --> B[Study published\nto a Client org]
     B --> C[Participants in that org\naccess the study]
     C --> D[jsPsych runs the\nexperiment in browser]
     D --> E[Response data posted\nback to Socho]
@@ -15,7 +15,7 @@ flowchart TD
 ```
 
 
-## Key Features
+## Key Features and their Implementation Details
 
 ### Study Builder
 
