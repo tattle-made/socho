@@ -250,7 +250,10 @@ defmodule Socho.Studies.JsGenerator do
     end
   end
 
-  defp collect_plugins(nodes) do
+  @doc """
+  Collect names of jspsych plugins used in the Trial Tree
+  """
+  def collect_plugins(nodes) do
     Enum.flat_map(nodes, fn node ->
       child_plugins = collect_plugins(node.children || [])
       own =
