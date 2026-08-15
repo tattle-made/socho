@@ -224,6 +224,9 @@ defmodule Socho.Studies.JsGenerator do
     ["#{@jspsych_base}/jspsych.js"] ++ extension_scripts ++ plugins
   end
 
+  @doc """
+  Generates the JS code (a valid JSPsych experiment) that is sent to the Participant
+  """
   def generate_inline_js(study) do
     tsb_layouts = collect_tsb_layouts(study.trials)
     {_, declarations, root_var_names} = emit_nodes(study.trials, 1)
