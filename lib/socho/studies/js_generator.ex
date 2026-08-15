@@ -266,14 +266,14 @@ defmodule Socho.Studies.JsGenerator do
     end)
   end
 
-  defp emit_nodes(nodes, counter) do
+  def emit_nodes(nodes, counter) do
     Enum.reduce(nodes, {counter, [], []}, fn node, {cnt, all_decls, all_var_names} ->
       {new_cnt, node_decls, var_name} = emit_node(node, cnt)
       {new_cnt, all_decls ++ node_decls, all_var_names ++ [var_name]}
     end)
   end
 
-  defp emit_node(%{node_type: "counterbalanced_group"} = node, counter) do
+  def emit_node(%{node_type: "counterbalanced_group"} = node, counter) do
     var_name = "timeline#{counter}"
     children = node.children || []
     config = node.config || %{}
@@ -316,7 +316,7 @@ defmodule Socho.Studies.JsGenerator do
     {final_counter, all_decls ++ [own_decl], var_name}
   end
 
-  defp emit_node(%{node_type: "template_group"} = node, counter) do
+  def emit_node(%{node_type: "template_group"} = node, counter) do
     var_name = "timeline#{counter}"
     {new_counter, child_decls, child_var_names} = emit_nodes(node.children || [], counter + 1)
     children_js = Enum.join(child_var_names, ", ")
@@ -324,7 +324,7 @@ defmodule Socho.Studies.JsGenerator do
     {new_counter, child_decls ++ [own_decl], var_name}
   end
 
-  defp emit_node(%{node_type: "timeline"} = node, counter) do
+  def emit_node(%{node_type: "timeline"} = node, counter) do
     var_name = "timeline#{counter}"
     {new_counter, child_decls, child_var_names} = emit_nodes(node.children || [], counter + 1)
     children_js = Enum.join(child_var_names, ", ")
@@ -333,7 +333,7 @@ defmodule Socho.Studies.JsGenerator do
     {new_counter, child_decls ++ [own_decl], var_name}
   end
 
-  defp emit_node(%{plugin: "pairwise-compare"} = node, counter) do
+  def emit_node(%{plugin: "pairwise-compare"} = node, counter) do
     var_name = "timeline#{counter}"
     config = node.config || %{}
     images = config["images"] || []
@@ -382,7 +382,7 @@ defmodule Socho.Studies.JsGenerator do
     {counter + 1, [own_decl], var_name}
   end
 
-  defp emit_node(node, counter) do
+  def emit_node(node, counter) do
     var_name = "trial#{counter}"
     data_tag = node.config["data_tag"]
     clean_config = Map.delete(node.config, "data_tag")
