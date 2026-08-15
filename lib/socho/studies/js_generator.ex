@@ -1,5 +1,102 @@
 defmodule Socho.Studies.JsGenerator do
-  @moduledoc "Generates jsPsych HTML page assets from a Study with preloaded trials."
+  @moduledoc """
+  Generates jsPsych HTML page assets from a Study with preloaded trials.
+
+  Given a study whose `trials` field has been populated as a nested tree, this
+  module produces three assets that are embedded into the experiment HTML page:
+
+  - `required_stylesheets/1` — CSS `<link>` paths
+  - `required_scripts/1` — JS `<script src>` paths
+  - `generate_inline_js/1` — the inline `<script>` block that initialises and
+    runs the jsPsych experiment
+
+  ## The trial tree
+
+  Trials are stored flat in the database but assembled into a tree via the
+  `children` virtual field before being passed here. Each node has a
+  `node_type` that controls how it is emitted:
+
+  | `node_type`             | Description |
+  |-------------------------|-------------|
+  | `"trial"`               | Leaf node — one jsPsych plugin call |
+  | `"timeline"`            | Container — supports `repetitions`, `randomize_order`, `timeline_variables`, conditional/loop functions |
+  | `"template_group"`      | Plain container — no extra config; used by study builder templates |
+  | `"counterbalanced_group"` | Randomly picks one group of children at runtime to counterbalance trial order across participants |
+
+  ## JS variable naming
+
+  The emitter walks the tree depth-first, assigning sequential names. Leaf
+  trials become `trial{n}`; any container becomes `timeline{n}`. The counter
+  threads through every recursive call so names are globally unique within the
+  page.
+
+  Plugin names map to jsPsych constructor variables by capitalising each
+  hyphen-separated segment:
+
+      "html-keyboard-response"  →  jsPsychHtmlKeyboardResponse
+      "survey"                  →  jsPsychSurvey
+
+  The `"pairwise-compare"` plugin is special: it is a synthetic type that
+  expands into a `jsPsychMultiImageSelect` IIFE at emit time.
+
+  ## Example
+
+      study = %{
+        trials: [
+          %Trial{
+            node_type: "timeline",
+            plugin: nil,
+            config: %{"repetitions" => 2},
+            extensions: %{},
+            children: [
+              %Trial{
+                node_type: "trial",
+                plugin: "image-keyboard-response",
+                config: %{"stimulus" => "cat.jpg", "choices" => ["f", "j"]},
+                extensions: %{},
+                children: []
+              },
+              %Trial{
+                node_type: "trial",
+                plugin: "html-keyboard-response",
+                config: %{"stimulus" => "<p>Done</p>"},
+                extensions: %{},
+                children: []
+              }
+            ]
+          }
+        ]
+      }
+
+      JsGenerator.required_stylesheets(study)
+      #=> ["/vendor/jspsych/jspsych.css"]
+
+      JsGenerator.required_scripts(study)
+      #=> ["/vendor/jspsych/jspsych.js",
+      #    "/vendor/jspsych/image-keyboard-response.js",
+      #    "/vendor/jspsych/html-keyboard-response.js"]
+
+      JsGenerator.generate_inline_js(study)
+      # (boilerplate omitted)
+      #=> ...
+      #   const trial2 = {
+      #     type: jsPsychImageKeyboardResponse,
+      #     stimulus: `cat.jpg`,
+      #     choices: [`f`, `j`],
+      #   };
+      #   const trial3 = {
+      #     type: jsPsychHtmlKeyboardResponse,
+      #     stimulus: `<p>Done</p>`,
+      #   };
+      #   const timeline1 = {
+      #     timeline: [trial2, trial3],
+      #     repetitions: 2,
+      #   };
+      #   jsPsych.run([timeline1]);
+
+  See `docs/dev-guides/05-js-generator.md` for full worked examples of every
+  node type.
+  """
 
   alias Socho.Studies.Registry
 
