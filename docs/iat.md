@@ -44,6 +44,8 @@ Input: trial latencies and correctness for Blocks 3, 4, 6, 7
    - quotient2 = difference2 / SDpooled(Blocks 4 and 7)
 8. D score = average(quotient1, quotient2)
 
+After consultation with Hansika, step 4 has been left out of the implementation.
+
 ### The Formula used
 
 The D-score is computed as the average of two intermediate scores — one from the practice combined blocks, one from the test combined blocks:
@@ -93,3 +95,8 @@ General benchmarks (Greenwald et al. 2003):
 
 Greenwald, A. G., Nosek, B. A., & Banaji, M. R. (2003). Understanding and using the Implicit Association Test: I. An improved scoring algorithm. *Journal of Personality and Social Psychology, 85*(2), 197–216.
 
+
+## Debugging IAT Data produced by Socho
+If you run an IAT test in preview mode (?preview=true) at the last screen you will see your D score and a json file will be downloaded. This script can be used to explore the IAT data in more details.
+
+We have 2 scripts for it - elixir and javascript. These can be invoked from the root folder as `elixir scripts/iat_score.exs scripts/files/iat_debug.json` or `node scripts/iat_score.js scripts/files/iat_6.json`

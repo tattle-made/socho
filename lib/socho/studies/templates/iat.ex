@@ -310,6 +310,25 @@ defmodule Socho.Studies.Templates.Iat do
             plugin: "html-button-response",
             config: %{
               "stimulus_function" => """
+                var c1_practice   = jsPsych.data.get().filterCustom(function(x){ return x.iat_type === 'combined1_practice' && x.rt >= 400 && x.rt < 10000; });
+                var c1_test       = jsPsych.data.get().filterCustom(function(x){ return x.iat_type === 'combined1_test'     && x.rt >= 400 && x.rt < 10000; });
+                var c2_practice   = jsPsych.data.get().filterCustom(function(x){ return x.iat_type === 'combined2_practice' && x.rt >= 400 && x.rt < 10000; });
+                var c2_test       = jsPsych.data.get().filterCustom(function(x){ return x.iat_type === 'combined2_test'     && x.rt >= 400 && x.rt < 10000; });
+                // Greenwald 2003: use fresh filterCustom for pooled sets to avoid DataCollection.join() mutating its receiver
+                var c1_pool       = jsPsych.data.get().filterCustom(function(x){ return (x.iat_type === 'combined1_practice' || x.iat_type === 'combined1_test')     && x.rt >= 400 && x.rt < 10000; });
+                var c2_pool       = jsPsych.data.get().filterCustom(function(x){ return (x.iat_type === 'combined2_practice' || x.iat_type === 'combined2_test')     && x.rt >= 400 && x.rt < 10000; });
+                var practice_pool = jsPsych.data.get().filterCustom(function(x){ return (x.iat_type === 'combined1_practice' || x.iat_type === 'combined2_practice') && x.rt >= 400 && x.rt < 10000; });
+                var test_pool     = jsPsych.data.get().filterCustom(function(x){ return (x.iat_type === 'combined1_test'     || x.iat_type === 'combined2_test')     && x.rt >= 400 && x.rt < 10000; });
+
+                var mean_c1 = c1_pool.select('rt').mean();
+                var mean_c2 = c2_pool.select('rt').mean();
+                var sd1 = practice_pool.select('rt').sd();
+                var sd2 = test_pool.select('rt').sd();
+                var d1 = (c2_practice.select('rt').mean() - c1_practice.select('rt').mean()) / sd1;
+                var d2 = (c2_test.select('rt').mean()     - c1_test.select('rt').mean())     / sd2;
+                var d = (d1 + d2) / 2;
+                jsPsych.data.get().push({ iat_type: 'iat_summary', d_score: d, mean_c1: mean_c1, mean_c2: mean_c2 });
+
                 // DEBUG: set to false to disable automatic data download in preview mode
                 var DEBUG_DOWNLOAD_IN_PREVIEW = true;
                 if (DEBUG_DOWNLOAD_IN_PREVIEW && new URLSearchParams(window.location.search).get('preview') === 'true') {
@@ -321,19 +340,7 @@ defmodule Socho.Studies.Templates.Iat do
                   a.click();
                   document.body.removeChild(a);
                 }
-                var c1_practice = jsPsych.data.get().filterCustom(function(x){ return x.iat_type === 'combined1_practice' && x.rt >= 400 && x.rt < 10000; });
-                var c1_test     = jsPsych.data.get().filterCustom(function(x){ return x.iat_type === 'combined1_test'     && x.rt >= 400 && x.rt < 10000; });
-                var c2_practice = jsPsych.data.get().filterCustom(function(x){ return x.iat_type === 'combined2_practice' && x.rt >= 400 && x.rt < 10000; });
-                var c2_test     = jsPsych.data.get().filterCustom(function(x){ return x.iat_type === 'combined2_test'     && x.rt >= 400 && x.rt < 10000; });
-                var mean_c1 = c1_practice.join(c1_test).select('rt').mean();
-                var mean_c2 = c2_practice.join(c2_test).select('rt').mean();
-                // Greenwald 2003: pool practice blocks together for sd1, test blocks together for sd2
-                var sd1 = c1_practice.join(c2_practice).select('rt').sd();
-                var sd2 = c1_test.join(c2_test).select('rt').sd();
-                var d1 = (c2_practice.select('rt').mean() - c1_practice.select('rt').mean()) / sd1;
-                var d2 = (c2_test.select('rt').mean() - c1_test.select('rt').mean()) / sd2;
-                var d = (d1 + d2) / 2;
-                jsPsych.data.get().push({ iat_type: 'iat_summary', d_score: d, mean_c1: mean_c1, mean_c2: mean_c2 });
+
                 return "<h2>You're done \u2014 thank you!</h2>" +
                   "<p>When <strong>#{cat1_label}</strong> and <strong>#{att1_label}</strong> were paired, " +
                   "your average response time was <strong>" + Math.floor(mean_c1) + " ms</strong>.</p>" +
