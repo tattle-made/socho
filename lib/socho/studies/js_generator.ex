@@ -642,10 +642,19 @@ defmodule Socho.Studies.JsGenerator do
             "    (function() {\n" <>
             "      var _src = jsPsych.data.get().filter({data_tag: #{tag}}).last(1).values()[0];\n" <>
             "      var _resp = _src && _src.response && _src.response[#{question}];\n" <>
-            "      var _dyn = _resp ? Object.keys(_resp).filter(function(row) { var v = _resp[row]; return v === #{filter_col} || (Array.isArray(v) && v.indexOf(#{filter_col}) > -1); }) : [];\n" <>
+            "      var _dyn = _resp ? (#{filter_col} === \"\" ? Object.keys(_resp) : Object.keys(_resp).filter(function(row) { var v = _resp[row]; return v === #{filter_col} || (Array.isArray(v) && v.indexOf(#{filter_col}) > -1) || (v && typeof v === 'object' && !Array.isArray(v) && v[#{filter_col}] === true); })) : [];\n" <>
             "      var _static = #{Jason.encode!(el["static_columns"] || [])};\n" <>
             "      var _el = trial.survey_json.elements.find(function(e) { return e.name === #{q_name}; });\n" <>
-            "      if (_el) _el.columns = _static.concat(_dyn);\n" <>
+            (cond do
+              el["type"] == "matrixdropdown" and el["inputType"] == "number" ->
+                min_js = if el["min"] != nil, do: ", min: #{el["min"]}", else: ""
+                max_js = if el["max"] != nil, do: ", max: #{el["max"]}", else: ""
+                "      if (_el) _el.columns = _static.map(function(n){return{name:n,title:n,cellType:\"text\",inputType:\"number\"#{min_js}#{max_js}};}).concat(_dyn.map(function(n){return{name:n,title:n,cellType:\"text\",inputType:\"number\"#{min_js}#{max_js}};}));\n"
+              el["type"] == "matrixdropdown" ->
+                "      if (_el) _el.columns = _static.map(function(n){return{name:n,title:n};}).concat(_dyn.map(function(n){return{name:n,title:n};}));\n"
+              true ->
+                "      if (_el) _el.columns = _static.concat(_dyn);\n"
+            end) <>
             "    })();"
           end)
 

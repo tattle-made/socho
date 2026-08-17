@@ -29,7 +29,8 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
       else
         parsed = parse_survey_json(value)
 
-        assign(socket,
+        socket
+        |> assign(
           id: assigns.id,
           field_name: field_name,
           questions: parsed.questions,
@@ -39,6 +40,7 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
           matrix_types: @matrix_types,
           data_tags: data_tags
         )
+        |> tap(&notify_parent/1)
       end
 
     {:ok, socket}
@@ -498,6 +500,41 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
                 </label>
               </form>
 
+              <div class="form-control">
+                <label class="label py-0"><span class="label-text text-xs">Cell type</span></label>
+                <form phx-change="sq_update_field" phx-target={"##{@id}"}>
+                  <input type="hidden" name="index" value={to_string(idx)} />
+                  <input type="hidden" name="field" value="cellType" />
+                  <select name="value" class="select select-bordered select-xs w-full">
+                    <option value="checkbox" selected={Map.get(q, "cellType", "checkbox") == "checkbox"}>Checkbox</option>
+                    <option value="radiogroup" selected={Map.get(q, "cellType", "checkbox") == "radiogroup"}>Radio button</option>
+                    <option value="text" selected={Map.get(q, "cellType", "checkbox") == "text"}>Free text</option>
+                    <option value="number" selected={Map.get(q, "cellType", "checkbox") == "number"}>Number</option>
+                  </select>
+                </form>
+              </div>
+
+              <%= if Map.get(q, "cellType") == "number" do %>
+                <div class="flex gap-2">
+                  <div class="form-control flex-1">
+                    <label class="label py-0"><span class="label-text text-xs">Min</span></label>
+                    <form phx-change="sq_update_field" phx-target={"##{@id}"}>
+                      <input type="hidden" name="index" value={to_string(idx)} />
+                      <input type="hidden" name="field" value="minValue" />
+                      <input type="number" name="value" class="input input-bordered input-xs w-full" value={q["minValue"] || ""} />
+                    </form>
+                  </div>
+                  <div class="form-control flex-1">
+                    <label class="label py-0"><span class="label-text text-xs">Max</span></label>
+                    <form phx-change="sq_update_field" phx-target={"##{@id}"}>
+                      <input type="hidden" name="index" value={to_string(idx)} />
+                      <input type="hidden" name="field" value="maxValue" />
+                      <input type="number" name="value" class="input input-bordered input-xs w-full" value={q["maxValue"] || ""} />
+                    </form>
+                  </div>
+                </div>
+              <% end %>
+
               <%= if q["type"] == "matrix_multiselect" do %>
                 <div class="space-y-1">
                   <label class="label py-0"><span class="label-text text-xs">Columns</span></label>
@@ -735,6 +772,22 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
 
   defp new_row, do: %{"text" => "", "reversed" => false}
 
+  defp parse_numeric(v) when is_binary(v) do
+    case Integer.parse(v) do
+      {n, ""} -> n
+      _ ->
+        case Float.parse(v) do
+          {f, ""} -> f
+          _ -> nil
+        end
+    end
+  end
+  defp parse_numeric(v) when is_number(v), do: v
+  defp parse_numeric(_), do: nil
+
+  defp maybe_put_numeric(map, _key, nil), do: map
+  defp maybe_put_numeric(map, key, val), do: Map.put(map, key, val)
+
   defp normalize_row(r) when is_binary(r), do: %{"text" => r, "reversed" => false}
   defp normalize_row(%{"text" => _} = r), do: r
   defp normalize_row(_), do: new_row()
@@ -767,35 +820,70 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
   end
 
   defp question_to_element(%{"type" => "dynamic_matrix"} = q) do
-    %{
-      "type" => "matrix",
-      "multiSelect" => true,
+    cell_type = q["cellType"] || "checkbox"
+    base = %{
       "name" => q["name"],
       "title" => q["title"],
       "isRequired" => q["isRequired"] || false,
       "eachRowRequired" => q["isRequired"] || false,
       "rows" => rows_to_surveyjs(q["rows"] || []),
       "columns" => [],
+      "cellType" => cell_type,
       "rowsOrder" => if(q["randomize_rows"], do: "random", else: "initial"),
       "dyn_source_tag" => q["dyn_source_tag"] || "",
       "dyn_source_question" => q["dyn_source_question"] || "",
       "dyn_filter_column" => q["dyn_filter_column"] || "",
       "static_columns" => q["static_columns"] || []
     }
+    case cell_type do
+      "checkbox" -> Map.merge(base, %{"type" => "matrix", "multiSelect" => true})
+      "text"     -> Map.put(base, "type", "matrixdropdown")
+      "number"   ->
+        min = parse_numeric(q["minValue"])
+        max = parse_numeric(q["maxValue"])
+        base
+        |> Map.put("type", "matrixdropdown")
+        |> Map.delete("cellType")
+        |> maybe_put_numeric("min", min)
+        |> maybe_put_numeric("max", max)
+        |> Map.put("cellType", "text")
+        |> Map.put("inputType", "number")
+      _ -> Map.merge(base, %{"type" => "matrix", "multiSelect" => false})
+    end
   end
 
   defp question_to_element(%{"type" => "matrix_multiselect"} = q) do
-    %{
-      "type" => "matrix",
-      "multiSelect" => true,
+    cell_type = q["cellType"] || "checkbox"
+    base = %{
       "name" => q["name"],
       "title" => q["title"],
       "isRequired" => q["isRequired"] || false,
       "eachRowRequired" => q["isRequired"] || false,
       "rows" => rows_to_surveyjs(q["rows"] || []),
-      "columns" => q["columns"] || [],
+      "cellType" => cell_type,
       "rowsOrder" => if(q["randomize_rows"], do: "random", else: "initial")
     }
+    case cell_type do
+      "checkbox" ->
+        Map.merge(base, %{"type" => "matrix", "multiSelect" => true, "columns" => q["columns"] || []})
+      "text" ->
+        cols = Enum.map(q["columns"] || [], fn c -> %{"name" => c, "title" => c} end)
+        Map.merge(base, %{"type" => "matrixdropdown", "columns" => cols})
+      "number" ->
+        min = parse_numeric(q["minValue"])
+        max = parse_numeric(q["maxValue"])
+        cols = Enum.map(q["columns"] || [], fn c -> %{"name" => c, "title" => c} end)
+        base
+        |> Map.put("type", "matrixdropdown")
+        |> Map.delete("cellType")
+        |> Map.put("cellType", "text")
+        |> Map.put("inputType", "number")
+        |> maybe_put_numeric("min", min)
+        |> maybe_put_numeric("max", max)
+        |> Map.put("columns", cols)
+      _ ->
+        Map.merge(base, %{"type" => "matrix", "multiSelect" => false, "columns" => q["columns"] || []})
+    end
   end
 
   defp question_to_element(q) do
@@ -882,7 +970,7 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
     }
   end
 
-  defp element_to_question(%{"type" => "matrix", "multiSelect" => true, "dyn_source_tag" => tag} = el, i)
+  defp element_to_question(%{"type" => "matrix", "dyn_source_tag" => tag} = el, i)
        when is_binary(tag) and tag != "" do
     rows =
       (el["rows"] || [])
@@ -904,7 +992,7 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
       "maxValue" => "",
       "rows" => rows,
       "columns" => [],
-      "cellType" => "checkbox",
+      "cellType" => el["cellType"] || "checkbox",
       "dyn_source_tag" => tag,
       "dyn_source_question" => el["dyn_source_question"] || "",
       "dyn_filter_column" => el["dyn_filter_column"] || "",
@@ -913,7 +1001,7 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
     }
   end
 
-  defp element_to_question(%{"type" => "matrix", "multiSelect" => true} = el, i) do
+  defp element_to_question(%{"type" => "matrix"} = el, i) do
     rows =
       (el["rows"] || [])
       |> Enum.map(fn
@@ -934,7 +1022,75 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
       "maxValue" => "",
       "rows" => rows,
       "columns" => el["columns"] || [],
-      "cellType" => "checkbox",
+      "cellType" => el["cellType"] || "checkbox",
+      "randomize_rows" => el["rowsOrder"] == "random"
+    }
+  end
+
+  defp element_to_question(%{"type" => "matrixdropdown", "dyn_source_tag" => tag} = el, i)
+       when is_binary(tag) and tag != "" do
+    rows =
+      (el["rows"] || [])
+      |> Enum.map(fn
+        r when is_binary(r) -> %{"text" => r, "reversed" => false}
+        %{"text" => t, "reversed" => rev} -> %{"text" => t, "reversed" => rev || false}
+        %{"text" => t} -> %{"text" => t, "reversed" => false}
+        _ -> new_row()
+      end)
+
+    cell_type = if el["inputType"] == "number", do: "number", else: el["cellType"] || "text"
+
+    %{
+      "type" => "dynamic_matrix",
+      "name" => el["name"] || "question#{i + 1}",
+      "title" => el["title"] || "",
+      "html" => "",
+      "isRequired" => el["isRequired"] || false,
+      "choices" => [],
+      "minValue" => to_string(el["min"] || ""),
+      "maxValue" => to_string(el["max"] || ""),
+      "rows" => rows,
+      "columns" => [],
+      "cellType" => cell_type,
+      "dyn_source_tag" => tag,
+      "dyn_source_question" => el["dyn_source_question"] || "",
+      "dyn_filter_column" => el["dyn_filter_column"] || "",
+      "static_columns" => el["static_columns"] || [],
+      "randomize_rows" => el["rowsOrder"] == "random"
+    }
+  end
+
+  defp element_to_question(%{"type" => "matrixdropdown"} = el, i) do
+    rows =
+      (el["rows"] || [])
+      |> Enum.map(fn
+        r when is_binary(r) -> %{"text" => r, "reversed" => false}
+        %{"text" => t, "reversed" => rev} -> %{"text" => t, "reversed" => rev || false}
+        %{"text" => t} -> %{"text" => t, "reversed" => false}
+        _ -> new_row()
+      end)
+
+    columns =
+      Enum.map(el["columns"] || [], fn
+        col when is_binary(col) -> col
+        %{"name" => name} -> name
+        _ -> ""
+      end)
+
+    cell_type = if el["inputType"] == "number", do: "number", else: el["cellType"] || "text"
+
+    %{
+      "type" => "matrix_multiselect",
+      "name" => el["name"] || "question#{i + 1}",
+      "title" => el["title"] || "",
+      "html" => "",
+      "isRequired" => el["isRequired"] || false,
+      "choices" => [],
+      "minValue" => to_string(el["min"] || ""),
+      "maxValue" => to_string(el["max"] || ""),
+      "rows" => rows,
+      "columns" => columns,
+      "cellType" => cell_type,
       "randomize_rows" => el["rowsOrder"] == "random"
     }
   end
