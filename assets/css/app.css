@@ -104,6 +104,9 @@
 
 /* This file is for your main application CSS */
 
+/* Override jsPsych default max-width constraint */
+.jspsych-content { width: 100% !important; }
+
 /* TipTap editor content styles */
 .tiptap-editor [contenteditable] {
   outline: none;
