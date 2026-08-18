@@ -1,10 +1,55 @@
 # User Guide: Dynamic Multi-Select Matrix
 
-## What Is This Feature For?
+## Overview
 
 Sometimes the questions you want to ask a participant depend on how they answered an earlier question. A common example: you first ask participants which fruits they consume *daily*, and then — in a follow-up survey — you want to ask detailed questions about *only those fruits*, not every fruit on your list.
 
 Without this feature, you would have to create a separate survey for every possible combination of responses, which is impractical. The **Dynamic Multi-Select Matrix** question type solves this by reading the participant's previous answers at runtime and building the matrix columns on the fly.
+
+---
+
+## Functional Requirements
+
+### Terminology
+
+- **Source survey** — The earlier survey from which dynamic column values are derived. It contains a standard matrix question whose rows are items (e.g. fruits) and whose columns represent values on a scale (e.g. *Daily, Frequently, Rarely, Never* or *Strongly Agree, Agree, Neutral, Disagree, Strongly Disagree*).
+- **Dynamic survey** — The follow-up survey that contains the Dynamic Multi-Select Matrix question. Its columns are built at runtime from the participant's responses to the source survey.
+
+---
+
+### Column Selection Rules
+
+1. **Always filter by the first column of the source survey.**
+   The system does not ask the study designer to choose a filter column. It always uses the first column (index 0) of the source survey's matrix as the primary filter — for example, *Daily* or *Strongly Agree*.
+
+2. **Treat source survey columns as an ordered scale.**
+   Columns are assumed to be arranged from highest to lowest priority (e.g. *Daily > Frequently > Rarely > Never*). When determining which items become dynamic columns, the system works through the scale from left to right.
+
+3. **Fall back to the next scale value when the first column yields no results.**
+   If a participant has not selected any items under the first column value, the system moves to the second column value and checks those items. It continues down the scale until it finds at least one item or exhausts all columns.
+
+4. **Cap dynamic columns at 4.**
+   The system collects at most 4 items to use as dynamic columns, filling the quota by moving through the scale in order:
+   - Start with all items the participant selected under column 1 (primary filter).
+   - If fewer than 4 have been collected, add items from column 2, then column 3, and so on, until the cap of 4 is reached.
+
+5. **Shuffle before displaying.**
+   Once up to 4 items have been collected from the scale, they are shuffled into a random order before being shown to the participant. This prevents the column order from implying any ranking.
+
+6. **Fixed columns are prepended before dynamic columns.**
+   Any fixed columns configured by the study designer are always shown and appear before the (shuffled) dynamic columns, bringing the total column count above 4 if fixed columns are present.
+
+---
+
+### Configuration
+
+| Setting | Purpose |
+|---------|---------|
+| **Source data tag** | Identifies the source survey block by its tag. Must match the tag set in that block's Identification section exactly (case-sensitive). |
+| **Source question** | The field name of the matrix question inside the source survey whose responses drive the dynamic columns. |
+| **Fixed columns** | Column labels that always appear for every participant, appended after the dynamic columns. |
+
+> **Note:** There is no "Filter by column value" setting. The first column of the source survey is always used as the primary filter.
 
 ---
 

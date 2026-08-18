@@ -614,7 +614,7 @@ defmodule Socho.Studies.JsGenerator do
 
     clean_elements =
       Enum.map(elements, fn el ->
-        Map.drop(el, ["dyn_source_tag", "dyn_source_question", "dyn_filter_column", "static_columns"])
+        Map.drop(el, ["dyn_source_tag", "dyn_source_question", "dyn_source_columns", "static_columns"])
       end)
 
     clean_config = Map.put(config, "survey_json", Map.put(survey_json, "elements", clean_elements))
@@ -636,13 +636,35 @@ defmodule Socho.Studies.JsGenerator do
           Enum.map_join(dynamic_elements, "\n", fn el ->
             tag = Jason.encode!(el["dyn_source_tag"])
             question = Jason.encode!(el["dyn_source_question"] || "")
-            filter_col = Jason.encode!(el["dyn_filter_column"] || "")
+            scale = Jason.encode!(el["dyn_source_columns"] || [])
             q_name = Jason.encode!(el["name"] || "")
 
             "    (function() {\n" <>
             "      var _src = jsPsych.data.get().filter({data_tag: #{tag}}).last(1).values()[0];\n" <>
             "      var _resp = _src && _src.response && _src.response[#{question}];\n" <>
-            "      var _dyn = _resp ? (#{filter_col} === \"\" ? Object.keys(_resp) : Object.keys(_resp).filter(function(row) { var v = _resp[row]; return v === #{filter_col} || (Array.isArray(v) && v.indexOf(#{filter_col}) > -1) || (v && typeof v === 'object' && !Array.isArray(v) && v[#{filter_col}] === true); })) : [];\n" <>
+            "      var _scale = #{scale};\n" <>
+            "      var _dyn = [];\n" <>
+            "      if (_resp) {\n" <>
+            "        if (_scale.length > 0) {\n" <>
+            "          for (var _i = 0; _i < _scale.length && _dyn.length < 4; _i++) {\n" <>
+            "            var _col = _scale[_i];\n" <>
+            "            var _cands = [];\n" <>
+            "            Object.keys(_resp).forEach(function(row) {\n" <>
+            "              var v = _resp[row];\n" <>
+            "              if (v === _col || (Array.isArray(v) && v.indexOf(_col) > -1) || (v && typeof v === 'object' && !Array.isArray(v) && v[_col] === true)) _cands.push(row);\n" <>
+            "            });\n" <>
+            "            for (var _ci = _cands.length - 1; _ci > 0; _ci--) { var _ck = Math.floor(Math.random() * (_ci + 1)); var _ct = _cands[_ci]; _cands[_ci] = _cands[_ck]; _cands[_ck] = _ct; }\n" <>
+            "            _dyn = _dyn.concat(_cands.slice(0, 4 - _dyn.length));\n" <>
+            "          }\n" <>
+            "        } else {\n" <>
+            "          var _keys = Object.keys(_resp);\n" <>
+            "          for (var _fi = 0; _fi < _keys.length && _dyn.length < 4; _fi++) _dyn.push(_keys[_fi]);\n" <>
+            "        }\n" <>
+            "        for (var _j = _dyn.length - 1; _j > 0; _j--) {\n" <>
+            "          var _k = Math.floor(Math.random() * (_j + 1));\n" <>
+            "          var _t = _dyn[_j]; _dyn[_j] = _dyn[_k]; _dyn[_k] = _t;\n" <>
+            "        }\n" <>
+            "      }\n" <>
             "      var _static = #{Jason.encode!(el["static_columns"] || [])};\n" <>
             "      var _el = trial.survey_json.elements.find(function(e) { return e.name === #{q_name}; });\n" <>
             (cond do

@@ -66,7 +66,7 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
       "cellType" => "checkbox",
       "dyn_source_tag" => "",
       "dyn_source_question" => "",
-      "dyn_filter_column" => "",
+      "dyn_source_columns" => [],
       "static_columns" => [],
       "randomize_rows" => false
     }
@@ -93,6 +93,43 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
   def handle_event("sq_update_field", %{"index" => idx, "field" => field, "value" => val}, socket) do
     idx = String.to_integer(idx)
     socket = update(socket, :questions, fn qs -> List.update_at(qs, idx, fn q -> Map.put(q, field, val) end) end)
+    notify_parent(socket)
+    {:noreply, socket}
+  end
+
+  def handle_event("sq_update_dyn_source_tag", %{"index" => idx, "value" => tag}, socket) do
+    idx = String.to_integer(idx)
+    socket = update(socket, :questions, fn qs ->
+      List.update_at(qs, idx, fn q ->
+        q
+        |> Map.put("dyn_source_tag", tag)
+        |> Map.put("dyn_source_question", "")
+        |> Map.put("dyn_source_columns", [])
+      end)
+    end)
+    notify_parent(socket)
+    {:noreply, socket}
+  end
+
+  def handle_event("sq_update_dyn_source_question", %{"index" => idx, "value" => question_name}, socket) do
+    idx = String.to_integer(idx)
+    socket = update(socket, :questions, fn qs ->
+      List.update_at(qs, idx, fn q ->
+        tag = q["dyn_source_tag"]
+        tag_meta = Enum.find(socket.assigns.data_tags, fn dt -> dt["tag"] == tag end)
+        columns =
+          if tag_meta do
+            qs_meta = tag_meta["questions"] || []
+            found = Enum.find(qs_meta, fn qq -> qq["name"] == question_name end)
+            if found, do: found["columns"] || [], else: []
+          else
+            []
+          end
+        q
+        |> Map.put("dyn_source_question", question_name)
+        |> Map.put("dyn_source_columns", columns)
+      end)
+    end)
     notify_parent(socket)
     {:noreply, socket}
   end
@@ -572,15 +609,12 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
               <%= if q["type"] == "dynamic_matrix" do %>
                 <% dyn_tag_meta = Enum.find(@data_tags, fn dt -> dt["tag"] == q["dyn_source_tag"] end) %>
                 <% dyn_matrix_qs = if dyn_tag_meta, do: Enum.filter(dyn_tag_meta["questions"] || [], fn qq -> qq["type"] == "matrix" end), else: [] %>
-                <% dyn_selected_q = Enum.find(dyn_matrix_qs, fn qq -> qq["name"] == q["dyn_source_question"] end) %>
-                <% dyn_columns = if dyn_selected_q, do: dyn_selected_q["columns"] || [], else: [] %>
                 <div class="space-y-2 border-l-2 border-info pl-3 pt-1">
-                  <p class="text-xs opacity-60">Columns are populated at runtime from a previous survey's matrix response.</p>
+                  <p class="text-xs opacity-60">Columns are populated at runtime from a previous survey's matrix response. The first column of the source survey is used as the primary filter; up to 4 dynamic columns are selected across the scale and shuffled.</p>
                   <div class="form-control">
                     <label class="label py-0"><span class="label-text text-xs">Source data tag</span></label>
-                    <form phx-change="sq_update_field" phx-target={"##{@id}"}>
+                    <form phx-change="sq_update_dyn_source_tag" phx-target={"##{@id}"}>
                       <input type="hidden" name="index" value={to_string(idx)} />
-                      <input type="hidden" name="field" value="dyn_source_tag" />
                       <select name="value" class="select select-bordered select-xs w-full font-mono">
                         <option value="">tag…</option>
                         <%= for dt <- @data_tags do %>
@@ -591,26 +625,12 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
                   </div>
                   <div class="form-control">
                     <label class="label py-0"><span class="label-text text-xs">Source question</span></label>
-                    <form phx-change="sq_update_field" phx-target={"##{@id}"}>
+                    <form phx-change="sq_update_dyn_source_question" phx-target={"##{@id}"}>
                       <input type="hidden" name="index" value={to_string(idx)} />
-                      <input type="hidden" name="field" value="dyn_source_question" />
                       <select name="value" class="select select-bordered select-xs w-full font-mono">
                         <option value="">question…</option>
                         <%= for qq <- dyn_matrix_qs do %>
                           <option value={qq["name"]} selected={q["dyn_source_question"] == qq["name"]}>{qq["name"]}</option>
-                        <% end %>
-                      </select>
-                    </form>
-                  </div>
-                  <div class="form-control">
-                    <label class="label py-0"><span class="label-text text-xs">Filter by column value</span></label>
-                    <form phx-change="sq_update_field" phx-target={"##{@id}"}>
-                      <input type="hidden" name="index" value={to_string(idx)} />
-                      <input type="hidden" name="field" value="dyn_filter_column" />
-                      <select name="value" class="select select-bordered select-xs w-full">
-                        <option value="">column…</option>
-                        <%= for col <- dyn_columns do %>
-                          <option value={col} selected={q["dyn_filter_column"] == col}>{col}</option>
                         <% end %>
                       </select>
                     </form>
@@ -832,7 +852,7 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
       "rowsOrder" => if(q["randomize_rows"], do: "random", else: "initial"),
       "dyn_source_tag" => q["dyn_source_tag"] || "",
       "dyn_source_question" => q["dyn_source_question"] || "",
-      "dyn_filter_column" => q["dyn_filter_column"] || "",
+      "dyn_source_columns" => q["dyn_source_columns"] || [],
       "static_columns" => q["static_columns"] || []
     }
     case cell_type do
@@ -995,7 +1015,7 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
       "cellType" => el["cellType"] || "checkbox",
       "dyn_source_tag" => tag,
       "dyn_source_question" => el["dyn_source_question"] || "",
-      "dyn_filter_column" => el["dyn_filter_column"] || "",
+      "dyn_source_columns" => el["dyn_source_columns"] || [],
       "static_columns" => el["static_columns"] || [],
       "randomize_rows" => el["rowsOrder"] == "random"
     }
@@ -1054,7 +1074,7 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
       "cellType" => cell_type,
       "dyn_source_tag" => tag,
       "dyn_source_question" => el["dyn_source_question"] || "",
-      "dyn_filter_column" => el["dyn_filter_column"] || "",
+      "dyn_source_columns" => el["dyn_source_columns"] || [],
       "static_columns" => el["static_columns"] || [],
       "randomize_rows" => el["rowsOrder"] == "random"
     }
