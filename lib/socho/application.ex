@@ -10,6 +10,7 @@ defmodule Socho.Application do
     children = [
       SochoWeb.Telemetry,
       Socho.Repo,
+      Socho.Cache,
       {DNSCluster, query: Application.get_env(:socho, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: Socho.PubSub},
       # Start a worker by calling: Socho.Worker.start_link(arg)

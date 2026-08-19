@@ -34,12 +34,21 @@ defmodule SochoWeb.Layouts do
   slot :inner_block, required: true
 
   def app(assigns) do
+    assigns = assign(assigns, :branding, Socho.Cache.get(:branding) || %{})
+
     ~H"""
+    <%= if primary = @branding["primary_color"] do %>
+      <style>:root { --color-primary: <%= primary %>; --color-primary-content: #ffffff; }</style>
+    <% end %>
     <header class="navbar px-4 sm:px-6 lg:px-8 border-b border-base-300">
       <div class="flex-1 flex items-center gap-6">
         <a href="/" class="flex items-center gap-2 shrink-0">
-          <img src={~p"/images/logo.svg"} width="28" />
-          <span class="text-sm font-semibold text-base-content">Socho</span>
+          <%= if (logo = @branding["logo_url"]) && logo != "" do %>
+            <img src={logo} class="h-8 object-contain" alt="Logo" />
+          <% else %>
+            <img src={~p"/images/logo.svg"} width="28" />
+            <span class="text-sm font-semibold text-base-content">Socho</span>
+          <% end %>
         </a>
         <nav class="flex items-center gap-1">
           <a href={~p"/studies"} class="btn btn-ghost btn-sm">Studies</a>
