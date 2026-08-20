@@ -20,8 +20,8 @@ defmodule Socho.Studies.Templates.ImageSwipeTask do
           key: "instructions_html",
           label: "Instructions",
           type: :text,
-          default: "Swipe each image left or right to respond."
-        },
+          default: "In this next exercise, you will be shown two images and you will be asked to make a choice. Swipe Left if you like the image and Swipe Right if you don't"
+       },
         %{
           key: "prompt",
           label: "Prompt",

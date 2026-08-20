@@ -104,6 +104,12 @@
 
 /* This file is for your main application CSS */
 
+/* image-swipe plugin — colors drawn from daisyUI theme tokens */
+.swipe-indicator-left  { background: var(--color-error); color: var(--color-error-content); }
+.swipe-indicator-right { background: var(--color-success); color: var(--color-success-content); }
+.swipe-btn-no  { background-color: var(--color-error)   !important; color: var(--color-error-content)   !important; border-color: var(--color-error)   !important; }
+.swipe-btn-yes { background-color: var(--color-success) !important; color: var(--color-success-content) !important; border-color: var(--color-success) !important; }
+
 /* Override jsPsych default max-width constraint */
 .jspsych-content { width: 100% !important; }
 

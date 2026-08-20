@@ -86,22 +86,20 @@ export default class ImageSwipe {
 
           ${trial.show_buttons ? `
             <div class="swipe-side-btn">
-              <button data-swipe="left" class="jspsych-btn" style="min-width:90px;">← ${trial.left_label}</button>
+              <button data-swipe="left" class="jspsych-btn swipe-btn-no" style="min-width:90px;">← ${trial.left_label}</button>
             </div>` : ''}
 
           <div style="position:relative;width:${trial.image_width}px;touch-action:none;">
 
-            <div id="ind-left" style="
+            <div id="ind-left" class="swipe-indicator-left" style="
               position:absolute;top:14px;left:14px;z-index:2;pointer-events:none;
-              background:rgba(220,38,38,0.88);color:#fff;
               padding:5px 14px;border-radius:20px;
               font-weight:700;font-size:1rem;letter-spacing:0.02em;
               opacity:0;
             ">${trial.left_label}</div>
 
-            <div id="ind-right" style="
+            <div id="ind-right" class="swipe-indicator-right" style="
               position:absolute;top:14px;right:14px;z-index:2;pointer-events:none;
-              background:rgba(22,163,74,0.88);color:#fff;
               padding:5px 14px;border-radius:20px;
               font-weight:700;font-size:1rem;letter-spacing:0.02em;
               opacity:0;
@@ -126,15 +124,15 @@ export default class ImageSwipe {
 
           ${trial.show_buttons ? `
             <div class="swipe-side-btn">
-              <button data-swipe="right" class="jspsych-btn" style="min-width:90px;">${trial.right_label} →</button>
+              <button data-swipe="right" class="jspsych-btn swipe-btn-yes" style="min-width:90px;">${trial.right_label} →</button>
             </div>` : ''}
 
         </div>
 
         ${trial.show_buttons ? `
           <div class="swipe-below-btns">
-            <button data-swipe="left" class="jspsych-btn" style="min-width:90px;">← ${trial.left_label}</button>
-            <button data-swipe="right" class="jspsych-btn" style="min-width:90px;">${trial.right_label} →</button>
+            <button data-swipe="left" class="jspsych-btn swipe-btn-no" style="min-width:90px;">← ${trial.left_label}</button>
+            <button data-swipe="right" class="jspsych-btn swipe-btn-yes" style="min-width:90px;">${trial.right_label} →</button>
           </div>` : ''}
 
       </div>
