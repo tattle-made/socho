@@ -436,6 +436,37 @@ defmodule SochoWeb.StudyLive.Builder do
     end
   end
 
+  def handle_event("template_var_pair_add", %{"key" => key}, socket) do
+    with id when not is_nil(id) <- socket.assigns.selected_trial_id,
+         %{node_type: "template_group"} = node <- find_node(socket.assigns.trials, id) do
+      tpl = Templates.get(node.config["template_id"])
+      vars = node.config["vars"] || %{}
+      new_vars = Map.update(vars, key, [["", ""]], &(&1 ++ [["", ""]]))
+      children = tpl.build.(new_vars) |> stamp_ids()
+      new_config = %{"template_id" => node.config["template_id"], "template_name" => node.config["template_name"], "vars" => new_vars}
+      trials = socket.assigns.trials |> update_node_config(id, new_config) |> update_node_children(id, children)
+      {:noreply, assign(socket, trials: trials)}
+    else
+      _ -> {:noreply, socket}
+    end
+  end
+
+  def handle_event("template_var_pair_remove", %{"key" => key, "index" => idx_str}, socket) do
+    with id when not is_nil(id) <- socket.assigns.selected_trial_id,
+         %{node_type: "template_group"} = node <- find_node(socket.assigns.trials, id) do
+      tpl = Templates.get(node.config["template_id"])
+      vars = node.config["vars"] || %{}
+      new_list = Map.get(vars, key, []) |> ensure_list() |> List.delete_at(String.to_integer(idx_str))
+      new_vars = Map.put(vars, key, new_list)
+      children = tpl.build.(new_vars) |> stamp_ids()
+      new_config = %{"template_id" => node.config["template_id"], "template_name" => node.config["template_name"], "vars" => new_vars}
+      trials = socket.assigns.trials |> update_node_config(id, new_config) |> update_node_children(id, children)
+      {:noreply, assign(socket, trials: trials)}
+    else
+      _ -> {:noreply, socket}
+    end
+  end
+
   def handle_event("toggle_preview", _params, socket) do
     {:noreply, assign(socket, show_preview: !socket.assigns.show_preview)}
   end
@@ -571,17 +602,31 @@ defmodule SochoWeb.StudyLive.Builder do
     Map.new(raw_vars, fn {key, val} ->
       var_def = Enum.find(var_defs, fn v -> v.key == key end)
       coerced =
-        if var_def && var_def.type == :list && is_map(val) do
-          val
-          |> Enum.filter(fn {k, _} -> match?({_, ""}, Integer.parse(k)) end)
-          |> Enum.sort_by(fn {k, _} -> String.to_integer(k) end)
-          |> Enum.map(fn {_, v} -> v end)
-        else
-          val
+        cond do
+          var_def && var_def.type == :list && is_map(val) ->
+            val
+            |> Enum.filter(fn {k, _} -> match?({_, ""}, Integer.parse(k)) end)
+            |> Enum.sort_by(fn {k, _} -> String.to_integer(k) end)
+            |> Enum.map(fn {_, v} -> v end)
+
+          var_def && var_def.type == :pair_list && is_map(val) ->
+            val
+            |> Enum.filter(fn {k, _} -> match?({_, ""}, Integer.parse(k)) end)
+            |> Enum.sort_by(fn {k, _} -> String.to_integer(k) end)
+            |> Enum.map(fn {_, pair_map} ->
+              [Map.get(pair_map, "0", ""), Map.get(pair_map, "1", "")]
+            end)
+
+          true ->
+            val
         end
       {key, coerced}
     end)
   end
+
+  defp ensure_pair([a, b]), do: [a, b]
+  defp ensure_pair([a]), do: [a, ""]
+  defp ensure_pair(_), do: ["", ""]
 
   defp sorted_params(parameters) do
     Enum.sort_by(parameters, fn {_, spec} ->
@@ -801,54 +846,97 @@ defmodule SochoWeb.StudyLive.Builder do
                   <% current_vars = @selected_trial.config["vars"] || %{} %>
                   <div class="form-control">
                     <p class="text-sm font-medium leading-tight">{var.label}</p>
-                    <%= if var.type == :list do %>
-                      <% items = Map.get(current_vars, var.key, var.default) |> ensure_list() %>
-                      <div class="space-y-1 mt-1">
-                        <%= for {item, idx} <- Enum.with_index(items) do %>
-                          <div class="flex items-center gap-2">
+                    <%= if var.type == :pair_list do %>
+                      <% pairs = Map.get(current_vars, var.key, var.default) |> ensure_list() %>
+                      <div class="space-y-2 mt-1">
+                        <%= for {pair, idx} <- Enum.with_index(pairs) do %>
+                          <% [img_a, img_b] = ensure_pair(pair) %>
+                          <div class="border border-base-300 rounded p-2 space-y-1">
+                            <div class="flex items-center justify-between mb-1">
+                              <span class="text-xs font-medium opacity-50">Pair {idx + 1}</span>
+                              <button
+                                type="button"
+                                class="btn btn-xs btn-ghost text-error"
+                                phx-click="template_var_pair_remove"
+                                phx-value-key={var.key}
+                                phx-value-index={idx}
+                              >✕</button>
+                            </div>
                             <input
                               type="text"
-                              class="input input-bordered input-sm flex-1"
-                              name={"vars[#{var.key}][#{idx}]"}
-                              value={item}
+                              class="input input-bordered input-sm w-full"
+                              name={"vars[#{var.key}][#{idx}][0]"}
+                              value={img_a}
+                              placeholder="Image A URL"
                               phx-debounce="300"
                             />
-                            <button
-                              type="button"
-                              class="btn btn-xs btn-ghost text-error shrink-0"
-                              phx-click="template_var_list_remove"
-                              phx-value-key={var.key}
-                              phx-value-index={idx}
-                            >✕</button>
+                            <input
+                              type="text"
+                              class="input input-bordered input-sm w-full"
+                              name={"vars[#{var.key}][#{idx}][1]"}
+                              value={img_b}
+                              placeholder="Image B URL"
+                              phx-debounce="300"
+                            />
                           </div>
                         <% end %>
                         <button
                           type="button"
                           class="btn btn-xs btn-outline w-full"
-                          phx-click="template_var_list_add"
+                          phx-click="template_var_pair_add"
                           phx-value-key={var.key}
-                        >+ Add</button>
+                        >+ Add Pair</button>
                       </div>
                     <% else %>
-                      <p class="text-xs opacity-40 mt-0.5 mb-1">
-                        {if var.type == :int, do: "INT", else: "TEXT"}
-                      </p>
-                      <textarea
-                        :if={var.type == :text}
-                        id={"tvar-#{@template_group_key}-#{var.key}"}
-                        class="textarea textarea-bordered textarea-sm text-xs font-mono leading-snug w-full"
-                        name={"vars[#{var.key}]"}
-                        rows="4"
-                      >{Map.get(current_vars, var.key, var.default)}</textarea>
-                      <input
-                        :if={var.type == :int}
-                        id={"tvar-#{@template_group_key}-#{var.key}"}
-                        type="number"
-                        class="input input-bordered input-sm w-full"
-                        name={"vars[#{var.key}]"}
-                        value={Map.get(current_vars, var.key, var.default)}
-                        step="1"
-                      />
+                      <%= if var.type == :list do %>
+                        <% items = Map.get(current_vars, var.key, var.default) |> ensure_list() %>
+                        <div class="space-y-1 mt-1">
+                          <%= for {item, idx} <- Enum.with_index(items) do %>
+                            <div class="flex items-center gap-2">
+                              <input
+                                type="text"
+                                class="input input-bordered input-sm flex-1"
+                                name={"vars[#{var.key}][#{idx}]"}
+                                value={item}
+                                phx-debounce="300"
+                              />
+                              <button
+                                type="button"
+                                class="btn btn-xs btn-ghost text-error shrink-0"
+                                phx-click="template_var_list_remove"
+                                phx-value-key={var.key}
+                                phx-value-index={idx}
+                              >✕</button>
+                            </div>
+                          <% end %>
+                          <button
+                            type="button"
+                            class="btn btn-xs btn-outline w-full"
+                            phx-click="template_var_list_add"
+                            phx-value-key={var.key}
+                          >+ Add</button>
+                        </div>
+                      <% else %>
+                        <p class="text-xs opacity-40 mt-0.5 mb-1">
+                          {if var.type == :int, do: "INT", else: "TEXT"}
+                        </p>
+                        <textarea
+                          :if={var.type == :text}
+                          id={"tvar-#{@template_group_key}-#{var.key}"}
+                          class="textarea textarea-bordered textarea-sm text-xs font-mono leading-snug w-full"
+                          name={"vars[#{var.key}]"}
+                          rows="4"
+                        >{Map.get(current_vars, var.key, var.default)}</textarea>
+                        <input
+                          :if={var.type == :int}
+                          id={"tvar-#{@template_group_key}-#{var.key}"}
+                          type="number"
+                          class="input input-bordered input-sm w-full"
+                          name={"vars[#{var.key}]"}
+                          value={Map.get(current_vars, var.key, var.default)}
+                          step="1"
+                        />
+                      <% end %>
                     <% end %>
                   </div>
                 <% end %>

@@ -436,13 +436,13 @@ defmodule Socho.Studies.JsGenerator do
   def emit_node(%{plugin: "pairwise-compare"} = node, counter) do
     var_name = "timeline#{counter}"
     config = node.config || %{}
-    images = config["images"] || []
+    pairs = config["pairs"] || []
     image_width = config["image_width"] || 300
     image_height = config["image_height"] || 300
     prompt = config["prompt"]
     data_tag = config["data_tag"]
 
-    images_js = Jason.encode!(images)
+    pairs_js = Jason.encode!(pairs)
 
     prompt_js =
       if prompt && prompt != "",
@@ -459,12 +459,9 @@ defmodule Socho.Studies.JsGenerator do
 
     own_decl = """
     const #{var_name} = (function() {
-      var _images = #{images_js};
-      var _shuffled = jsPsych.randomization.shuffle(_images.slice());
-      var _pairs = [];
-      for (var i = 0; i + 1 < _shuffled.length; i += 2) {
-        _pairs.push({ _pw_images: [_shuffled[i], _shuffled[i + 1]] });
-      }
+      var _pairs = #{pairs_js};
+      var _shuffled = jsPsych.randomization.shuffle(_pairs.slice());
+      var _timeline_vars = _shuffled.map(function(pair) { return { _pw_images: pair }; });
       return {
         timeline: [{
           type: jsPsychMultiImageSelect,
@@ -474,7 +471,7 @@ defmodule Socho.Studies.JsGenerator do
           image_height: #{image_height},
           prompt: #{prompt_js},
     #{data_js}    }],
-        timeline_variables: _pairs,
+        timeline_variables: _timeline_vars,
       };
     })();\
     """
