@@ -20,7 +20,13 @@ defmodule Socho.Studies.Templates.ImageSwipeTask do
           key: "instructions_html",
           label: "Instructions",
           type: :text,
-          default: "<p>Swipe each image left or right to respond.</p>"
+          default: "Swipe each image left or right to respond."
+        },
+        %{
+          key: "prompt",
+          label: "Prompt",
+          type: :text,
+          default: "Swipe each image left or right to respond."
         }
       ],
       build: fn vars ->
@@ -28,6 +34,7 @@ defmodule Socho.Studies.Templates.ImageSwipeTask do
         left_label = Map.get(vars, "left_label", "No")
         right_label = Map.get(vars, "right_label", "Yes")
         instructions = Map.get(vars, "instructions_html", "")
+        prompt = Map.get(vars, "prompt", "")
 
         [
           %{
@@ -69,7 +76,7 @@ defmodule Socho.Studies.Templates.ImageSwipeTask do
                   "image_width" => 360,
                   "image_height" => 360,
                   "swipe_threshold" => 80,
-                  "prompt" => ""
+                  "prompt" => prompt
                 },
                 extensions: %{},
                 children: []

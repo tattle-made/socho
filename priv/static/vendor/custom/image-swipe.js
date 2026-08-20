@@ -106,54 +106,76 @@ var __jsPsychCustomPlugin__ = (() => {
       const startTime = performance.now();
       let responded = false;
       displayElement.innerHTML = `
-      <div style="display:flex;flex-direction:column;align-items:center;padding:2rem 1rem;user-select:none;">
+      <style>
+        .swipe-outer { display:flex;flex-direction:column;align-items:center;padding:2rem 1rem;user-select:none; }
+        .swipe-row { display:flex;flex-direction:column;align-items:center; }
+        .swipe-side-btn { display:none; }
+        .swipe-below-btns { display:flex;gap:2.5rem;margin-top:1.5rem; }
+        @media (min-width:640px) {
+          .swipe-row { flex-direction:row;align-items:center;gap:2rem; }
+          .swipe-side-btn { display:flex;align-items:center;justify-content:center; }
+          .swipe-below-btns { display:none; }
+        }
+      </style>
+      <div class="swipe-outer">
 
         ${trial.prompt ? `<div style="margin-bottom:1.25rem;font-size:1.05rem;">${trial.prompt}</div>` : ""}
 
-        <div style="position:relative;width:${trial.image_width}px;touch-action:none;">
+        <div class="swipe-row">
 
-          <div id="ind-left" style="
-            position:absolute;top:14px;left:14px;z-index:2;pointer-events:none;
-            background:rgba(220,38,38,0.88);color:#fff;
-            padding:5px 14px;border-radius:20px;
-            font-weight:700;font-size:1rem;letter-spacing:0.02em;
-            opacity:0;
-          ">${trial.left_label}</div>
+          ${trial.show_buttons ? `
+            <div class="swipe-side-btn">
+              <button data-swipe="left" class="jspsych-btn" style="min-width:90px;">\u2190 ${trial.left_label}</button>
+            </div>` : ""}
 
-          <div id="ind-right" style="
-            position:absolute;top:14px;right:14px;z-index:2;pointer-events:none;
-            background:rgba(22,163,74,0.88);color:#fff;
-            padding:5px 14px;border-radius:20px;
-            font-weight:700;font-size:1rem;letter-spacing:0.02em;
-            opacity:0;
-          ">${trial.right_label}</div>
+          <div style="position:relative;width:${trial.image_width}px;touch-action:none;">
 
-          <img
-            id="swipe-img"
-            src="${trial.stimulus}"
-            draggable="false"
-            style="
-              display:block;
-              width:${trial.image_width}px;
-              height:${trial.image_height}px;
-              object-fit:cover;
-              border-radius:12px;
-              box-shadow:0 6px 24px rgba(0,0,0,0.18);
-              cursor:grab;
-              will-change:transform;
-            "
-          />
+            <div id="ind-left" style="
+              position:absolute;top:14px;left:14px;z-index:2;pointer-events:none;
+              background:rgba(220,38,38,0.88);color:#fff;
+              padding:5px 14px;border-radius:20px;
+              font-weight:700;font-size:1rem;letter-spacing:0.02em;
+              opacity:0;
+            ">${trial.left_label}</div>
+
+            <div id="ind-right" style="
+              position:absolute;top:14px;right:14px;z-index:2;pointer-events:none;
+              background:rgba(22,163,74,0.88);color:#fff;
+              padding:5px 14px;border-radius:20px;
+              font-weight:700;font-size:1rem;letter-spacing:0.02em;
+              opacity:0;
+            ">${trial.right_label}</div>
+
+            <img
+              id="swipe-img"
+              src="${trial.stimulus}"
+              draggable="false"
+              style="
+                display:block;
+                width:${trial.image_width}px;
+                height:${trial.image_height}px;
+                object-fit:cover;
+                border-radius:12px;
+                box-shadow:0 6px 24px rgba(0,0,0,0.18);
+                cursor:grab;
+                will-change:transform;
+              "
+            />
+          </div>
+
+          ${trial.show_buttons ? `
+            <div class="swipe-side-btn">
+              <button data-swipe="right" class="jspsych-btn" style="min-width:90px;">${trial.right_label} \u2192</button>
+            </div>` : ""}
+
         </div>
 
         ${trial.show_buttons ? `
-          <div style="display:flex;gap:2.5rem;margin-top:1.5rem;">
-            <button id="btn-left" class="jspsych-btn" style="min-width:90px;">\u2190 ${trial.left_label}</button>
-            <button id="btn-right" class="jspsych-btn" style="min-width:90px;">${trial.right_label} \u2192</button>
+          <div class="swipe-below-btns">
+            <button data-swipe="left" class="jspsych-btn" style="min-width:90px;">\u2190 ${trial.left_label}</button>
+            <button data-swipe="right" class="jspsych-btn" style="min-width:90px;">${trial.right_label} \u2192</button>
           </div>` : ""}
 
-        <p style="margin-top:1rem;font-size:0.78rem;opacity:0.4;">
-          Swipe or drag left / right${trial.show_buttons ? ", or use the buttons" : ""} \xB7 \u2190 \u2192 keys also work
-        </p>
       </div>
     `;
       const img = displayElement.querySelector("#swipe-img");
@@ -233,8 +255,8 @@ var __jsPsychCustomPlugin__ = (() => {
       };
       document.addEventListener("keydown", onKey);
       if (trial.show_buttons) {
-        displayElement.querySelector("#btn-left").addEventListener("click", () => respond("left"));
-        displayElement.querySelector("#btn-right").addEventListener("click", () => respond("right"));
+        displayElement.querySelectorAll('[data-swipe="left"]').forEach((btn) => btn.addEventListener("click", () => respond("left")));
+        displayElement.querySelectorAll('[data-swipe="right"]').forEach((btn) => btn.addEventListener("click", () => respond("right")));
       }
     }
   };
