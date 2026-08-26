@@ -46,7 +46,16 @@ defmodule Socho.Studies.Templates.PairwiseImageCompare do
             :error -> 300
           end
 
+        all_image_urls = pairs |> List.flatten() |> Enum.reject(&(&1 == ""))
+
         [
+          %{
+            node_type: "trial",
+            plugin: "preload",
+            config: %{"images" => all_image_urls, "auto_preload" => false},
+            extensions: %{},
+            children: []
+          },
           %{
             node_type: "trial",
             plugin: "pairwise-compare",
