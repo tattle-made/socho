@@ -21,7 +21,8 @@ defmodule Socho.Studies.Templates.PairwiseImageCompare do
           default: "Which image do you prefer?"
         },
         %{key: "image_width", label: "Image width (px)", type: :int, default: "300"},
-        %{key: "image_height", label: "Image height (px)", type: :int, default: "300"}
+        %{key: "image_height", label: "Image height (px)", type: :int, default: "300"},
+        %{key: "randomize_pairs", label: "Randomize pair order", type: :boolean, default: true}
       ],
       build: fn vars ->
         pairs =
@@ -53,7 +54,8 @@ defmodule Socho.Studies.Templates.PairwiseImageCompare do
               "pairs" => pairs,
               "prompt" => prompt,
               "image_width" => image_width,
-              "image_height" => image_height
+              "image_height" => image_height,
+              "randomize_pairs" => Map.get(vars, "randomize_pairs", true)
             },
             extensions: %{},
             children: []

@@ -441,6 +441,7 @@ defmodule Socho.Studies.JsGenerator do
     image_height = config["image_height"] || 300
     prompt = config["prompt"]
     data_tag = config["data_tag"]
+    randomize_pairs = Map.get(config, "randomize_pairs", true)
 
     pairs_js = Jason.encode!(pairs)
 
@@ -457,10 +458,17 @@ defmodule Socho.Studies.JsGenerator do
         ""
       end
 
+    ordered_pairs_js =
+      if randomize_pairs do
+        "jsPsych.randomization.shuffle(_pairs.slice())"
+      else
+        "_pairs.slice()"
+      end
+
     own_decl = """
     const #{var_name} = (function() {
       var _pairs = #{pairs_js};
-      var _shuffled = jsPsych.randomization.shuffle(_pairs.slice());
+      var _shuffled = #{ordered_pairs_js};
       var _timeline_vars = _shuffled.map(function(pair) { return { _pw_images: pair }; });
       return {
         timeline: [{

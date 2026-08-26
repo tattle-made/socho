@@ -609,6 +609,9 @@ defmodule SochoWeb.StudyLive.Builder do
             |> Enum.sort_by(fn {k, _} -> String.to_integer(k) end)
             |> Enum.map(fn {_, v} -> v end)
 
+          var_def && var_def.type == :boolean ->
+            val == "true" || val == true
+
           var_def && var_def.type == :pair_list && is_map(val) ->
             val
             |> Enum.filter(fn {k, _} -> match?({_, ""}, Integer.parse(k)) end)
@@ -888,6 +891,19 @@ defmodule SochoWeb.StudyLive.Builder do
                         >+ Add Pair</button>
                       </div>
                     <% else %>
+                      <%= if var.type == :boolean do %>
+                        <div class="flex items-center gap-2 mt-1">
+                          <input type="hidden" name={"vars[#{var.key}]"} value="false" />
+                          <input
+                            type="checkbox"
+                            id={"tvar-#{@template_group_key}-#{var.key}"}
+                            class="checkbox checkbox-sm"
+                            name={"vars[#{var.key}]"}
+                            value="true"
+                            checked={Map.get(current_vars, var.key, var.default) == true}
+                          />
+                        </div>
+                      <% else %>
                       <%= if var.type == :list do %>
                         <% items = Map.get(current_vars, var.key, var.default) |> ensure_list() %>
                         <div class="space-y-1 mt-1">
@@ -936,6 +952,7 @@ defmodule SochoWeb.StudyLive.Builder do
                           value={Map.get(current_vars, var.key, var.default)}
                           step="1"
                         />
+                      <% end %>
                       <% end %>
                     <% end %>
                   </div>
