@@ -14,13 +14,14 @@
       <style><%= raw(@inline_css) %></style>
     <% end %>
     <style>
-      html, body { background-color: #ffffff; color: #000000; }
+      html, body { background-color: #f3f3f3; color: #333333; }
     </style>
     <%= if branding = assigns[:branding] do %>
       <%= if primary = branding["primary_color"] do %>
         <style>
           :root { --sjs-primary-backcolor: <%= primary %>; --sjs-primary-backcolor-dark: <%= primary %>; }
           .sd-btn--action { background-color: <%= primary %> !important; }
+          .sd-element--with-frame {border-width: 1px; border-color:rgb(219, 219, 219); box-shadow: none;}
         </style>
       <% end %>
       <%= if bg = branding["background_color"] do %>

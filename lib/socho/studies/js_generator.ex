@@ -632,6 +632,20 @@ defmodule Socho.Studies.JsGenerator do
     survey_fn = """
       survey_function: function(survey) {
         survey.onTextMarkdown.add(function(s, opts) { opts.html = opts.text; });
+        survey.onAfterRenderSurvey.add(function(s) {
+          s.applyTheme({
+            themeName: "contrast",
+            colorPalette: "light",
+            isPanelless: false,
+            cssVariables: {
+              "--sjs-questionpanel-backcolor": "rgb(255, 255, 255)",
+              "--sjs-general-backcolor-dim": "rgb(252, 252, 252)",
+              "--sjs-shadow-inner": "inset 0px 0px 0px 1px #DCDCDC",
+              "--sjs-editorpanel-backcolor": "#F5F5F5",
+              "--sjs-font-questiontitle-color": "#333333"
+            }
+          });
+        });
       },
     """
 
