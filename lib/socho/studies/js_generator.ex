@@ -631,7 +631,12 @@ defmodule Socho.Studies.JsGenerator do
 
     survey_fn = """
       survey_function: function(survey) {
-        survey.onTextMarkdown.add(function(s, opts) { opts.html = opts.text; });
+        survey.onTextMarkdown.add(function(s, opts) {
+          opts.html = opts.text
+            .replace(/<\\/p>\\s*<p[^>]*>/gi, '<br><br>')
+            .replace(/<p[^>]*>/gi, '')
+            .replace(/<\\/p>/gi, '');
+        });
         survey.onAfterRenderSurvey.add(function(s) {
           s.applyTheme({
             themeName: "contrast",
