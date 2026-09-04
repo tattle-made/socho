@@ -65,6 +65,7 @@ defmodule SochoWeb.UserLive.Login do
           phx-submit="submit_phone"
         >
           <.input
+            readonly={!!@current_scope}
             field={@phone_form[:phone_number]}
             type="tel"
             label="Phone number"
@@ -116,12 +117,16 @@ defmodule SochoWeb.UserLive.Login do
 
   @impl true
   def mount(_params, _session, socket) do
+    current_user = get_in(socket.assigns, [:current_scope, Access.key(:user)])
+
     email =
       Phoenix.Flash.get(socket.assigns.flash, :email) ||
-        get_in(socket.assigns, [:current_scope, Access.key(:user), Access.key(:email)])
+        current_user && current_user.email
+
+    phone = current_user && current_user.phone_number
 
     form = to_form(%{"email" => email}, as: "user")
-    phone_form = to_form(%{"phone_number" => ""}, as: "user")
+    phone_form = to_form(%{"phone_number" => phone}, as: "user")
 
     {:ok, assign(socket, form: form, phone_form: phone_form, trigger_submit: false)}
   end
