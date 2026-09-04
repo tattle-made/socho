@@ -60,6 +60,25 @@ defmodule SochoWeb.UserLive.Login do
         <div class="divider">or</div>
 
         <.form
+          for={@phone_form}
+          id="login_form_phone"
+          phx-submit="submit_phone"
+        >
+          <.input
+            field={@phone_form[:phone_number]}
+            type="tel"
+            label="Phone number"
+            placeholder="+919876543210"
+            autocomplete="tel"
+          />
+          <.button class="btn btn-primary btn-soft w-full">
+            Log in with SMS <span aria-hidden="true">→</span>
+          </.button>
+        </.form>
+
+        <div class="divider">or</div>
+
+        <.form
           :let={f}
           for={@form}
           id="login_form_password"
@@ -102,8 +121,9 @@ defmodule SochoWeb.UserLive.Login do
         get_in(socket.assigns, [:current_scope, Access.key(:user), Access.key(:email)])
 
     form = to_form(%{"email" => email}, as: "user")
+    phone_form = to_form(%{"phone_number" => ""}, as: "user")
 
-    {:ok, assign(socket, form: form, trigger_submit: false)}
+    {:ok, assign(socket, form: form, phone_form: phone_form, trigger_submit: false)}
   end
 
   @impl true
@@ -126,6 +146,23 @@ defmodule SochoWeb.UserLive.Login do
      socket
      |> put_flash(:info, info)
      |> push_navigate(to: ~p"/users/log-in")}
+  end
+
+  def handle_event("submit_phone", %{"user" => %{"phone_number" => phone}}, socket) do
+    if user = Accounts.get_user_by_phone(String.trim(phone)) do
+      Accounts.deliver_sms_login_instructions(user)
+      encoded_phone = Base.url_encode64(user.phone_number, padding: false)
+
+      {:noreply,
+       socket
+       |> put_flash(:info, "A verification code was sent to your phone.")
+       |> push_navigate(to: ~p"/users/log-in/sms?phone=#{encoded_phone}")}
+    else
+      {:noreply,
+       socket
+       |> put_flash(:info, "If your number is in our system, you will receive a code shortly.")
+       |> push_navigate(to: ~p"/users/log-in")}
+    end
   end
 
   defp local_mail_adapter? do

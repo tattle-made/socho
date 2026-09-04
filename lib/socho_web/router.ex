@@ -80,6 +80,7 @@ defmodule SochoWeb.Router do
       on_mount: [{SochoWeb.UserAuth, :mount_current_scope}] do
       live "/users/register", UserLive.Registration, :new
       live "/users/log-in", UserLive.Login, :new
+      live "/users/log-in/sms", UserLive.SMSConfirmation, :new
       live "/users/log-in/:token", UserLive.Confirmation, :new
     end
 

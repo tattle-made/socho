@@ -9,6 +9,7 @@ defmodule Socho.Accounts.UserToken do
   # It is very important to keep the magic link token expiry short,
   # since someone with access to the email may take over the account.
   @magic_link_validity_in_minutes 15
+  @sms_otp_validity_in_minutes 10
   @change_email_validity_in_days 7
   @session_validity_in_days 14
 
@@ -80,6 +81,41 @@ defmodule Socho.Accounts.UserToken do
   """
   def build_email_token(user, context) do
     build_hashed_token(user, context, user.email)
+  end
+
+  @doc """
+  Builds a 6-digit OTP for SMS delivery.
+
+  The plain OTP is returned for sending via SMS; the hashed version is stored in the DB
+  with context "sms_login". Expires after #{@sms_otp_validity_in_minutes} minutes.
+  """
+  def build_sms_token(user) do
+    otp = :rand.uniform(999_999) |> Integer.to_string() |> String.pad_leading(6, "0")
+    hashed = :crypto.hash(@hash_algorithm, otp)
+
+    {otp,
+     %UserToken{
+       token: hashed,
+       context: "sms_login",
+       sent_to: user.phone_number,
+       user_id: user.id
+     }}
+  end
+
+  @doc """
+  Validates an SMS OTP. Returns `{:ok, query}` where query resolves to `{user, token}`.
+  """
+  def verify_sms_token_query(phone_number, otp) do
+    hashed = :crypto.hash(@hash_algorithm, otp)
+
+    query =
+      from token in by_token_and_context_query(hashed, "sms_login"),
+        join: user in assoc(token, :user),
+        where: token.inserted_at > ago(@sms_otp_validity_in_minutes, "minute"),
+        where: token.sent_to == ^phone_number,
+        select: {user, token}
+
+    {:ok, query}
   end
 
   defp build_hashed_token(user, context, sent_to) do

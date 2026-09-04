@@ -90,3 +90,6 @@ config :phoenix_live_view,
 
 # Disable swoosh api client as it is only required for production adapters.
 config :swoosh, :api_client, false
+
+# SMS: use local adapter in development (logs OTP codes to console)
+config :socho, Socho.SMS, adapter: Socho.SMS.Adapters.Local

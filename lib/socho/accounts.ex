@@ -6,7 +6,7 @@ defmodule Socho.Accounts do
   import Ecto.Query, warn: false
   alias Socho.Repo
 
-  alias Socho.Accounts.{User, UserToken, UserNotifier}
+  alias Socho.Accounts.{User, UserToken, UserNotifier, UserSMSNotifier}
 
   ## Database getters
 
@@ -24,6 +24,13 @@ defmodule Socho.Accounts do
   """
   def get_user_by_email(email) when is_binary(email) do
     Repo.get_by(User, email: email)
+  end
+
+  @doc """
+  Gets a user by phone number.
+  """
+  def get_user_by_phone(phone) when is_binary(phone) do
+    Repo.get_by(User, phone_number: phone)
   end
 
   @doc """
@@ -89,6 +96,22 @@ defmodule Socho.Accounts do
     %User{}
     |> User.email_changeset(attrs)
     |> Repo.insert()
+  end
+
+  @doc """
+  Registers a user with a phone number for SMS-based verification.
+  """
+  def register_user_with_sms(attrs) do
+    %User{}
+    |> User.sms_registration_changeset(attrs)
+    |> Repo.insert()
+  end
+
+  @doc """
+  Returns a changeset for validating SMS registration fields.
+  """
+  def change_user_sms_registration(user \\ %User{}, attrs \\ %{}, opts \\ []) do
+    User.sms_registration_changeset(user, attrs, opts)
   end
 
   ## Settings
@@ -387,6 +410,45 @@ defmodule Socho.Accounts do
     {encoded_token, user_token} = UserToken.build_email_token(user, "login")
     Repo.insert!(user_token)
     UserNotifier.deliver_login_instructions(user, magic_link_url_fun.(encoded_token))
+  end
+
+  @doc """
+  Sends an OTP via SMS for login. Used by both registration and returning SMS users.
+  """
+  def deliver_sms_login_instructions(%User{verification_method: :sms} = user) do
+    {otp, user_token} = UserToken.build_sms_token(user)
+    Repo.insert!(user_token)
+    UserSMSNotifier.deliver_login_otp(user, otp)
+  end
+
+  @doc """
+  Sends a registration OTP via SMS.
+  """
+  def deliver_sms_registration_instructions(%User{verification_method: :sms} = user) do
+    {otp, user_token} = UserToken.build_sms_token(user)
+    Repo.insert!(user_token)
+    UserSMSNotifier.deliver_registration_otp(user, otp)
+  end
+
+  @doc """
+  Verifies an SMS OTP and logs the user in, confirming the account if not yet confirmed.
+  """
+  def verify_sms_otp(phone_number, otp) do
+    {:ok, query} = UserToken.verify_sms_token_query(phone_number, otp)
+
+    case Repo.one(query) do
+      {%User{confirmed_at: nil} = user, _token} ->
+        user
+        |> User.confirm_changeset()
+        |> update_user_and_delete_all_tokens()
+
+      {user, token} ->
+        Repo.delete!(token)
+        {:ok, {user, []}}
+
+      nil ->
+        {:error, :not_found}
+    end
   end
 
   @doc """

@@ -4,6 +4,8 @@ defmodule Socho.Accounts.User do
 
   schema "users" do
     field :email, :string
+    field :phone_number, :string
+    field :verification_method, Ecto.Enum, values: [:email, :sms], default: :email
     field :username, :string
     field :password, :string, virtual: true, redact: true
     field :hashed_password, :string, redact: true
@@ -32,6 +34,38 @@ defmodule Socho.Accounts.User do
     user
     |> cast(attrs, [:email])
     |> validate_email(opts)
+  end
+
+  @doc """
+  A changeset for registering via SMS. Requires phone_number; email is optional.
+
+  ## Options
+
+    * `:validate_unique` - Set to false to skip uniqueness check (e.g. live validation).
+      Defaults to `true`.
+  """
+  def sms_registration_changeset(user, attrs, opts \\ []) do
+    user
+    |> cast(attrs, [:phone_number, :email])
+    |> put_change(:verification_method, :sms)
+    |> validate_phone_number(opts)
+  end
+
+  defp validate_phone_number(changeset, opts) do
+    changeset =
+      changeset
+      |> validate_required([:phone_number])
+      |> validate_format(:phone_number, ~r/^\+?[1-9]\d{6,14}$/,
+        message: "must be a valid phone number in E.164 format"
+      )
+
+    if Keyword.get(opts, :validate_unique, true) do
+      changeset
+      |> unsafe_validate_unique(:phone_number, Socho.Repo)
+      |> unique_constraint(:phone_number)
+    else
+      changeset
+    end
   end
 
   defp validate_email(changeset, opts) do

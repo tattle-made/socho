@@ -8,8 +8,31 @@ defmodule SochoWeb.UserSessionController do
     create(conn, params, "User confirmed successfully.")
   end
 
+  def create(conn, %{"_action" => "sms_confirmed"} = params) do
+    create(conn, params, "Welcome!")
+  end
+
   def create(conn, params) do
     create(conn, params, "Welcome back!")
+  end
+
+  # SMS OTP login
+  defp create(conn, %{"user" => %{"otp" => otp, "phone_number" => phone} = user_params}, info) do
+    case Accounts.verify_sms_otp(phone, otp) do
+      {:ok, {user, tokens_to_disconnect}} ->
+        UserAuth.disconnect_sessions(tokens_to_disconnect)
+
+        conn
+        |> put_flash(:info, info)
+        |> UserAuth.log_in_user(user, user_params)
+
+      _ ->
+        encoded_phone = Base.url_encode64(phone, padding: false)
+
+        conn
+        |> put_flash(:error, "The code is invalid or has expired.")
+        |> redirect(to: ~p"/users/log-in/sms?phone=#{encoded_phone}")
+    end
   end
 
   # magic link login

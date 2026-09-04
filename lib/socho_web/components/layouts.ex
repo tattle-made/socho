@@ -188,5 +188,7 @@ defmodule SochoWeb.Layouts do
     name |> String.split() |> Enum.take(2) |> Enum.map(&String.first/1) |> Enum.join() |> String.upcase()
   end
 
-  defp user_initials(%{email: email}), do: email |> String.first() |> String.upcase()
+  defp user_initials(%{email: email}) when is_binary(email), do: email |> String.first() |> String.upcase()
+  defp user_initials(%{phone_number: phone}) when is_binary(phone), do: String.first(phone)
+  defp user_initials(_), do: "?"
 end
