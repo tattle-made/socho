@@ -7,6 +7,7 @@ defmodule Socho.Studies.Study do
     field :description, :string
     field :status, Ecto.Enum, values: [:draft, :published], default: :draft
     field :client_id, :id
+    field :allow_multiple_public_submissions, :boolean, default: true
 
     belongs_to :client, Socho.Clients.Client, define_field: false
     has_many :trials, Socho.Studies.Trial, preload_order: [asc: :position]
@@ -16,7 +17,7 @@ defmodule Socho.Studies.Study do
 
   def changeset(study, attrs) do
     study
-    |> cast(attrs, [:title, :description, :status, :client_id])
+    |> cast(attrs, [:title, :description, :status, :client_id, :allow_multiple_public_submissions])
     |> validate_required([:title])
     |> validate_length(:title, min: 1, max: 255)
   end

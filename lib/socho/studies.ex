@@ -145,9 +145,9 @@ defmodule Socho.Studies do
 
   # ── Submissions ──────────────────────────────────────────────────────────────
 
-  def record_submission(study_id, user_id, trial_list) when is_list(trial_list) do
+  def record_submission(study_id, user_id, trial_list, remote_ip \\ nil) when is_list(trial_list) do
     %Submission{}
-    |> Submission.changeset(%{study_id: study_id, user_id: user_id, data: %{"trials" => trial_list}})
+    |> Submission.changeset(%{study_id: study_id, user_id: user_id, data: %{"trials" => trial_list}, remote_ip: remote_ip})
     |> Repo.insert()
   end
 
@@ -156,6 +156,10 @@ defmodule Socho.Studies do
   end
 
   def has_submitted?(_study_id, nil), do: false
+
+  def has_submitted_from_ip?(study_id, remote_ip) when is_binary(remote_ip) do
+    Repo.exists?(from s in Submission, where: s.study_id == ^study_id and s.remote_ip == ^remote_ip)
+  end
 
   def count_submissions(study_id) do
     Repo.aggregate(from(s in Submission, where: s.study_id == ^study_id), :count)

@@ -31,11 +31,21 @@ defmodule SochoWeb.StudyController do
   def save_data(conn, %{"study_id" => study_id, "data" => trial_data}) when is_list(trial_data) do
     user_id = get_in(conn.assigns, [:current_scope, Access.key(:user), Access.key(:id)])
     study_id_int = String.to_integer(study_id)
+    remote_ip = conn.remote_ip |> :inet.ntoa() |> to_string()
 
-    if Studies.has_submitted?(study_id_int, user_id) do
+    already_submitted =
+      if is_nil(user_id) do
+        study = Studies.get_study_meta!(study_id_int)
+        not study.allow_multiple_public_submissions and
+          Studies.has_submitted_from_ip?(study_id_int, remote_ip)
+      else
+        Studies.has_submitted?(study_id_int, user_id)
+      end
+
+    if already_submitted do
       json(conn, %{status: "already_submitted"})
     else
-      case Studies.record_submission(study_id_int, user_id, trial_data) do
+      case Studies.record_submission(study_id_int, user_id, trial_data, remote_ip) do
         {:ok, _} -> json(conn, %{status: "ok"})
         {:error, _} -> json(conn, %{status: "already_submitted"})
       end

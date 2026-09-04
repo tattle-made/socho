@@ -80,6 +80,18 @@ defmodule SochoWeb.StudyLive.Settings do
               </div>
             </div>
 
+            <div class="form-control">
+              <label class="label cursor-pointer justify-start gap-3">
+                <.input field={@form[:allow_multiple_public_submissions]} type="checkbox" />
+                <div>
+                  <span class="label-text font-medium">Allow multiple public submissions</span>
+                  <p class="text-xs opacity-50 mt-0.5">
+                    When off, each IP address can only submit once. Note: shared IPs or VPNs can bypass this.
+                  </p>
+                </div>
+              </label>
+            </div>
+
             <div class="pt-2">
               <.button phx-disable-with="Saving..." class="btn btn-primary">
                 Save Settings
