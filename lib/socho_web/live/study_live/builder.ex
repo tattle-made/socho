@@ -834,7 +834,7 @@ defmodule SochoWeb.StudyLive.Builder do
         </div>
 
         <%!-- Column 2: Config panel --%>
-        <div class="flex flex-col gap-2 border-l border-base-300 pl-4">
+        <div class="flex flex-col gap-2 border-l border-base-300 pl-4 sticky top-16 max-h-[calc(100vh-4rem)] overflow-y-auto">
           <%= if @selected_trial && @selected_trial.node_type == "template_group" do %>
             <p class="text-xs font-semibold uppercase tracking-wider opacity-50 shrink-0">Configure</p>
             <p class="text-sm font-medium text-accent shrink-0 -mt-1">{@selected_template && @selected_template.name}</p>
@@ -1216,7 +1216,7 @@ defmodule SochoWeb.StudyLive.Builder do
         <%!-- Column 3: Phone preview --%>
         <div
           :if={@show_preview && @study_id}
-          class="border-l border-base-300 pl-4 flex flex-col gap-3"
+          class="border-l border-base-300 pl-4 flex flex-col gap-3 sticky top-16 max-h-[calc(100vh-4rem)] overflow-y-auto"
         >
           <div class="flex items-center justify-between shrink-0">
             <p class="text-xs font-semibold uppercase tracking-wider opacity-50">Live Preview</p>
