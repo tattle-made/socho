@@ -483,14 +483,15 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
                 <%= for {row, r_idx} <- Enum.with_index(q["rows"] || []) do %>
                   <% row_map = normalize_row(row) %>
                   <div class="flex gap-1 items-center">
-                    <input
-                      type="text"
-                      class="input input-bordered input-xs flex-1"
-                      value={row_map["text"]}
-                      phx-blur="sq_update_row"
-                      phx-value-q={idx}
-                      phx-value-r={r_idx}
-                      phx-target={"##{@id}"}
+                    <div
+                      phx-hook=".SurveyRowText"
+                      phx-update="ignore"
+                      id={"row-editor-#{idx}-#{r_idx}"}
+                      data-q={idx}
+                      data-r={r_idx}
+                      data-component-id={@id}
+                      data-value={row_map["text"]}
+                      class="flex-1 relative"
                     />
                     <form phx-change="sq_toggle_row_reversed" phx-target={"##{@id}"}>
                       <input type="hidden" name="q" value={to_string(idx)} />
@@ -786,6 +787,83 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
           }
         }
       </script>
+      <script :type={Phoenix.LiveView.ColocatedHook} name=".SurveyRowText">
+        import { Editor } from "@tiptap/core"
+        import Document from "@tiptap/extension-document"
+        import Paragraph from "@tiptap/extension-paragraph"
+        import Text from "@tiptap/extension-text"
+        import Bold from "@tiptap/extension-bold"
+        import Italic from "@tiptap/extension-italic"
+        import Underline from "@tiptap/extension-underline"
+
+        export default {
+          mounted() {
+            const q = this.el.dataset.q
+            const r = this.el.dataset.r
+            const componentId = this.el.dataset.componentId
+            const initialValue = this.el.dataset.value || ""
+
+            this.toolbar = document.createElement("div")
+            this.toolbar.className = "absolute bottom-full left-0 mb-1 flex gap-0.5 bg-base-200 border border-base-300 rounded shadow p-0.5 z-20"
+            this.toolbar.style.display = "none"
+            this.el.appendChild(this.toolbar)
+
+            const editorEl = document.createElement("div")
+            this.el.appendChild(editorEl)
+
+            const toolbarDefs = [
+              { label: "B", title: "Bold",      style: "font-bold",  cmd: () => this.editor.chain().focus().toggleBold().run(),      active: () => this.editor.isActive("bold") },
+              { label: "I", title: "Italic",    style: "italic",     cmd: () => this.editor.chain().focus().toggleItalic().run(),    active: () => this.editor.isActive("italic") },
+              { label: "U", title: "Underline", style: "underline",  cmd: () => this.editor.chain().focus().toggleUnderline().run(), active: () => this.editor.isActive("underline") },
+            ]
+
+            toolbarDefs.forEach(({ label, title, style, cmd }) => {
+              const btn = document.createElement("button")
+              btn.type = "button"
+              btn.title = title
+              btn.textContent = label
+              btn.className = `btn btn-xs btn-ghost ${style}`
+              btn.addEventListener("mousedown", e => { e.preventDefault(); cmd() })
+              this.toolbar.appendChild(btn)
+            })
+
+            this.editor = new Editor({
+              element: editorEl,
+              extensions: [Document, Paragraph, Text, Bold, Italic, Underline],
+              content: initialValue,
+              editorProps: { attributes: { class: "input input-bordered input-xs w-full outline-none cursor-text" } },
+              onUpdate: ({ editor }) => {
+                this.pushEventTo("#" + componentId, "sq_update_row", { q: q, r: r, value: editor.getHTML() })
+              },
+              onTransaction: () => {
+                const btns = this.toolbar.querySelectorAll("button")
+                toolbarDefs.forEach(({ active }, i) => {
+                  btns[i]?.classList.toggle("btn-active", active())
+                })
+              },
+            })
+
+            this.editor.on("focus", () => {
+              clearTimeout(this._blurTimer)
+              this.toolbar.style.display = "flex"
+            })
+            this.editor.on("blur", () => {
+              this._blurTimer = setTimeout(() => { this.toolbar.style.display = "none" }, 150)
+            })
+          },
+
+          updated() {
+            const newVal = this.el.dataset.value || ""
+            if (this.editor && newVal !== this.editor.getHTML()) {
+              this.editor.commands.setContent(newVal, false)
+            }
+          },
+
+          destroyed() {
+            this.editor?.destroy()
+          }
+        }
+      </script>
     </div>
     """
   end
@@ -815,7 +893,8 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
   defp rows_to_surveyjs(rows) do
     Enum.map(rows, fn row ->
       r = normalize_row(row)
-      %{"value" => r["text"], "text" => r["text"], "reversed" => r["reversed"] || false}
+      plain = Regex.replace(~r/<[^>]+>/, r["text"], "")
+      %{"value" => plain, "text" => r["text"], "reversed" => r["reversed"] || false}
     end)
   end
 
