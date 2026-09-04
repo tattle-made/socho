@@ -958,7 +958,8 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
   defp to_survey_json(questions, complete_text) do
     %{
       "elements" => Enum.map(questions, &question_to_element/1),
-      "completeText" => if(complete_text && complete_text != "", do: complete_text, else: "Next")
+      "completeText" => if(complete_text && complete_text != "", do: complete_text, else: "Next"),
+      "widthMode" => "responsive"
     }
   end
 

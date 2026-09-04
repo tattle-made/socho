@@ -629,7 +629,12 @@ defmodule Socho.Studies.JsGenerator do
         {el["name"], %{"min" => el["minWords"] || 0, "max" => el["maxWords"] || 0}}
       end)
 
-    clean_config = Map.put(config, "survey_json", Map.put(survey_json, "elements", clean_elements))
+    clean_survey_json =
+      survey_json
+      |> Map.put("elements", clean_elements)
+      |> Map.put_new("widthMode", "responsive")
+
+    clean_config = Map.put(config, "survey_json", clean_survey_json)
 
     params_js =
       clean_config
@@ -669,7 +674,7 @@ defmodule Socho.Studies.JsGenerator do
           s.applyTheme({
             themeName: "contrast",
             colorPalette: "light",
-            isPanelless: false,
+            isPanelless: true,
             cssVariables: {
               "--sjs-questionpanel-backcolor": "rgb(255, 255, 255)",
               "--sjs-general-backcolor-dim": "rgb(252, 252, 252)",
