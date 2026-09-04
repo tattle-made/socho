@@ -61,6 +61,9 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
       "choices" => [],
       "minValue" => "",
       "maxValue" => "",
+      "inputType" => "free",
+      "minWords" => "",
+      "maxWords" => "",
       "rows" => [],
       "columns" => [],
       "cellType" => "checkbox",
@@ -436,6 +439,51 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
                 />
               </div>
             </div>
+          <% end %>
+
+          <%= if q["type"] == "text" do %>
+            <div class="form-control">
+              <label class="label py-0"><span class="label-text text-xs">Input type</span></label>
+              <form phx-change="sq_update_field" phx-target={"##{@id}"}>
+                <input type="hidden" name="index" value={idx} />
+                <input type="hidden" name="field" value="inputType" />
+                <select name="value" class="select select-bordered select-xs w-full">
+                  <option value="free" selected={q["inputType"] in [nil, "", "free"]}>Free text</option>
+                  <option value="email" selected={q["inputType"] == "email"}>Email</option>
+                  <option value="phone" selected={q["inputType"] == "phone"}>Phone number</option>
+                </select>
+              </form>
+            </div>
+            <%= if q["inputType"] in [nil, "", "free"] do %>
+              <div class="grid grid-cols-2 gap-2">
+                <div class="form-control">
+                  <label class="label py-0"><span class="label-text text-xs">Min words</span></label>
+                  <input
+                    type="number"
+                    min="0"
+                    class="input input-bordered input-xs"
+                    value={q["minWords"] || ""}
+                    phx-blur="sq_update_field"
+                    phx-value-index={idx}
+                    phx-value-field="minWords"
+                    phx-target={"##{@id}"}
+                  />
+                </div>
+                <div class="form-control">
+                  <label class="label py-0"><span class="label-text text-xs">Max words</span></label>
+                  <input
+                    type="number"
+                    min="0"
+                    class="input input-bordered input-xs"
+                    value={q["maxWords"] || ""}
+                    phx-blur="sq_update_field"
+                    phx-value-index={idx}
+                    phx-value-field="maxWords"
+                    phx-target={"##{@id}"}
+                  />
+                </div>
+              </div>
+            <% end %>
           <% end %>
 
           <%= if q["type"] in @choice_types do %>
@@ -995,6 +1043,7 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
     |> maybe_put_input_type(q)
     |> maybe_put_choices(q)
     |> maybe_put_validators(q)
+    |> maybe_put_word_limits(q)
   end
 
   # Survey.js uses type "text" with inputType "number" for numeric inputs
@@ -1002,6 +1051,8 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
   defp survey_js_type(t), do: t
 
   defp maybe_put_input_type(el, %{"type" => "number"}), do: Map.put(el, "inputType", "number")
+  defp maybe_put_input_type(el, %{"type" => "text", "inputType" => "email"}), do: Map.put(el, "inputType", "email")
+  defp maybe_put_input_type(el, %{"type" => "text", "inputType" => "phone"}), do: Map.put(el, "inputType", "tel")
   defp maybe_put_input_type(el, _), do: el
 
   defp maybe_put_choices(el, %{"type" => t, "choices" => [_ | _] = choices})
@@ -1026,7 +1077,36 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
     end
   end
 
+  defp maybe_put_validators(el, %{"type" => "text"} = q) do
+    case q["inputType"] do
+      "email" ->
+        Map.put(el, "validators", [%{"type" => "email"}])
+      "phone" ->
+        Map.put(el, "validators", [%{
+          "type" => "regex",
+          "regex" => "^[+]?[0-9(). -]{7,20}$",
+          "text" => "Please enter a valid phone number"
+        }])
+      _ -> el
+    end
+  end
+
   defp maybe_put_validators(el, _), do: el
+
+  defp maybe_put_word_limits(el, %{"type" => "text"} = q) do
+    case q["inputType"] || "free" do
+      "free" ->
+        min = parse_numeric(q["minWords"])
+        max = parse_numeric(q["maxWords"])
+        el
+        |> then(&if(min && min > 0, do: Map.put(&1, "minWords", trunc(min)), else: &1))
+        |> then(&if(max && max > 0, do: Map.put(&1, "maxWords", trunc(max)), else: &1))
+      _ ->
+        el
+    end
+  end
+
+  defp maybe_put_word_limits(el, _), do: el
 
   defp parse_number(v) when v in [nil, ""], do: nil
   defp parse_number(v) when is_number(v), do: v
@@ -1195,10 +1275,13 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
   end
 
   defp element_to_question(el, i) do
-    type =
-      if el["type"] == "text" and el["inputType"] == "number",
-        do: "number",
-        else: el["type"] || "text"
+    {type, input_type} =
+      case {el["type"], el["inputType"]} do
+        {"text", "number"} -> {"number", "free"}
+        {"text", "email"}  -> {"text", "email"}
+        {"text", "tel"}    -> {"text", "phone"}
+        {t, _}             -> {t || "text", "free"}
+      end
 
     {min_v, max_v} = extract_numeric_validator(el)
 
@@ -1210,7 +1293,10 @@ defmodule SochoWeb.StudyLive.SurveyBuilderComponent do
       "isRequired" => el["isRequired"] || false,
       "choices" => normalize_choices(el["choices"]),
       "minValue" => to_string(min_v || ""),
-      "maxValue" => to_string(max_v || "")
+      "maxValue" => to_string(max_v || ""),
+      "inputType" => input_type,
+      "minWords" => to_string(el["minWords"] || ""),
+      "maxWords" => to_string(el["maxWords"] || "")
     }
   end
 

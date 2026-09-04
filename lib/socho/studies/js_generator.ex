@@ -622,6 +622,13 @@ defmodule Socho.Studies.JsGenerator do
         Map.drop(el, ["dyn_source_tag", "dyn_source_question", "dyn_source_columns", "static_columns"])
       end)
 
+    word_limits =
+      clean_elements
+      |> Enum.filter(fn el -> el["minWords"] || el["maxWords"] end)
+      |> Enum.into(%{}, fn el ->
+        {el["name"], %{"min" => el["minWords"] || 0, "max" => el["maxWords"] || 0}}
+      end)
+
     clean_config = Map.put(config, "survey_json", Map.put(survey_json, "elements", clean_elements))
 
     params_js =
@@ -629,8 +636,29 @@ defmodule Socho.Studies.JsGenerator do
       |> Enum.map(fn {key, val} -> "  #{key}: #{value_to_js(val)}," end)
       |> Enum.join("\n")
 
+    word_count_js =
+      if map_size(word_limits) > 0 do
+        limits = Jason.encode!(word_limits)
+        """
+            var _wl = #{limits};
+            survey.onValidateQuestion.add(function(s, opts) {
+              var _l = _wl[opts.name];
+              if (!_l || !opts.value) return;
+              var _words = opts.value.trim().split(/\\s+/).filter(function(w) { return w.length > 0; });
+              if (_l.min > 0 && _words.length < _l.min) {
+                opts.error = "Please enter at least " + _l.min + (_l.min === 1 ? " word." : " words.");
+              } else if (_l.max > 0 && _words.length > _l.max) {
+                opts.error = "Please enter no more than " + _l.max + (_l.max === 1 ? " word." : " words.");
+              }
+            });
+        """
+      else
+        ""
+      end
+
     survey_fn = """
       survey_function: function(survey) {
+        #{String.trim(word_count_js)}
         survey.onTextMarkdown.add(function(s, opts) {
           opts.html = opts.text
             .replace(/<\\/p>\\s*<p[^>]*>/gi, '<br><br>')
