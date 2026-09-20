@@ -36,6 +36,7 @@ defmodule SochoWeb.StudyController do
     already_submitted =
       if is_nil(user_id) do
         study = Studies.get_study_meta!(study_id_int)
+
         not study.allow_multiple_public_submissions and
           Studies.has_submitted_from_ip?(study_id_int, remote_ip)
       else
@@ -53,23 +54,44 @@ defmodule SochoWeb.StudyController do
   end
 
   def export_template(conn, %{"id" => id}) do
-    template = Studies.export_template(id)
-    filename = template["title"]
-      |> String.downcase()
-      |> String.replace(~r/[^a-z0-9]+/, "-")
-      |> then(&"#{&1}-template.json")
+    study = Studies.get_study_meta!(id)
+    user = conn.assigns[:current_scope] && conn.assigns.current_scope.user
 
-    conn
-    |> put_resp_content_type("application/json")
-    |> put_resp_header("content-disposition", ~s(attachment; filename="#{filename}"))
-    |> send_resp(200, Jason.encode!(template, pretty: true))
+    authorized? =
+      case user && user.role do
+        :admin -> true
+        :manager -> not is_nil(user.client_id) and study.client_id == user.client_id
+        _ -> false
+      end
+
+    if authorized? do
+      template = Studies.export_template(id)
+
+      filename =
+        template["title"]
+        |> String.downcase()
+        |> String.replace(~r/[^a-z0-9]+/, "-")
+        |> then(&"#{&1}-template.json")
+
+      conn
+      |> put_resp_content_type("application/json")
+      |> put_resp_header("content-disposition", ~s(attachment; filename="#{filename}"))
+      |> send_resp(200, Jason.encode!(template, pretty: true))
+    else
+      conn
+      |> put_flash(:error, "You don't have access to export this study.")
+      |> redirect(to: ~p"/studies")
+    end
   end
 
   def import_template(conn, %{"file" => %Plug.Upload{path: path}}) do
+    user = conn.assigns[:current_scope] && conn.assigns.current_scope.user
+    client_id = if user && user.role == :manager, do: user.client_id, else: nil
+
     with {:ok, content} <- File.read(path),
          {:ok, %{"nodes" => nodes} = data} when is_list(nodes) <- Jason.decode(content),
          title <- Map.get(data, "title", "Imported Study"),
-         {:ok, study} <- Studies.import_template(title, nil, nodes) do
+         {:ok, study} <- Studies.import_template(title, client_id, nodes) do
       conn
       |> put_flash(:info, "\"#{study.title}\" imported successfully.")
       |> redirect(to: ~p"/studies/#{study.id}/edit")
@@ -89,13 +111,39 @@ defmodule SochoWeb.StudyController do
 
   def export(conn, %{"study_id" => study_id}) do
     study = Studies.get_study_meta!(study_id)
-    csv = Studies.export_submissions_csv(study_id)
-    filename = study.title |> String.downcase() |> String.replace(~r/[^a-z0-9]+/, "-") |> then(&"#{&1}-submissions.csv")
+    user = conn.assigns[:current_scope] && conn.assigns.current_scope.user
 
-    conn
-    |> put_resp_content_type("text/csv")
-    |> put_resp_header("content-disposition", ~s(attachment; filename="#{filename}"))
-    |> send_resp(200, csv)
+    authorized? =
+      case user && user.role do
+        :admin -> true
+        :manager -> not is_nil(user.client_id) and study.client_id == user.client_id
+        _ -> false
+      end
+
+    if authorized? do
+      csv = Studies.export_submissions_csv(study_id)
+
+      filename =
+        study.title
+        |> String.downcase()
+        |> String.replace(~r/[^a-z0-9]+/, "-")
+        |> then(&"#{&1}-submissions.csv")
+
+      conn
+      |> put_resp_content_type("text/csv")
+      |> put_resp_header("content-disposition", ~s(attachment; filename="#{filename}"))
+      |> send_resp(200, csv)
+    else
+      conn
+      |> put_flash(:error, "You don't have access to export submissions for this study.")
+      |> redirect(to: ~p"/studies")
+    end
+  end
+
+  defp authorize_study_access(%Scope{user: %User{role: :admin}}, _study), do: :ok
+
+  defp authorize_study_access(%Scope{user: %User{role: :manager, client_id: m_client}}, study) do
+    if not is_nil(m_client) and study.client_id == m_client, do: :ok, else: :forbidden
   end
 
   defp authorize_study_access(%Scope{user: %User{role: :participant, client_id: p_client}}, study)
@@ -103,5 +151,10 @@ defmodule SochoWeb.StudyController do
     if study.client_id == p_client, do: :ok, else: :forbidden
   end
 
-  defp authorize_study_access(_scope, _study), do: :ok
+  defp authorize_study_access(%Scope{user: %User{role: :participant, client_id: nil}}, _study),
+    do: :forbidden
+
+  defp authorize_study_access(_scope, study) do
+    if study.status == :published, do: :ok, else: :forbidden
+  end
 end

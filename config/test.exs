@@ -11,7 +11,7 @@ config :bcrypt_elixir, :log_rounds, 1
 config :socho, Socho.Repo,
   username: "tattle",
   password: "weak_password",
-  hostname: "localhost",
+  hostname: System.get_env("POSTGRES_HOST") || "localhost",
   database: "socho_test#{System.get_env("MIX_TEST_PARTITION")}",
   pool: Ecto.Adapters.SQL.Sandbox,
   pool_size: System.schedulers_online() * 2

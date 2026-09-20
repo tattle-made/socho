@@ -2,7 +2,32 @@ defmodule Socho.Studies do
   import Ecto.Query
 
   alias Socho.Repo
+  alias Socho.Accounts.{Scope, User}
   alias Socho.Studies.{Study, Trial, Submission}
+
+  def list_studies(%Scope{user: %User{role: :admin}}) do
+    list_studies()
+  end
+
+  def list_studies(%Scope{user: %User{role: :manager, client_id: client_id}})
+      when not is_nil(client_id) do
+    list_all_studies_for_client(client_id)
+  end
+
+  def list_studies(%Scope{user: %User{role: :manager, client_id: nil}}) do
+    []
+  end
+
+  def list_studies(%Scope{user: %User{role: :participant, client_id: client_id}})
+      when not is_nil(client_id) do
+    list_studies_for_client(client_id)
+  end
+
+  def list_studies(%Scope{user: %User{role: :participant, client_id: nil}}) do
+    []
+  end
+
+  def list_studies(_), do: []
 
   def list_studies do
     from(s in Study, order_by: [desc: s.inserted_at])
@@ -16,6 +41,7 @@ defmodule Socho.Studies do
       order_by: [desc: s.inserted_at]
     )
     |> Repo.all()
+    |> Repo.preload(:client)
   end
 
   def list_all_studies_for_client(client_id) do
@@ -24,6 +50,7 @@ defmodule Socho.Studies do
       order_by: [desc: s.inserted_at]
     )
     |> Repo.all()
+    |> Repo.preload(:client)
   end
 
   def get_study_meta!(id), do: Repo.get!(Study, id)
@@ -145,9 +172,15 @@ defmodule Socho.Studies do
 
   # ── Submissions ──────────────────────────────────────────────────────────────
 
-  def record_submission(study_id, user_id, trial_list, remote_ip \\ nil) when is_list(trial_list) do
+  def record_submission(study_id, user_id, trial_list, remote_ip \\ nil)
+      when is_list(trial_list) do
     %Submission{}
-    |> Submission.changeset(%{study_id: study_id, user_id: user_id, data: %{"trials" => trial_list}, remote_ip: remote_ip})
+    |> Submission.changeset(%{
+      study_id: study_id,
+      user_id: user_id,
+      data: %{"trials" => trial_list},
+      remote_ip: remote_ip
+    })
     |> Repo.insert()
   end
 
@@ -158,7 +191,9 @@ defmodule Socho.Studies do
   def has_submitted?(_study_id, nil), do: false
 
   def has_submitted_from_ip?(study_id, remote_ip) when is_binary(remote_ip) do
-    Repo.exists?(from s in Submission, where: s.study_id == ^study_id and s.remote_ip == ^remote_ip)
+    Repo.exists?(
+      from s in Submission, where: s.study_id == ^study_id and s.remote_ip == ^remote_ip
+    )
   end
 
   def count_submissions(study_id) do
@@ -228,6 +263,7 @@ defmodule Socho.Studies do
 
   defp csv_escape(value) do
     str = to_string(value)
+
     if String.contains?(str, [",", "\"", "\n"]) do
       "\"" <> String.replace(str, "\"", "\"\"") <> "\""
     else

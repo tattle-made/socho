@@ -4,7 +4,7 @@ import Config
 config :socho, Socho.Repo,
   username: "tattle",
   password: "weak_password",
-  hostname: "localhost",
+  hostname: System.get_env("POSTGRES_HOST") || "localhost",
   database: "socho_dev",
   stacktrace: true,
   show_sensitive_data_on_connection_error: true,

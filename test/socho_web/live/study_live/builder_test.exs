@@ -6,9 +6,9 @@ defmodule SochoWeb.StudyLive.BuilderTest do
   setup %{conn: conn} do
     {:ok, user} =
       Socho.Accounts.UserAdmin.create_user(
-        "manager#{System.unique_integer()}@example.com",
+        "admin#{System.unique_integer()}@example.com",
         "password123!",
-        :manager
+        :admin
       )
 
     %{conn: log_in_user(conn, user), user: user}

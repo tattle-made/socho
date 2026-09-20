@@ -7,18 +7,40 @@ defmodule SochoWeb.StudyLive.Settings do
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
+    user = socket.assigns.current_scope.user
     study = Studies.get_study_meta!(id)
-    clients = Clients.list_clients()
-    changeset = Study.changeset(study, %{})
 
-    {:ok,
-     assign(socket,
-       study: study,
-       clients: clients,
-       form: to_form(changeset),
-       submission_count: Studies.count_submissions(id),
-       study_url: SochoWeb.Endpoint.url() <> "/study/#{id}"
-     )}
+    authorized? =
+      case user.role do
+        :admin -> true
+        :manager -> not is_nil(user.client_id) and study.client_id == user.client_id
+        _ -> false
+      end
+
+    if authorized? do
+      clients =
+        if user.role == :admin do
+          Clients.list_clients()
+        else
+          if user.client_id, do: [Clients.get_client(user.client_id)], else: []
+        end
+
+      changeset = Study.changeset(study, %{})
+
+      {:ok,
+       assign(socket,
+         study: study,
+         clients: clients,
+         form: to_form(changeset),
+         submission_count: Studies.count_submissions(id),
+         study_url: SochoWeb.Endpoint.url() <> "/study/#{id}"
+       )}
+    else
+      {:ok,
+       socket
+       |> put_flash(:error, "You don't have access to this study.")
+       |> redirect(to: ~p"/studies")}
+    end
   end
 
   @impl true
@@ -26,7 +48,6 @@ defmodule SochoWeb.StudyLive.Settings do
     ~H"""
     <Layouts.app flash={@flash} current_scope={@current_scope}>
       <div class="max-w-xl mx-auto p-6 space-y-6">
-
         <div class="flex items-center gap-3">
           <.link href={"/studies/#{@study.id}/edit"} class="btn btn-ghost btn-sm">
             ← Builder
@@ -36,7 +57,6 @@ defmodule SochoWeb.StudyLive.Settings do
 
         <div class="card bg-base-200 shadow p-6">
           <.form for={@form} phx-submit="save" phx-change="validate" class="space-y-4">
-
             <div class="form-control">
               <label class="label">
                 <span class="label-text font-medium">Title <span class="text-error">*</span></span>
@@ -97,7 +117,6 @@ defmodule SochoWeb.StudyLive.Settings do
                 Save Settings
               </.button>
             </div>
-
           </.form>
         </div>
 
@@ -122,7 +141,10 @@ defmodule SochoWeb.StudyLive.Settings do
             <div>
               <h2 class="text-lg font-semibold">Submissions</h2>
               <p class="text-sm opacity-60 mt-0.5">
-                {if @submission_count == 0, do: "No submissions yet.", else: "#{@submission_count} #{if @submission_count == 1, do: "submission", else: "submissions"} collected."}
+                {if @submission_count == 0,
+                  do: "No submissions yet.",
+                  else:
+                    "#{@submission_count} #{if @submission_count == 1, do: "submission", else: "submissions"} collected."}
               </p>
             </div>
             <a
@@ -134,7 +156,6 @@ defmodule SochoWeb.StudyLive.Settings do
             </a>
           </div>
         </div>
-
       </div>
     </Layouts.app>
     """
@@ -151,17 +172,38 @@ defmodule SochoWeb.StudyLive.Settings do
   end
 
   def handle_event("save", %{"study" => params}, socket) do
-    case Studies.update_study(socket.assigns.study.id, params) do
-      {:ok, study} ->
-        changeset = Study.changeset(study, %{})
+    user = socket.assigns.current_scope.user
+    study = socket.assigns.study
 
-        {:noreply,
-         socket
-         |> put_flash(:info, "Settings saved.")
-         |> assign(study: study, form: to_form(changeset))}
+    authorized? =
+      case user.role do
+        :admin -> true
+        :manager -> not is_nil(user.client_id) and study.client_id == user.client_id
+        _ -> false
+      end
 
-      {:error, %Ecto.Changeset{} = changeset} ->
-        {:noreply, assign(socket, form: to_form(changeset))}
+    if authorized? do
+      params =
+        if user.role == :manager do
+          Map.put(params, "client_id", user.client_id)
+        else
+          params
+        end
+
+      case Studies.update_study(study.id, params) do
+        {:ok, updated_study} ->
+          changeset = Study.changeset(updated_study, %{})
+
+          {:noreply,
+           socket
+           |> put_flash(:info, "Settings saved.")
+           |> assign(study: updated_study, form: to_form(changeset))}
+
+        {:error, %Ecto.Changeset{} = changeset} ->
+          {:noreply, assign(socket, form: to_form(changeset))}
+      end
+    else
+      {:noreply, put_flash(socket, :error, "You don't have permission to modify this study.")}
     end
   end
 end

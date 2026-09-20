@@ -15,6 +15,16 @@ defmodule SochoWeb.StudyLive.Builder do
   def mount(_params, _session, socket) do
     registry = Registry.all()
     plugin_names = registry |> Map.keys() |> Enum.sort()
+    user = socket.assigns.current_scope.user
+
+    clients =
+      if user.role == :admin do
+        Clients.list_clients()
+      else
+        if user.client_id, do: [Clients.get_client(user.client_id)], else: []
+      end
+
+    study_client_id = if user.role == :manager, do: user.client_id, else: nil
 
     {:ok,
      assign(socket,
@@ -24,8 +34,8 @@ defmodule SochoWeb.StudyLive.Builder do
        filtered_plugins: plugin_names,
        study_id: nil,
        study_title: "",
-       study_client_id: nil,
-       clients: Clients.list_clients(),
+       study_client_id: study_client_id,
+       clients: clients,
        trials: [],
        selected_trial_id: nil,
        show_preview: false,
@@ -38,16 +48,32 @@ defmodule SochoWeb.StudyLive.Builder do
 
   @impl true
   def handle_params(%{"id" => id}, _uri, socket) do
+    user = socket.assigns.current_scope.user
     study = Studies.get_study!(id)
-    trials = Enum.map(study.trials, &db_trial_to_node/1)
 
-    {:noreply,
-     assign(socket,
-       study_id: study.id,
-       study_title: study.title,
-       study_client_id: study.client_id,
-       trials: trials
-     )}
+    authorized? =
+      case user.role do
+        :admin -> true
+        :manager -> not is_nil(user.client_id) and study.client_id == user.client_id
+        _ -> false
+      end
+
+    if authorized? do
+      trials = Enum.map(study.trials, &db_trial_to_node/1)
+
+      {:noreply,
+       assign(socket,
+         study_id: study.id,
+         study_title: study.title,
+         study_client_id: study.client_id,
+         trials: trials
+       )}
+    else
+      {:noreply,
+       socket
+       |> put_flash(:error, "You don't have access to this study.")
+       |> push_navigate(to: ~p"/studies")}
+    end
   end
 
   def handle_params(_params, _uri, socket), do: {:noreply, socket}
@@ -60,7 +86,15 @@ defmodule SochoWeb.StudyLive.Builder do
   end
 
   def handle_event("study_client_changed", %{"value" => client_id_str}, socket) do
-    client_id = if client_id_str == "", do: nil, else: String.to_integer(client_id_str)
+    user = socket.assigns.current_scope.user
+
+    client_id =
+      if user.role == :manager do
+        user.client_id
+      else
+        if client_id_str == "", do: nil, else: String.to_integer(client_id_str)
+      end
+
     {:noreply, assign(socket, study_client_id: client_id)}
   end
 
@@ -153,7 +187,9 @@ defmodule SochoWeb.StudyLive.Builder do
     with id when not is_nil(id) <- socket.assigns.selected_trial_id,
          node when not is_nil(node) <- find_node(socket.assigns.trials, id) do
       new_config = Map.put(node.config, "skip_unless", new_skip_unless)
-      {:noreply, assign(socket, trials: update_node_config(socket.assigns.trials, id, new_config))}
+
+      {:noreply,
+       assign(socket, trials: update_node_config(socket.assigns.trials, id, new_config))}
     else
       _ -> {:noreply, socket}
     end
@@ -163,7 +199,9 @@ defmodule SochoWeb.StudyLive.Builder do
     with id when not is_nil(id) <- socket.assigns.selected_trial_id,
          node when not is_nil(node) <- find_node(socket.assigns.trials, id) do
       new_config = Map.put(node.config, "survey_json", survey_json)
-      {:noreply, assign(socket, trials: update_node_config(socket.assigns.trials, id, new_config))}
+
+      {:noreply,
+       assign(socket, trials: update_node_config(socket.assigns.trials, id, new_config))}
     else
       _ -> {:noreply, socket}
     end
@@ -179,6 +217,7 @@ defmodule SochoWeb.StudyLive.Builder do
         else
           schema = socket.assigns.registry[node.plugin]
           new_config = coerce_config(params, schema["parameters"] || %{})
+
           # data_tag and survey_json are managed via their own event handlers; preserve server-side values
           new_config
           |> Map.put("data_tag", node.config["data_tag"] || "")
@@ -195,7 +234,9 @@ defmodule SochoWeb.StudyLive.Builder do
     with id when not is_nil(id) <- socket.assigns.selected_trial_id,
          node when not is_nil(node) <- find_node(socket.assigns.trials, id) do
       new_config = Map.put(node.config, "data_tag", tag)
-      {:noreply, assign(socket, trials: update_node_config(socket.assigns.trials, id, new_config))}
+
+      {:noreply,
+       assign(socket, trials: update_node_config(socket.assigns.trials, id, new_config))}
     else
       _ -> {:noreply, socket}
     end
@@ -216,7 +257,9 @@ defmodule SochoWeb.StudyLive.Builder do
         end
 
       new_extensions = Map.put(node.extensions || %{}, ext_name, new_ext_cfg)
-      {:noreply, assign(socket, trials: update_node_extensions(socket.assigns.trials, id, new_extensions))}
+
+      {:noreply,
+       assign(socket, trials: update_node_extensions(socket.assigns.trials, id, new_extensions))}
     else
       _ -> {:noreply, socket}
     end
@@ -230,7 +273,9 @@ defmodule SochoWeb.StudyLive.Builder do
       new_button = %{"key" => "e", "preset" => "left", "label" => "←", "color" => ""}
       new_ext_cfg = Map.put(ext_cfg, "buttons", buttons ++ [new_button])
       new_extensions = Map.put(node.extensions || %{}, ext_name, new_ext_cfg)
-      {:noreply, assign(socket, trials: update_node_extensions(socket.assigns.trials, id, new_extensions))}
+
+      {:noreply,
+       assign(socket, trials: update_node_extensions(socket.assigns.trials, id, new_extensions))}
     else
       _ -> {:noreply, socket}
     end
@@ -244,13 +289,19 @@ defmodule SochoWeb.StudyLive.Builder do
       buttons = Map.get(ext_cfg, "buttons", []) |> List.delete_at(idx)
       new_ext_cfg = Map.put(ext_cfg, "buttons", buttons)
       new_extensions = Map.put(node.extensions || %{}, ext_name, new_ext_cfg)
-      {:noreply, assign(socket, trials: update_node_extensions(socket.assigns.trials, id, new_extensions))}
+
+      {:noreply,
+       assign(socket, trials: update_node_extensions(socket.assigns.trials, id, new_extensions))}
     else
       _ -> {:noreply, socket}
     end
   end
 
-  def handle_event("tsb_button_changed", %{"ext" => ext_name, "index" => idx_str, "button" => params}, socket) do
+  def handle_event(
+        "tsb_button_changed",
+        %{"ext" => ext_name, "index" => idx_str, "button" => params},
+        socket
+      ) do
     with id when not is_nil(id) <- socket.assigns.selected_trial_id,
          node when not is_nil(node) <- find_node(socket.assigns.trials, id) do
       idx = String.to_integer(idx_str)
@@ -259,7 +310,9 @@ defmodule SochoWeb.StudyLive.Builder do
       updated = Map.merge(Enum.at(buttons, idx, %{}), params)
       new_ext_cfg = Map.put(ext_cfg, "buttons", List.replace_at(buttons, idx, updated))
       new_extensions = Map.put(node.extensions || %{}, ext_name, new_ext_cfg)
-      {:noreply, assign(socket, trials: update_node_extensions(socket.assigns.trials, id, new_extensions))}
+
+      {:noreply,
+       assign(socket, trials: update_node_extensions(socket.assigns.trials, id, new_extensions))}
     else
       _ -> {:noreply, socket}
     end
@@ -273,7 +326,9 @@ defmodule SochoWeb.StudyLive.Builder do
       new_item = build_defaults(nested)
       items = Map.get(node.config, param_name) |> ensure_list()
       new_config = Map.put(node.config, param_name, items ++ [new_item])
-      {:noreply, assign(socket, trials: update_node_config(socket.assigns.trials, id, new_config))}
+
+      {:noreply,
+       assign(socket, trials: update_node_config(socket.assigns.trials, id, new_config))}
     else
       _ -> {:noreply, socket}
     end
@@ -285,7 +340,9 @@ defmodule SochoWeb.StudyLive.Builder do
       idx = String.to_integer(idx_str)
       items = Map.get(node.config, param_name) |> ensure_list() |> List.delete_at(idx)
       new_config = Map.put(node.config, param_name, items)
-      {:noreply, assign(socket, trials: update_node_config(socket.assigns.trials, id, new_config))}
+
+      {:noreply,
+       assign(socket, trials: update_node_config(socket.assigns.trials, id, new_config))}
     else
       _ -> {:noreply, socket}
     end
@@ -309,7 +366,11 @@ defmodule SochoWeb.StudyLive.Builder do
     {:noreply, assign(socket, trials: duplicate_node(socket.assigns.trials, id))}
   end
 
-  def handle_event("reorder_node", %{"id" => id_str, "from" => from_id, "to" => to_id, "new_index" => new_idx_str}, socket) do
+  def handle_event(
+        "reorder_node",
+        %{"id" => id_str, "from" => from_id, "to" => to_id, "new_index" => new_idx_str},
+        socket
+      ) do
     id = String.to_integer(id_str)
     new_idx = String.to_integer(new_idx_str)
 
@@ -329,34 +390,75 @@ defmodule SochoWeb.StudyLive.Builder do
 
   def handle_event("rename_node", %{"node_id" => id_str, "label" => label}, socket) do
     id = String.to_integer(id_str)
+
     with node when not is_nil(node) <- find_node(socket.assigns.trials, id) do
       new_config = Map.put(node.config, "label", label)
-      {:noreply, assign(socket, trials: update_node_config(socket.assigns.trials, id, new_config))}
+
+      {:noreply,
+       assign(socket, trials: update_node_config(socket.assigns.trials, id, new_config))}
     else
       _ -> {:noreply, socket}
     end
   end
 
   def handle_event("save_study", _params, socket) do
+    user = socket.assigns.current_scope.user
     %{study_id: study_id, study_client_id: client_id, trials: trials} = socket.assigns
-    title = if socket.assigns.study_title == "", do: "Untitled Study", else: socket.assigns.study_title
-    trial_maps = Enum.map(trials, &node_to_map/1)
 
-    result =
-      if study_id,
-        do: Studies.update_study_with_trials(study_id, title, client_id, trial_maps),
-        else: Studies.create_study_with_trials(title, client_id, trial_maps)
+    client_id =
+      if user.role == :manager do
+        user.client_id
+      else
+        client_id
+      end
 
-    case result do
-      {:ok, study} ->
-        {:noreply,
-         socket
-         |> assign(study_id: study.id, preview_key: socket.assigns.preview_key + 1)
-         |> put_flash(:info, "Saved")
-         |> push_patch(to: "/studies/#{study.id}/edit")}
+    authorized? =
+      if study_id do
+        case user.role do
+          :admin ->
+            true
 
-      {:error, reason} ->
-        {:noreply, put_flash(socket, :error, "Failed to save: #{inspect(reason)}")}
+          :manager ->
+            not is_nil(user.client_id) and
+              Studies.get_study_meta!(study_id).client_id == user.client_id
+
+          _ ->
+            false
+        end
+      else
+        case user.role do
+          :admin -> true
+          :manager -> not is_nil(user.client_id)
+          _ -> false
+        end
+      end
+
+    if authorized? do
+      title =
+        if socket.assigns.study_title == "",
+          do: "Untitled Study",
+          else: socket.assigns.study_title
+
+      trial_maps = Enum.map(trials, &node_to_map/1)
+
+      result =
+        if study_id,
+          do: Studies.update_study_with_trials(study_id, title, client_id, trial_maps),
+          else: Studies.create_study_with_trials(title, client_id, trial_maps)
+
+      case result do
+        {:ok, study} ->
+          {:noreply,
+           socket
+           |> assign(study_id: study.id, preview_key: socket.assigns.preview_key + 1)
+           |> put_flash(:info, "Saved")
+           |> push_patch(to: "/studies/#{study.id}/edit")}
+
+        {:error, reason} ->
+          {:noreply, put_flash(socket, :error, "Failed to save: #{inspect(reason)}")}
+      end
+    else
+      {:noreply, put_flash(socket, :error, "You don't have permission to save this study.")}
     end
   end
 
@@ -392,7 +494,12 @@ defmodule SochoWeb.StudyLive.Builder do
       tpl = Templates.get(node.config["template_id"])
       vars = coerce_template_vars(raw_vars, tpl.variables)
       children = tpl.build.(vars) |> stamp_ids()
-      new_config = %{"template_id" => node.config["template_id"], "template_name" => node.config["template_name"], "vars" => vars}
+
+      new_config = %{
+        "template_id" => node.config["template_id"],
+        "template_name" => node.config["template_name"],
+        "vars" => vars
+      }
 
       trials =
         socket.assigns.trials
@@ -412,8 +519,18 @@ defmodule SochoWeb.StudyLive.Builder do
       vars = node.config["vars"] || %{}
       new_vars = Map.update(vars, key, [""], &(&1 ++ [""]))
       children = tpl.build.(new_vars) |> stamp_ids()
-      new_config = %{"template_id" => node.config["template_id"], "template_name" => node.config["template_name"], "vars" => new_vars}
-      trials = socket.assigns.trials |> update_node_config(id, new_config) |> update_node_children(id, children)
+
+      new_config = %{
+        "template_id" => node.config["template_id"],
+        "template_name" => node.config["template_name"],
+        "vars" => new_vars
+      }
+
+      trials =
+        socket.assigns.trials
+        |> update_node_config(id, new_config)
+        |> update_node_children(id, children)
+
       {:noreply, assign(socket, trials: trials)}
     else
       _ -> {:noreply, socket}
@@ -425,11 +542,24 @@ defmodule SochoWeb.StudyLive.Builder do
          %{node_type: "template_group"} = node <- find_node(socket.assigns.trials, id) do
       tpl = Templates.get(node.config["template_id"])
       vars = node.config["vars"] || %{}
-      new_list = Map.get(vars, key, []) |> ensure_list() |> List.delete_at(String.to_integer(idx_str))
+
+      new_list =
+        Map.get(vars, key, []) |> ensure_list() |> List.delete_at(String.to_integer(idx_str))
+
       new_vars = Map.put(vars, key, new_list)
       children = tpl.build.(new_vars) |> stamp_ids()
-      new_config = %{"template_id" => node.config["template_id"], "template_name" => node.config["template_name"], "vars" => new_vars}
-      trials = socket.assigns.trials |> update_node_config(id, new_config) |> update_node_children(id, children)
+
+      new_config = %{
+        "template_id" => node.config["template_id"],
+        "template_name" => node.config["template_name"],
+        "vars" => new_vars
+      }
+
+      trials =
+        socket.assigns.trials
+        |> update_node_config(id, new_config)
+        |> update_node_children(id, children)
+
       {:noreply, assign(socket, trials: trials)}
     else
       _ -> {:noreply, socket}
@@ -443,8 +573,18 @@ defmodule SochoWeb.StudyLive.Builder do
       vars = node.config["vars"] || %{}
       new_vars = Map.update(vars, key, [["", ""]], &(&1 ++ [["", ""]]))
       children = tpl.build.(new_vars) |> stamp_ids()
-      new_config = %{"template_id" => node.config["template_id"], "template_name" => node.config["template_name"], "vars" => new_vars}
-      trials = socket.assigns.trials |> update_node_config(id, new_config) |> update_node_children(id, children)
+
+      new_config = %{
+        "template_id" => node.config["template_id"],
+        "template_name" => node.config["template_name"],
+        "vars" => new_vars
+      }
+
+      trials =
+        socket.assigns.trials
+        |> update_node_config(id, new_config)
+        |> update_node_children(id, children)
+
       {:noreply, assign(socket, trials: trials)}
     else
       _ -> {:noreply, socket}
@@ -456,11 +596,24 @@ defmodule SochoWeb.StudyLive.Builder do
          %{node_type: "template_group"} = node <- find_node(socket.assigns.trials, id) do
       tpl = Templates.get(node.config["template_id"])
       vars = node.config["vars"] || %{}
-      new_list = Map.get(vars, key, []) |> ensure_list() |> List.delete_at(String.to_integer(idx_str))
+
+      new_list =
+        Map.get(vars, key, []) |> ensure_list() |> List.delete_at(String.to_integer(idx_str))
+
       new_vars = Map.put(vars, key, new_list)
       children = tpl.build.(new_vars) |> stamp_ids()
-      new_config = %{"template_id" => node.config["template_id"], "template_name" => node.config["template_name"], "vars" => new_vars}
-      trials = socket.assigns.trials |> update_node_config(id, new_config) |> update_node_children(id, children)
+
+      new_config = %{
+        "template_id" => node.config["template_id"],
+        "template_name" => node.config["template_name"],
+        "vars" => new_vars
+      }
+
+      trials =
+        socket.assigns.trials
+        |> update_node_config(id, new_config)
+        |> update_node_children(id, children)
+
       {:noreply, assign(socket, trials: trials)}
     else
       _ -> {:noreply, socket}
@@ -484,13 +637,18 @@ defmodule SochoWeb.StudyLive.Builder do
   defp collect_data_tags(nodes), do: SochoWeb.StudyLive.DataTags.collect(nodes)
   defp update_node_config(nodes, id, cfg), do: TrialTree.update_node_config(nodes, id, cfg)
   defp update_node_children(nodes, id, ch), do: TrialTree.update_node_children(nodes, id, ch)
-  defp update_node_extensions(nodes, id, ext), do: TrialTree.update_node_extensions(nodes, id, ext)
+
+  defp update_node_extensions(nodes, id, ext),
+    do: TrialTree.update_node_extensions(nodes, id, ext)
+
   defp remove_node_from_tree(nodes, id), do: TrialTree.remove_node_from_tree(nodes, id)
   defp add_child_to_node(nodes, pid, node), do: TrialTree.add_child_to_node(nodes, pid, node)
   defp move_node_in_tree(nodes, id, dir), do: TrialTree.move_node_in_tree(nodes, id, dir)
   defp duplicate_node(nodes, id), do: TrialTree.duplicate_node(nodes, id)
   defp reorder_node_in_tree(nodes, id, idx), do: TrialTree.reorder_node_in_tree(nodes, id, idx)
-  defp move_node_to_parent(nodes, id, parent_id, idx), do: TrialTree.move_node_to_parent(nodes, id, parent_id, idx)
+
+  defp move_node_to_parent(nodes, id, parent_id, idx),
+    do: TrialTree.move_node_to_parent(nodes, id, parent_id, idx)
 
   # ── Config Helpers ──────────────────────────────────────────────────────────
 
@@ -555,13 +713,17 @@ defmodule SochoWeb.StudyLive.Builder do
 
           "OBJECT" ->
             case val do
-              val when is_map(val) -> val
+              val when is_map(val) ->
+                val
+
               val when is_binary(val) ->
                 case Jason.decode(val) do
                   {:ok, map} when is_map(map) -> map
                   _ -> %{}
                 end
-              _ -> %{}
+
+              _ ->
+                %{}
             end
 
           "COMPLEX" ->
@@ -601,6 +763,7 @@ defmodule SochoWeb.StudyLive.Builder do
   defp coerce_template_vars(raw_vars, var_defs) do
     Map.new(raw_vars, fn {key, val} ->
       var_def = Enum.find(var_defs, fn v -> v.key == key end)
+
       coerced =
         cond do
           var_def && var_def.type == :list && is_map(val) ->
@@ -623,6 +786,7 @@ defmodule SochoWeb.StudyLive.Builder do
           true ->
             val
         end
+
       {key, coerced}
     end)
   end
@@ -690,565 +854,606 @@ defmodule SochoWeb.StudyLive.Builder do
 
     ~H"""
     <Layouts.app flash={@flash} current_scope={@current_scope}>
-    <div class="flex flex-col gap-6 p-4">
-      <%!-- Header bar --%>
-      <div class="flex items-center gap-3 shrink-0">
-        <h1 class="text-xl font-bold shrink-0">Study Builder</h1>
-        <div class="flex-1" />
-        <.link
-          :if={@study_id}
-          href={"/studies/#{@study_id}/settings"}
-          class="btn btn-ghost btn-sm shrink-0"
-          title="Study settings"
-        >
-          <.icon name="hero-cog-6-tooth" class="size-5" />
-        </.link>
-        <button
-          :if={@study_id}
-          class={["btn btn-sm shrink-0", if(@show_preview, do: "btn-primary", else: "btn-outline")]}
-          phx-click="toggle_preview"
-          type="button"
-          title="Toggle live preview"
-        >
-          👁 Preview
-        </button>
-        <button
-          class="btn btn-success shrink-0"
-          phx-click="save_study"
-          type="button"
-          disabled={@trials == []}
-        >
-          Save
-        </button>
-      </div>
-
-      <%!-- Blocks / Templates strip --%>
-      <div class="shrink-0 border-b border-base-300 pb-3 flex flex-col gap-2">
-
-        <%!-- Tab bar --%>
-        <div role="tablist" class="tabs tabs-bordered tabs-sm">
-          <button
-            role="tab"
-            class={["tab", if(@sidebar_tab == :blocks, do: "tab-active")]}
-            phx-click="switch_sidebar_tab"
-            phx-value-tab="blocks"
-            type="button"
+      <div class="flex flex-col gap-6 p-4">
+        <%!-- Header bar --%>
+        <div class="flex items-center gap-3 shrink-0">
+          <h1 class="text-xl font-bold shrink-0">Study Builder</h1>
+          <div class="flex-1" />
+          <.link
+            :if={@study_id}
+            href={"/studies/#{@study_id}/settings"}
+            class="btn btn-ghost btn-sm shrink-0"
+            title="Study settings"
           >
-            Blocks
+            <.icon name="hero-cog-6-tooth" class="size-5" />
+          </.link>
+          <button
+            :if={@study_id}
+            class={["btn btn-sm shrink-0", if(@show_preview, do: "btn-primary", else: "btn-outline")]}
+            phx-click="toggle_preview"
+            type="button"
+            title="Toggle live preview"
+          >
+            👁 Preview
           </button>
           <button
-            role="tab"
-            class={["tab", if(@sidebar_tab == :templates, do: "tab-active")]}
-            phx-click="switch_sidebar_tab"
-            phx-value-tab="templates"
+            class="btn btn-success shrink-0"
+            phx-click="save_study"
             type="button"
+            disabled={@trials == []}
           >
-            Templates
+            Save
           </button>
         </div>
 
-        <%!-- Blocks tab content --%>
-        <%= if @sidebar_tab == :blocks do %>
-          <div class="flex items-center gap-2 shrink-0">
+        <%!-- Blocks / Templates strip --%>
+        <div class="shrink-0 border-b border-base-300 pb-3 flex flex-col gap-2">
+          <%!-- Tab bar --%>
+          <div role="tablist" class="tabs tabs-bordered tabs-sm">
             <button
-              class="btn btn-sm btn-outline btn-secondary shrink-0"
-              phx-click="add_timeline"
+              role="tab"
+              class={["tab", if(@sidebar_tab == :blocks, do: "tab-active")]}
+              phx-click="switch_sidebar_tab"
+              phx-value-tab="blocks"
               type="button"
             >
-              + Timeline Group
+              Blocks
             </button>
-            <form phx-change="plugin_search">
-              <input
-                class="input input-bordered input-sm w-44"
-                type="text"
-                name="query"
-                placeholder="Search plugins…"
-                value={@plugin_search}
-                phx-debounce="100"
-                autocomplete="off"
-              />
-            </form>
+            <button
+              role="tab"
+              class={["tab", if(@sidebar_tab == :templates, do: "tab-active")]}
+              phx-click="switch_sidebar_tab"
+              phx-value-tab="templates"
+              type="button"
+            >
+              Templates
+            </button>
           </div>
-          <div class="flex gap-2 overflow-x-auto pb-1">
-            <p :if={@filtered_plugins == []} class="text-sm opacity-50 px-2 self-center">No plugins found.</p>
-            <%= for name <- @filtered_plugins do %>
-              <% meta = @registry[name] %>
+
+          <%!-- Blocks tab content --%>
+          <%= if @sidebar_tab == :blocks do %>
+            <div class="flex items-center gap-2 shrink-0">
               <button
-                class="btn btn-ghost shrink-0 w-44 h-auto py-2 px-3 font-normal border border-base-200 hover:border-primary flex flex-col items-start text-left"
-                phx-click="add_plugin_trial"
-                phx-value-plugin={name}
+                class="btn btn-sm btn-outline btn-secondary shrink-0"
+                phx-click="add_timeline"
                 type="button"
               >
-                <div class="flex items-center gap-1 w-full">
-                  <span class="text-sm font-medium leading-tight">{name}</span>
-                  <span :if={meta["custom"]} class="badge badge-accent badge-xs ml-auto">custom</span>
-                </div>
-                <span :if={meta["description"]} class="text-xs opacity-50 leading-tight whitespace-normal text-left mt-0.5">
-                  {meta["description"]}
-                </span>
+                + Timeline Group
               </button>
-            <% end %>
-          </div>
-        <% end %>
+              <form phx-change="plugin_search">
+                <input
+                  class="input input-bordered input-sm w-44"
+                  type="text"
+                  name="query"
+                  placeholder="Search plugins…"
+                  value={@plugin_search}
+                  phx-debounce="100"
+                  autocomplete="off"
+                />
+              </form>
+            </div>
+            <div class="flex gap-2 overflow-x-auto pb-1">
+              <p :if={@filtered_plugins == []} class="text-sm opacity-50 px-2 self-center">
+                No plugins found.
+              </p>
+              <%= for name <- @filtered_plugins do %>
+                <% meta = @registry[name] %>
+                <button
+                  class="btn btn-ghost shrink-0 w-44 h-auto py-2 px-3 font-normal border border-base-200 hover:border-primary flex flex-col items-start text-left"
+                  phx-click="add_plugin_trial"
+                  phx-value-plugin={name}
+                  type="button"
+                >
+                  <div class="flex items-center gap-1 w-full">
+                    <span class="text-sm font-medium leading-tight">{name}</span>
+                    <span :if={meta["custom"]} class="badge badge-accent badge-xs ml-auto">
+                      custom
+                    </span>
+                  </div>
+                  <span
+                    :if={meta["description"]}
+                    class="text-xs opacity-50 leading-tight whitespace-normal text-left mt-0.5"
+                  >
+                    {meta["description"]}
+                  </span>
+                </button>
+              <% end %>
+            </div>
+          <% end %>
 
-        <%!-- Templates tab content --%>
-        <%= if @sidebar_tab == :templates do %>
-          <div class="flex gap-2 overflow-x-auto pb-1">
-            <%= for tpl <- @templates do %>
-              <button
-                class="btn btn-ghost shrink-0 w-52 h-auto py-2 px-3 font-normal border border-base-200 hover:border-primary flex flex-col items-start text-left"
-                phx-click="insert_template"
-                phx-value-id={tpl.id}
-                type="button"
-              >
-                <span class="text-sm font-semibold leading-tight">{tpl.name}</span>
-                <span class="text-xs opacity-50 leading-tight whitespace-normal text-left mt-0.5">{tpl.description}</span>
-              </button>
-            <% end %>
-          </div>
-        <% end %>
-
-      </div>
-
-      <%!-- 2-column layout (3rd column added when preview is open) --%>
-      <div
-        class="grid gap-6 items-start"
-        style={if @show_preview && @study_id, do: "grid-template-columns: 320px 1fr 360px", else: "grid-template-columns: 320px 1fr"}
-      >
-
-        <%!-- Column 1: Trial tree --%>
-        <div class="flex flex-col gap-2">
-          <p class="text-xs font-semibold uppercase tracking-wider opacity-50">
-            Trials <span class="badge badge-neutral ml-1">{length(@trials)}</span>
-          </p>
-
-          <div id="trial-root-list" phx-hook="Sortable" class="space-y-2">
-            <p :if={@trials == []} class="text-sm opacity-50">
-              Pick a plugin above to add a block.
-            </p>
-
-            <%= for {node, position} <- Enum.with_index(@trials, 1) do %>
-              <.node_block node={node} position={position} selected_id={@selected_trial_id} />
-            <% end %>
-          </div>
+          <%!-- Templates tab content --%>
+          <%= if @sidebar_tab == :templates do %>
+            <div class="flex gap-2 overflow-x-auto pb-1">
+              <%= for tpl <- @templates do %>
+                <button
+                  class="btn btn-ghost shrink-0 w-52 h-auto py-2 px-3 font-normal border border-base-200 hover:border-primary flex flex-col items-start text-left"
+                  phx-click="insert_template"
+                  phx-value-id={tpl.id}
+                  type="button"
+                >
+                  <span class="text-sm font-semibold leading-tight">{tpl.name}</span>
+                  <span class="text-xs opacity-50 leading-tight whitespace-normal text-left mt-0.5">
+                    {tpl.description}
+                  </span>
+                </button>
+              <% end %>
+            </div>
+          <% end %>
         </div>
 
-        <%!-- Column 2: Config panel --%>
-        <div class="flex flex-col gap-2 border-l border-base-300 pl-4 sticky top-16 max-h-[calc(100vh-4rem)] overflow-y-auto">
-          <%= if @selected_trial && @selected_trial.node_type == "template_group" do %>
-            <p class="text-xs font-semibold uppercase tracking-wider opacity-50 shrink-0">Configure</p>
-            <p class="text-sm font-medium text-accent shrink-0 -mt-1">{@selected_template && @selected_template.name}</p>
+        <%!-- 2-column layout (3rd column added when preview is open) --%>
+        <div
+          class="grid gap-6 items-start"
+          style={
+            if @show_preview && @study_id,
+              do: "grid-template-columns: 320px 1fr 360px",
+              else: "grid-template-columns: 320px 1fr"
+          }
+        >
+          <%!-- Column 1: Trial tree --%>
+          <div class="flex flex-col gap-2">
+            <p class="text-xs font-semibold uppercase tracking-wider opacity-50">
+              Trials <span class="badge badge-neutral ml-1">{length(@trials)}</span>
+            </p>
 
-            <div>
-              <form
-                phx-change="template_vars_changed"
-                id={"template-vars-form-#{@template_group_key}"}
-                class="space-y-5"
-              >
-                <%= for var <- (@selected_template && @selected_template.variables) || [] do %>
-                  <% current_vars = @selected_trial.config["vars"] || %{} %>
-                  <div class="form-control">
-                    <p class="text-sm font-medium leading-tight">{var.label}</p>
-                    <%= if var.type == :pair_list do %>
-                      <% pairs = Map.get(current_vars, var.key, var.default) |> ensure_list() %>
-                      <div class="space-y-2 mt-1">
-                        <%= for {pair, idx} <- Enum.with_index(pairs) do %>
-                          <% [img_a, img_b] = ensure_pair(pair) %>
-                          <div class="border border-base-300 rounded p-2 space-y-1">
-                            <div class="flex items-center justify-between mb-1">
-                              <span class="text-xs font-medium opacity-50">Pair {idx + 1}</span>
-                              <button
-                                type="button"
-                                class="btn btn-xs btn-ghost text-error"
-                                phx-click="template_var_pair_remove"
-                                phx-value-key={var.key}
-                                phx-value-index={idx}
-                              >✕</button>
-                            </div>
-                            <input
-                              type="text"
-                              class="input input-bordered input-sm w-full"
-                              name={"vars[#{var.key}][#{idx}][0]"}
-                              value={img_a}
-                              placeholder="Image A URL"
-                              phx-debounce="300"
-                            />
-                            <input
-                              type="text"
-                              class="input input-bordered input-sm w-full"
-                              name={"vars[#{var.key}][#{idx}][1]"}
-                              value={img_b}
-                              placeholder="Image B URL"
-                              phx-debounce="300"
-                            />
-                          </div>
-                        <% end %>
-                        <button
-                          type="button"
-                          class="btn btn-xs btn-outline w-full"
-                          phx-click="template_var_pair_add"
-                          phx-value-key={var.key}
-                        >+ Add Pair</button>
-                      </div>
-                    <% else %>
-                      <%= if var.type == :boolean do %>
-                        <div class="flex items-center gap-2 mt-1">
-                          <input type="hidden" name={"vars[#{var.key}]"} value="false" />
-                          <input
-                            type="checkbox"
-                            id={"tvar-#{@template_group_key}-#{var.key}"}
-                            class="checkbox checkbox-sm"
-                            name={"vars[#{var.key}]"}
-                            value="true"
-                            checked={Map.get(current_vars, var.key, var.default) == true}
-                          />
-                        </div>
-                      <% else %>
-                      <%= if var.type == :list do %>
-                        <% items = Map.get(current_vars, var.key, var.default) |> ensure_list() %>
-                        <div class="space-y-1 mt-1">
-                          <%= for {item, idx} <- Enum.with_index(items) do %>
-                            <div class="flex items-center gap-2">
+            <div id="trial-root-list" phx-hook="Sortable" class="space-y-2">
+              <p :if={@trials == []} class="text-sm opacity-50">
+                Pick a plugin above to add a block.
+              </p>
+
+              <%= for {node, position} <- Enum.with_index(@trials, 1) do %>
+                <.node_block node={node} position={position} selected_id={@selected_trial_id} />
+              <% end %>
+            </div>
+          </div>
+
+          <%!-- Column 2: Config panel --%>
+          <div class="flex flex-col gap-2 border-l border-base-300 pl-4 sticky top-16 max-h-[calc(100vh-4rem)] overflow-y-auto">
+            <%= if @selected_trial && @selected_trial.node_type == "template_group" do %>
+              <p class="text-xs font-semibold uppercase tracking-wider opacity-50 shrink-0">
+                Configure
+              </p>
+              <p class="text-sm font-medium text-accent shrink-0 -mt-1">
+                {@selected_template && @selected_template.name}
+              </p>
+
+              <div>
+                <form
+                  phx-change="template_vars_changed"
+                  id={"template-vars-form-#{@template_group_key}"}
+                  class="space-y-5"
+                >
+                  <%= for var <- (@selected_template && @selected_template.variables) || [] do %>
+                    <% current_vars = @selected_trial.config["vars"] || %{} %>
+                    <div class="form-control">
+                      <p class="text-sm font-medium leading-tight">{var.label}</p>
+                      <%= if var.type == :pair_list do %>
+                        <% pairs = Map.get(current_vars, var.key, var.default) |> ensure_list() %>
+                        <div class="space-y-2 mt-1">
+                          <%= for {pair, idx} <- Enum.with_index(pairs) do %>
+                            <% [img_a, img_b] = ensure_pair(pair) %>
+                            <div class="border border-base-300 rounded p-2 space-y-1">
+                              <div class="flex items-center justify-between mb-1">
+                                <span class="text-xs font-medium opacity-50">Pair {idx + 1}</span>
+                                <button
+                                  type="button"
+                                  class="btn btn-xs btn-ghost text-error"
+                                  phx-click="template_var_pair_remove"
+                                  phx-value-key={var.key}
+                                  phx-value-index={idx}
+                                >
+                                  ✕
+                                </button>
+                              </div>
                               <input
                                 type="text"
-                                class="input input-bordered input-sm flex-1"
-                                name={"vars[#{var.key}][#{idx}]"}
-                                value={item}
+                                class="input input-bordered input-sm w-full"
+                                name={"vars[#{var.key}][#{idx}][0]"}
+                                value={img_a}
+                                placeholder="Image A URL"
                                 phx-debounce="300"
                               />
-                              <button
-                                type="button"
-                                class="btn btn-xs btn-ghost text-error shrink-0"
-                                phx-click="template_var_list_remove"
-                                phx-value-key={var.key}
-                                phx-value-index={idx}
-                              >✕</button>
+                              <input
+                                type="text"
+                                class="input input-bordered input-sm w-full"
+                                name={"vars[#{var.key}][#{idx}][1]"}
+                                value={img_b}
+                                placeholder="Image B URL"
+                                phx-debounce="300"
+                              />
                             </div>
                           <% end %>
                           <button
                             type="button"
                             class="btn btn-xs btn-outline w-full"
-                            phx-click="template_var_list_add"
+                            phx-click="template_var_pair_add"
                             phx-value-key={var.key}
-                          >+ Add</button>
+                          >
+                            + Add Pair
+                          </button>
                         </div>
                       <% else %>
-                        <p class="text-xs opacity-40 mt-0.5 mb-1">
-                          {if var.type == :int, do: "INT", else: "TEXT"}
-                        </p>
-                        <textarea
-                          :if={var.type == :text}
-                          id={"tvar-#{@template_group_key}-#{var.key}"}
-                          class="textarea textarea-bordered textarea-sm text-xs font-mono leading-snug w-full"
-                          name={"vars[#{var.key}]"}
-                          rows="4"
-                        >{Map.get(current_vars, var.key, var.default)}</textarea>
-                        <input
-                          :if={var.type == :int}
-                          id={"tvar-#{@template_group_key}-#{var.key}"}
-                          type="number"
-                          class="input input-bordered input-sm w-full"
-                          name={"vars[#{var.key}]"}
-                          value={Map.get(current_vars, var.key, var.default)}
-                          step="1"
-                        />
-                      <% end %>
-                      <% end %>
-                    <% end %>
-                  </div>
-                <% end %>
-              </form>
-            </div>
-          <% else %>
-          <%= if @selected_trial && @selected_trial.node_type == "timeline" do %>
-            <p class="text-xs font-semibold uppercase tracking-wider opacity-50 shrink-0">Configure</p>
-            <p class="text-sm font-medium text-secondary shrink-0 -mt-1">Timeline Group</p>
-
-            <div>
-              <form
-                phx-change="config_changed"
-                id={"config-form-#{@selected_trial.id}"}
-                class="space-y-5"
-              >
-                <div class="form-control">
-                  <p class="text-sm font-medium leading-tight">timeline_variables</p>
-                  <p class="text-xs opacity-40 mt-0.5 mb-1">JSON array</p>
-                  <textarea
-                    class="textarea textarea-bordered text-xs font-mono w-full"
-                    name="config[timeline_variables]"
-                    rows="6"
-                    placeholder={"[{\"stimulus\": \"hello\"}, {\"stimulus\": \"world\"}]"}
-                  >{Jason.encode!(@selected_trial.config["timeline_variables"] || [])}</textarea>
-                  <p class="text-xs opacity-50 mt-1">
-                    In trial params, use <code class="font-mono">{"{{varName}}"}</code> to reference a variable.
-                  </p>
-                </div>
-
-                <div class="form-control">
-                  <p class="text-sm font-medium leading-tight">repetitions</p>
-                  <p class="text-xs opacity-40 mt-0.5 mb-1">INT</p>
-                  <input
-                    type="number"
-                    class="input input-bordered input-sm w-full"
-                    name="config[repetitions]"
-                    value={@selected_trial.config["repetitions"] || 1}
-                    min="1"
-                    step="1"
-                  />
-                </div>
-
-                <div>
-                  <p class="text-sm font-medium leading-tight mb-1">randomize_order</p>
-                  <div class="flex items-center gap-2">
-                    <input type="hidden" name="config[randomize_order]" value="false" />
-                    <input
-                      type="checkbox"
-                      class="checkbox checkbox-sm"
-                      name="config[randomize_order]"
-                      value="true"
-                      checked={@selected_trial.config["randomize_order"] == true}
-                    />
-                    <span class="text-xs opacity-40">BOOL</span>
-                  </div>
-                </div>
-
-                <div class="divider text-xs my-1">Conditional Logic</div>
-
-                <.live_component
-                  module={SkipUnlessComponent}
-                  id={"skip-unless-#{@selected_trial.id}"}
-                  skip_unless={@selected_trial.config["skip_unless"]}
-                  conditional_function={@selected_trial.config["conditional_function"] || ""}
-                  data_tags={@data_tags}
-                />
-
-                <div class="form-control">
-                  <p class="text-sm font-medium leading-tight">Repeat while…</p>
-                  <p class="text-xs opacity-40 mt-0.5 mb-1">loop_function</p>
-                  <textarea
-                    class="textarea textarea-bordered text-xs font-mono leading-snug w-full"
-                    name="config[loop_function]"
-                    rows="4"
-                    placeholder={"// data = DataCollection from the last iteration\n// Return true to repeat, false to continue\nreturn data.select(\"correct\").mean() < 0.8;"}
-                    phx-debounce="300"
-                  >{@selected_trial.config["loop_function"] || ""}</textarea>
-                  <p class="text-xs opacity-50 mt-1 leading-snug">
-                    JS function body. Receives <code class="font-mono">data</code> (last iteration's trials). Return <code class="font-mono">true</code> to repeat this block.
-                  </p>
-                </div>
-              </form>
-            </div>
-          <% else %>
-            <%= if @selected_trial do %>
-              <% schema = @registry[@selected_trial.plugin] %>
-              <% params = sorted_params(schema["parameters"] || %{}) %>
-
-              <p class="text-xs font-semibold uppercase tracking-wider opacity-50 shrink-0">
-                Configure
-              </p>
-              <p class="text-sm font-medium text-primary shrink-0 -mt-1">{@selected_trial.plugin}</p>
-
-              <div>
-                <form
-                  phx-change="config_changed"
-                  id={"config-form-#{@selected_trial.id}"}
-                  class="space-y-5"
-                >
-                  <p
-                    :if={params == [] or Enum.all?(params, fn {_, s} -> input_kind(s) == :skip end)}
-                    class="text-sm opacity-50"
-                  >
-                    No configurable parameters.
-                  </p>
-                  <%= for {param_name, spec} <- params, input_kind(spec) != :skip, param_name != "survey_json" do %>
-                    <.param_field
-                      param={param_name}
-                      spec={spec}
-                      kind={input_kind(spec)}
-                      value={@selected_trial.config[param_name]}
-                      trial_id={@selected_trial.id}
-                      data_tags={@data_tags}
-                    />
-                  <% end %>
-
-                  <div class="divider text-xs my-1">Identification</div>
-
-                  <div class="form-control">
-                    <p class="text-sm font-medium leading-tight">Tag</p>
-                    <p class="text-xs opacity-40 mt-0.5 mb-1">data.tag</p>
-                    <input
-                      type="text"
-                      class="input input-bordered input-sm font-mono w-full"
-                      name="data_tag"
-                      value={@selected_trial.config["data_tag"] || ""}
-                      placeholder="e.g. screening-question"
-                      phx-blur="data_tag_changed"
-                    />
-                    <p class="text-xs opacity-50 mt-1 leading-snug">
-                      Optional identifier used to reference this block's response in <strong>Skip unless</strong> conditions on other blocks.
-                      <%= if @selected_trial.plugin == "survey" do %>
-                        Set a tag here, then select it in a timeline's Skip unless condition to branch on individual survey question answers.
-                      <% end %>
-                    </p>
-                  </div>
-                </form>
-
-                <%= for {param_name, spec} <- params, param_name == "survey_json", input_kind(spec) != :skip do %>
-                  <.param_field
-                    param={param_name}
-                    spec={spec}
-                    kind={input_kind(spec)}
-                    value={@selected_trial.config[param_name]}
-                    trial_id={@selected_trial.id}
-                    data_tags={@data_tags}
-                  />
-                <% end %>
-
-                <div class="divider text-xs mt-3 mb-2">Extensions</div>
-
-                <div class="space-y-3 pb-4">
-                  <%= for ext <- available_extensions() do %>
-                    <% ext_cfg = Map.get(@selected_trial.extensions || %{}, ext.name, %{}) %>
-                    <% enabled = Map.get(ext_cfg, "enabled", false) %>
-
-                    <div class="flex items-start gap-2">
-                      <input
-                        type="checkbox"
-                        class="checkbox checkbox-xs mt-1 shrink-0"
-                        checked={enabled}
-                        phx-click="toggle_extension"
-                        phx-value-ext={ext.name}
-                      />
-                      <div class="flex-1 min-w-0">
-                        <p class="text-xs font-medium">{ext.label}</p>
-                        <p class="text-xs opacity-50 leading-tight">{ext.description}</p>
-
-                        <%= if enabled do %>
-                          <% buttons = Map.get(ext_cfg, "buttons", default_tsb_buttons()) %>
-                          <div class="mt-2 space-y-2">
-                            <%= for {btn, idx} <- Enum.with_index(buttons) do %>
-                              <div class="border border-base-content/10 rounded p-2 space-y-1 bg-base-100">
-                                <div class="flex items-center justify-between">
-                                  <span class="text-xs font-medium opacity-60">Button {idx + 1}</span>
-                                  <button
-                                    class="btn btn-xs btn-ghost text-error px-1"
-                                    phx-click="remove_tsb_button"
-                                    phx-value-ext={ext.name}
-                                    phx-value-index={idx}
-                                    type="button"
-                                  >✕</button>
-                                </div>
-                                <form
-                                  phx-change="tsb_button_changed"
-                                  id={"tsb-btn-#{@selected_trial.id}-#{idx}"}
-                                  class="space-y-1"
-                                >
-                                  <input type="hidden" name="ext" value={ext.name} />
-                                  <input type="hidden" name="index" value={idx} />
-                                  <div class="flex items-center gap-2">
-                                    <label class="text-xs opacity-60 w-12 shrink-0">Zone</label>
-                                    <select
-                                      class="select select-bordered select-xs flex-1"
-                                      name="button[preset]"
-                                    >
-                                      <%= for {val, lbl} <- @tsb_presets do %>
-                                        <option value={val} selected={Map.get(btn, "preset", "left") == val}>
-                                          {lbl}
-                                        </option>
-                                      <% end %>
-                                    </select>
-                                  </div>
-                                  <div class="flex items-center gap-2">
-                                    <label class="text-xs opacity-60 w-12 shrink-0">Key</label>
-                                    <input
-                                      type="text"
-                                      class="input input-bordered input-xs w-12 font-mono"
-                                      name="button[key]"
-                                      value={Map.get(btn, "key", "e")}
-                                      maxlength="10"
-                                    />
-                                  </div>
-                                  <div class="flex items-center gap-2">
-                                    <label class="text-xs opacity-60 w-12 shrink-0">Label</label>
-                                    <input
-                                      type="text"
-                                      class="input input-bordered input-xs flex-1"
-                                      name="button[label]"
-                                      value={Map.get(btn, "label", "")}
-                                    />
-                                  </div>
-                                  <div class="flex items-center gap-2">
-                                    <label class="text-xs opacity-60 w-12 shrink-0">Color</label>
-                                    <input
-                                      type="color"
-                                      class="w-8 h-6 rounded cursor-pointer border border-base-300"
-                                      name="button[color]"
-                                      value={if Map.get(btn, "color", "") == "", do: "#999999", else: btn["color"]}
-                                    />
-                                  </div>
-                                </form>
-                              </div>
-                            <% end %>
-
-                            <button
-                              class="btn btn-xs btn-outline w-full"
-                              phx-click="add_tsb_button"
-                              phx-value-ext={ext.name}
-                              type="button"
-                            >
-                              + Add button
-                            </button>
+                        <%= if var.type == :boolean do %>
+                          <div class="flex items-center gap-2 mt-1">
+                            <input type="hidden" name={"vars[#{var.key}]"} value="false" />
+                            <input
+                              type="checkbox"
+                              id={"tvar-#{@template_group_key}-#{var.key}"}
+                              class="checkbox checkbox-sm"
+                              name={"vars[#{var.key}]"}
+                              value="true"
+                              checked={Map.get(current_vars, var.key, var.default) == true}
+                            />
                           </div>
+                        <% else %>
+                          <%= if var.type == :list do %>
+                            <% items = Map.get(current_vars, var.key, var.default) |> ensure_list() %>
+                            <div class="space-y-1 mt-1">
+                              <%= for {item, idx} <- Enum.with_index(items) do %>
+                                <div class="flex items-center gap-2">
+                                  <input
+                                    type="text"
+                                    class="input input-bordered input-sm flex-1"
+                                    name={"vars[#{var.key}][#{idx}]"}
+                                    value={item}
+                                    phx-debounce="300"
+                                  />
+                                  <button
+                                    type="button"
+                                    class="btn btn-xs btn-ghost text-error shrink-0"
+                                    phx-click="template_var_list_remove"
+                                    phx-value-key={var.key}
+                                    phx-value-index={idx}
+                                  >
+                                    ✕
+                                  </button>
+                                </div>
+                              <% end %>
+                              <button
+                                type="button"
+                                class="btn btn-xs btn-outline w-full"
+                                phx-click="template_var_list_add"
+                                phx-value-key={var.key}
+                              >
+                                + Add
+                              </button>
+                            </div>
+                          <% else %>
+                            <p class="text-xs opacity-40 mt-0.5 mb-1">
+                              {if var.type == :int, do: "INT", else: "TEXT"}
+                            </p>
+                            <textarea
+                              :if={var.type == :text}
+                              id={"tvar-#{@template_group_key}-#{var.key}"}
+                              class="textarea textarea-bordered textarea-sm text-xs font-mono leading-snug w-full"
+                              name={"vars[#{var.key}]"}
+                              rows="4"
+                            >{Map.get(current_vars, var.key, var.default)}</textarea>
+                            <input
+                              :if={var.type == :int}
+                              id={"tvar-#{@template_group_key}-#{var.key}"}
+                              type="number"
+                              class="input input-bordered input-sm w-full"
+                              name={"vars[#{var.key}]"}
+                              value={Map.get(current_vars, var.key, var.default)}
+                              step="1"
+                            />
+                          <% end %>
                         <% end %>
-                      </div>
+                      <% end %>
                     </div>
                   <% end %>
-                </div>
+                </form>
               </div>
             <% else %>
-              <p class="text-xs font-semibold uppercase tracking-wider opacity-50">Configure</p>
-              <p class="text-sm opacity-40 mt-2">Click a trial block to configure it.</p>
-            <% end %>
-          <% end %>
-          <% end %>
-        </div>
+              <%= if @selected_trial && @selected_trial.node_type == "timeline" do %>
+                <p class="text-xs font-semibold uppercase tracking-wider opacity-50 shrink-0">
+                  Configure
+                </p>
+                <p class="text-sm font-medium text-secondary shrink-0 -mt-1">Timeline Group</p>
 
-        <%!-- Column 3: Phone preview --%>
-        <div
-          :if={@show_preview && @study_id}
-          class="border-l border-base-300 pl-4 flex flex-col gap-3 sticky top-16 max-h-[calc(100vh-4rem)] overflow-y-auto"
-        >
-          <div class="flex items-center justify-between shrink-0">
-            <p class="text-xs font-semibold uppercase tracking-wider opacity-50">Live Preview</p>
-            <button
-              class="btn btn-xs btn-ghost"
-              phx-click="reload_preview"
-              type="button"
-              title="Reload preview"
-            >
-              ↺ Reload
-            </button>
+                <div>
+                  <form
+                    phx-change="config_changed"
+                    id={"config-form-#{@selected_trial.id}"}
+                    class="space-y-5"
+                  >
+                    <div class="form-control">
+                      <p class="text-sm font-medium leading-tight">timeline_variables</p>
+                      <p class="text-xs opacity-40 mt-0.5 mb-1">JSON array</p>
+                      <textarea
+                        class="textarea textarea-bordered text-xs font-mono w-full"
+                        name="config[timeline_variables]"
+                        rows="6"
+                        placeholder={"[{\"stimulus\": \"hello\"}, {\"stimulus\": \"world\"}]"}
+                      >{Jason.encode!(@selected_trial.config["timeline_variables"] || [])}</textarea>
+                      <p class="text-xs opacity-50 mt-1">
+                        In trial params, use <code class="font-mono">{"{{varName}}"}</code>
+                        to reference a variable.
+                      </p>
+                    </div>
+
+                    <div class="form-control">
+                      <p class="text-sm font-medium leading-tight">repetitions</p>
+                      <p class="text-xs opacity-40 mt-0.5 mb-1">INT</p>
+                      <input
+                        type="number"
+                        class="input input-bordered input-sm w-full"
+                        name="config[repetitions]"
+                        value={@selected_trial.config["repetitions"] || 1}
+                        min="1"
+                        step="1"
+                      />
+                    </div>
+
+                    <div>
+                      <p class="text-sm font-medium leading-tight mb-1">randomize_order</p>
+                      <div class="flex items-center gap-2">
+                        <input type="hidden" name="config[randomize_order]" value="false" />
+                        <input
+                          type="checkbox"
+                          class="checkbox checkbox-sm"
+                          name="config[randomize_order]"
+                          value="true"
+                          checked={@selected_trial.config["randomize_order"] == true}
+                        />
+                        <span class="text-xs opacity-40">BOOL</span>
+                      </div>
+                    </div>
+
+                    <div class="divider text-xs my-1">Conditional Logic</div>
+
+                    <.live_component
+                      module={SkipUnlessComponent}
+                      id={"skip-unless-#{@selected_trial.id}"}
+                      skip_unless={@selected_trial.config["skip_unless"]}
+                      conditional_function={@selected_trial.config["conditional_function"] || ""}
+                      data_tags={@data_tags}
+                    />
+
+                    <div class="form-control">
+                      <p class="text-sm font-medium leading-tight">Repeat while…</p>
+                      <p class="text-xs opacity-40 mt-0.5 mb-1">loop_function</p>
+                      <textarea
+                        class="textarea textarea-bordered text-xs font-mono leading-snug w-full"
+                        name="config[loop_function]"
+                        rows="4"
+                        placeholder={"// data = DataCollection from the last iteration\n// Return true to repeat, false to continue\nreturn data.select(\"correct\").mean() < 0.8;"}
+                        phx-debounce="300"
+                      >{@selected_trial.config["loop_function"] || ""}</textarea>
+                      <p class="text-xs opacity-50 mt-1 leading-snug">
+                        JS function body. Receives <code class="font-mono">data</code>
+                        (last iteration's trials). Return <code class="font-mono">true</code>
+                        to repeat this block.
+                      </p>
+                    </div>
+                  </form>
+                </div>
+              <% else %>
+                <%= if @selected_trial do %>
+                  <% schema = @registry[@selected_trial.plugin] %>
+                  <% params = sorted_params(schema["parameters"] || %{}) %>
+
+                  <p class="text-xs font-semibold uppercase tracking-wider opacity-50 shrink-0">
+                    Configure
+                  </p>
+                  <p class="text-sm font-medium text-primary shrink-0 -mt-1">
+                    {@selected_trial.plugin}
+                  </p>
+
+                  <div>
+                    <form
+                      phx-change="config_changed"
+                      id={"config-form-#{@selected_trial.id}"}
+                      class="space-y-5"
+                    >
+                      <p
+                        :if={
+                          params == [] or Enum.all?(params, fn {_, s} -> input_kind(s) == :skip end)
+                        }
+                        class="text-sm opacity-50"
+                      >
+                        No configurable parameters.
+                      </p>
+                      <%= for {param_name, spec} <- params, input_kind(spec) != :skip, param_name != "survey_json" do %>
+                        <.param_field
+                          param={param_name}
+                          spec={spec}
+                          kind={input_kind(spec)}
+                          value={@selected_trial.config[param_name]}
+                          trial_id={@selected_trial.id}
+                          data_tags={@data_tags}
+                        />
+                      <% end %>
+
+                      <div class="divider text-xs my-1">Identification</div>
+
+                      <div class="form-control">
+                        <p class="text-sm font-medium leading-tight">Tag</p>
+                        <p class="text-xs opacity-40 mt-0.5 mb-1">data.tag</p>
+                        <input
+                          type="text"
+                          class="input input-bordered input-sm font-mono w-full"
+                          name="data_tag"
+                          value={@selected_trial.config["data_tag"] || ""}
+                          placeholder="e.g. screening-question"
+                          phx-blur="data_tag_changed"
+                        />
+                        <p class="text-xs opacity-50 mt-1 leading-snug">
+                          Optional identifier used to reference this block's response in
+                          <strong>Skip unless</strong>
+                          conditions on other blocks.
+                          <%= if @selected_trial.plugin == "survey" do %>
+                            Set a tag here, then select it in a timeline's Skip unless condition to branch on individual survey question answers.
+                          <% end %>
+                        </p>
+                      </div>
+                    </form>
+
+                    <%= for {param_name, spec} <- params, param_name == "survey_json", input_kind(spec) != :skip do %>
+                      <.param_field
+                        param={param_name}
+                        spec={spec}
+                        kind={input_kind(spec)}
+                        value={@selected_trial.config[param_name]}
+                        trial_id={@selected_trial.id}
+                        data_tags={@data_tags}
+                      />
+                    <% end %>
+
+                    <div class="divider text-xs mt-3 mb-2">Extensions</div>
+
+                    <div class="space-y-3 pb-4">
+                      <%= for ext <- available_extensions() do %>
+                        <% ext_cfg = Map.get(@selected_trial.extensions || %{}, ext.name, %{}) %>
+                        <% enabled = Map.get(ext_cfg, "enabled", false) %>
+
+                        <div class="flex items-start gap-2">
+                          <input
+                            type="checkbox"
+                            class="checkbox checkbox-xs mt-1 shrink-0"
+                            checked={enabled}
+                            phx-click="toggle_extension"
+                            phx-value-ext={ext.name}
+                          />
+                          <div class="flex-1 min-w-0">
+                            <p class="text-xs font-medium">{ext.label}</p>
+                            <p class="text-xs opacity-50 leading-tight">{ext.description}</p>
+
+                            <%= if enabled do %>
+                              <% buttons = Map.get(ext_cfg, "buttons", default_tsb_buttons()) %>
+                              <div class="mt-2 space-y-2">
+                                <%= for {btn, idx} <- Enum.with_index(buttons) do %>
+                                  <div class="border border-base-content/10 rounded p-2 space-y-1 bg-base-100">
+                                    <div class="flex items-center justify-between">
+                                      <span class="text-xs font-medium opacity-60">
+                                        Button {idx + 1}
+                                      </span>
+                                      <button
+                                        class="btn btn-xs btn-ghost text-error px-1"
+                                        phx-click="remove_tsb_button"
+                                        phx-value-ext={ext.name}
+                                        phx-value-index={idx}
+                                        type="button"
+                                      >
+                                        ✕
+                                      </button>
+                                    </div>
+                                    <form
+                                      phx-change="tsb_button_changed"
+                                      id={"tsb-btn-#{@selected_trial.id}-#{idx}"}
+                                      class="space-y-1"
+                                    >
+                                      <input type="hidden" name="ext" value={ext.name} />
+                                      <input type="hidden" name="index" value={idx} />
+                                      <div class="flex items-center gap-2">
+                                        <label class="text-xs opacity-60 w-12 shrink-0">Zone</label>
+                                        <select
+                                          class="select select-bordered select-xs flex-1"
+                                          name="button[preset]"
+                                        >
+                                          <%= for {val, lbl} <- @tsb_presets do %>
+                                            <option
+                                              value={val}
+                                              selected={Map.get(btn, "preset", "left") == val}
+                                            >
+                                              {lbl}
+                                            </option>
+                                          <% end %>
+                                        </select>
+                                      </div>
+                                      <div class="flex items-center gap-2">
+                                        <label class="text-xs opacity-60 w-12 shrink-0">Key</label>
+                                        <input
+                                          type="text"
+                                          class="input input-bordered input-xs w-12 font-mono"
+                                          name="button[key]"
+                                          value={Map.get(btn, "key", "e")}
+                                          maxlength="10"
+                                        />
+                                      </div>
+                                      <div class="flex items-center gap-2">
+                                        <label class="text-xs opacity-60 w-12 shrink-0">Label</label>
+                                        <input
+                                          type="text"
+                                          class="input input-bordered input-xs flex-1"
+                                          name="button[label]"
+                                          value={Map.get(btn, "label", "")}
+                                        />
+                                      </div>
+                                      <div class="flex items-center gap-2">
+                                        <label class="text-xs opacity-60 w-12 shrink-0">Color</label>
+                                        <input
+                                          type="color"
+                                          class="w-8 h-6 rounded cursor-pointer border border-base-300"
+                                          name="button[color]"
+                                          value={
+                                            if Map.get(btn, "color", "") == "",
+                                              do: "#999999",
+                                              else: btn["color"]
+                                          }
+                                        />
+                                      </div>
+                                    </form>
+                                  </div>
+                                <% end %>
+
+                                <button
+                                  class="btn btn-xs btn-outline w-full"
+                                  phx-click="add_tsb_button"
+                                  phx-value-ext={ext.name}
+                                  type="button"
+                                >
+                                  + Add button
+                                </button>
+                              </div>
+                            <% end %>
+                          </div>
+                        </div>
+                      <% end %>
+                    </div>
+                  </div>
+                <% else %>
+                  <p class="text-xs font-semibold uppercase tracking-wider opacity-50">Configure</p>
+                  <p class="text-sm opacity-40 mt-2">Click a trial block to configure it.</p>
+                <% end %>
+              <% end %>
+            <% end %>
           </div>
 
-          <div class="flex justify-center items-start">
-            <div class="mockup-phone shrink-0">
-              <div class="camera"></div>
-              <div class="display" style="width:300px; aspect-ratio:9/16;">
-                <iframe
-                  src={"/study/#{@study_id}?preview=true&k=#{@preview_key}"}
-                  style="width:100%;height:100%;border:none;"
-                  title="Study preview"
-                />
+          <%!-- Column 3: Phone preview --%>
+          <div
+            :if={@show_preview && @study_id}
+            class="border-l border-base-300 pl-4 flex flex-col gap-3 sticky top-16 max-h-[calc(100vh-4rem)] overflow-y-auto"
+          >
+            <div class="flex items-center justify-between shrink-0">
+              <p class="text-xs font-semibold uppercase tracking-wider opacity-50">Live Preview</p>
+              <button
+                class="btn btn-xs btn-ghost"
+                phx-click="reload_preview"
+                type="button"
+                title="Reload preview"
+              >
+                ↺ Reload
+              </button>
+            </div>
+
+            <div class="flex justify-center items-start">
+              <div class="mockup-phone shrink-0">
+                <div class="camera"></div>
+                <div class="display" style="width:300px; aspect-ratio:9/16;">
+                  <iframe
+                    src={"/study/#{@study_id}?preview=true&k=#{@preview_key}"}
+                    style="width:100%;height:100%;border:none;"
+                    title="Study preview"
+                  />
+                </div>
               </div>
             </div>
           </div>
         </div>
-
       </div>
-    </div>
     </Layouts.app>
-
-
     """
   end
 end
