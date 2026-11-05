@@ -177,7 +177,7 @@ defmodule Socho.Accounts.User do
   """
   def direct_invite_changeset(user, attrs) do
     user
-    |> cast(attrs, [:email, :username, :role, :password])
+    |> cast(attrs, [:email, :username, :role, :password, :client_id])
     |> validate_required([:email])
     |> validate_format(:email, ~r/^[^@,;\s]+@[^@,;\s]+$/,
       message: "must have the @ sign and no spaces"

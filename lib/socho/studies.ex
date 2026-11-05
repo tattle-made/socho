@@ -35,6 +35,14 @@ defmodule Socho.Studies do
     |> Repo.preload(:client)
   end
 
+  def list_public_studies do
+    from(s in Study,
+      where: is_nil(s.client_id) and s.status == :published,
+      order_by: [desc: s.inserted_at]
+    )
+    |> Repo.all()
+  end
+
   def list_studies_for_client(client_id) do
     from(s in Study,
       where: s.client_id == ^client_id and s.status == :published,

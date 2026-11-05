@@ -35,81 +35,142 @@ defmodule SochoWeb.UserLive.Login do
           </div>
         </div>
 
-        <.form
-          :let={f}
-          for={@form}
-          id="login_form_magic"
-          action={~p"/users/log-in"}
-          phx-submit="submit_magic"
-        >
-          <.input
-            readonly={!!@current_scope}
-            field={f[:email]}
-            type="email"
-            label="Email"
-            autocomplete="username"
-            spellcheck="false"
-            required
-            phx-mounted={JS.focus()}
-          />
-          <.button class="btn btn-primary w-full">
-            Log in with email <span aria-hidden="true">→</span>
-          </.button>
-        </.form>
+        <div class="flex rounded-lg border border-base-300 mb-2 overflow-hidden">
+          <button
+            type="button"
+            phx-click="set_login_tab"
+            phx-value-tab="email"
+            class={[
+              "flex-1 py-2 text-sm font-medium transition-colors",
+              @login_tab == :email && "bg-primary text-primary-content",
+              @login_tab != :email && "bg-base-100 text-base-content hover:bg-base-200"
+            ]}
+          >
+            Email
+          </button>
+          <button
+            type="button"
+            phx-click="set_login_tab"
+            phx-value-tab="phone"
+            class={[
+              "flex-1 py-2 text-sm font-medium transition-colors",
+              @login_tab == :phone && "bg-primary text-primary-content",
+              @login_tab != :phone && "bg-base-100 text-base-content hover:bg-base-200"
+            ]}
+          >
+            Phone
+          </button>
+        </div>
 
-        <div class="divider">or</div>
+        <div :if={@login_tab == :email} class="space-y-4">
+          <.form
+            :let={f}
+            for={@form}
+            id="login_form_magic"
+            action={~p"/users/log-in"}
+            phx-submit="submit_magic"
+          >
+            <.input
+              readonly={!!@current_scope}
+              field={f[:email]}
+              type="email"
+              label="Email"
+              autocomplete="username"
+              spellcheck="false"
+              required
+              phx-mounted={JS.focus()}
+            />
+            <.button class="btn btn-primary w-full">
+              Log in with email <span aria-hidden="true">→</span>
+            </.button>
+          </.form>
 
-        <.form
-          for={@phone_form}
-          id="login_form_phone"
-          phx-submit="submit_phone"
-        >
-          <.input
-            readonly={!!@current_scope}
-            field={@phone_form[:phone_number]}
-            type="tel"
-            label="Phone number"
-            placeholder="+919876543210"
-            autocomplete="tel"
-          />
-          <.button class="btn btn-primary btn-soft w-full">
-            Log in with SMS <span aria-hidden="true">→</span>
-          </.button>
-        </.form>
+          <div class="divider">or</div>
 
-        <div class="divider">or</div>
+          <.form
+            :let={f}
+            for={@form}
+            id="login_form_password"
+            action={~p"/users/log-in"}
+            phx-submit="submit_password"
+            phx-trigger-action={@trigger_submit}
+          >
+            <.input
+              readonly={!!@current_scope}
+              field={f[:email]}
+              type="email"
+              label="Email"
+              autocomplete="username"
+              spellcheck="false"
+              required
+            />
+            <.input
+              field={@form[:password]}
+              type="password"
+              label="Password"
+              autocomplete="current-password"
+              spellcheck="false"
+            />
+            <.button class="btn btn-primary w-full" name={@form[:remember_me].name} value="true">
+              Log in and stay logged in <span aria-hidden="true">→</span>
+            </.button>
+            <.button class="btn btn-primary btn-soft w-full mt-2">
+              Log in only this time
+            </.button>
+          </.form>
+        </div>
 
-        <.form
-          :let={f}
-          for={@form}
-          id="login_form_password"
-          action={~p"/users/log-in"}
-          phx-submit="submit_password"
-          phx-trigger-action={@trigger_submit}
-        >
-          <.input
-            readonly={!!@current_scope}
-            field={f[:email]}
-            type="email"
-            label="Email"
-            autocomplete="username"
-            spellcheck="false"
-            required
-          />
-          <.input
-            field={@form[:password]}
-            type="password"
-            label="Password"
-            autocomplete="current-password"
-            spellcheck="false"
-          />
-          <.button class="btn btn-primary w-full" name={@form[:remember_me].name} value="true">
-            Log in and stay logged in <span aria-hidden="true">→</span>
-          </.button>
-          <.button class="btn btn-primary btn-soft w-full mt-2">
-            Log in only this time
-          </.button>
-        </.form>
+        <div :if={@login_tab == :phone} class="space-y-4">
+          <.form
+            for={@phone_form}
+            id="login_form_phone"
+            phx-submit="submit_phone"
+          >
+            <.input
+              readonly={!!@current_scope}
+              field={@phone_form[:phone_number]}
+              type="tel"
+              label="Phone number"
+              placeholder="+919876543210"
+              autocomplete="tel"
+            />
+            <.button class="btn btn-primary w-full">
+              Log in with SMS <span aria-hidden="true">→</span>
+            </.button>
+          </.form>
+
+          <div class="divider">or</div>
+
+          <.form
+            for={@phone_form}
+            id="login_form_phone_password"
+            action={~p"/users/log-in"}
+            phx-submit="submit_phone_password"
+            phx-trigger-action={@trigger_submit_phone}
+          >
+            <.input
+              readonly={!!@current_scope}
+              field={@phone_form[:phone_number]}
+              type="tel"
+              label="Phone number"
+              placeholder="+919876543210"
+              autocomplete="tel"
+            />
+            <.input
+              field={@phone_form[:password]}
+              type="password"
+              label="Password"
+              autocomplete="current-password"
+              spellcheck="false"
+            />
+            <.button class="btn btn-primary w-full" name={@phone_form[:remember_me].name} value="true">
+              Log in and stay logged in <span aria-hidden="true">→</span>
+            </.button>
+            <.button class="btn btn-primary btn-soft w-full mt-2">
+              Log in only this time
+            </.button>
+          </.form>
+        </div>
       </div>
     </Layouts.app>
     """
@@ -128,12 +189,27 @@ defmodule SochoWeb.UserLive.Login do
     form = to_form(%{"email" => email}, as: "user")
     phone_form = to_form(%{"phone_number" => phone}, as: "user")
 
-    {:ok, assign(socket, form: form, phone_form: phone_form, trigger_submit: false)}
+    {:ok,
+     assign(socket,
+       form: form,
+       phone_form: phone_form,
+       trigger_submit: false,
+       trigger_submit_phone: false,
+       login_tab: :email
+     )}
   end
 
   @impl true
+  def handle_event("set_login_tab", %{"tab" => tab}, socket) do
+    {:noreply, assign(socket, login_tab: String.to_existing_atom(tab))}
+  end
+
   def handle_event("submit_password", _params, socket) do
     {:noreply, assign(socket, :trigger_submit, true)}
+  end
+
+  def handle_event("submit_phone_password", _params, socket) do
+    {:noreply, assign(socket, :trigger_submit_phone, true)}
   end
 
   def handle_event("submit_magic", %{"user" => %{"email" => email}}, socket) do

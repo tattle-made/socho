@@ -52,6 +52,15 @@ defmodule Socho.Accounts do
   end
 
   @doc """
+  Gets a user by phone number and password.
+  """
+  def get_user_by_phone_and_password(phone, password)
+      when is_binary(phone) and is_binary(password) do
+    user = Repo.get_by(User, phone_number: phone)
+    if User.valid_password?(user, password), do: user
+  end
+
+  @doc """
   Gets a single user.
 
   Raises `Ecto.NoResultsError` if the User does not exist.

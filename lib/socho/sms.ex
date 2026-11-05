@@ -7,11 +7,12 @@ defmodule Socho.SMS do
       config :socho, Socho.SMS, adapter: Socho.SMS.Adapters.Local
   """
 
-  @doc """
-  Sends an SMS message to the given phone number.
-  """
-  def send_sms(to, body) do
-    adapter().send_sms(to, body)
+  def send_otp(to, var) do
+    adapter().send_otp(to, var)
+  end
+
+  def send_forget_password(to, var) do
+    adapter().send_forget_password(to, var)
   end
 
   defp adapter do

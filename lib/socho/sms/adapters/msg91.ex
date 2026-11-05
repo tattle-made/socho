@@ -6,8 +6,7 @@ defmodule Socho.SMS.Adapters.Msg91 do
 
       config :socho, Socho.SMS,
         adapter: Socho.SMS.Adapters.Msg91,
-        auth_key: "your_msg91_auth_key",
-        template_id: "your_otp_template_id"
+        auth_key: "your_msg91_auth_key"
 
   The OTP template in Msg91 must have a `##OTP##` variable.
   Phone numbers must be in E.164 format (e.g. "919876543210").
@@ -15,30 +14,47 @@ defmodule Socho.SMS.Adapters.Msg91 do
 
   @behaviour Socho.SMS.Adapter
 
-  @api_url "https://control.msg91.com/api/v5/otp"
+  # Refer to console on msg91 for this (https://control.msg91.com/app/m/l/sms/templates)
+  @template_otp_verification "6ac4c40e6c8cb16130015168"
 
-  @impl true
-  def send_sms(to, otp) do
+  defp base_req do
     config = Application.get_env(:socho, Socho.SMS, [])
-    auth_key = Keyword.fetch!(config, :auth_key)
-    template_id = Keyword.fetch!(config, :template_id)
+    auth_key = Keyword.get(config, :auth_key)
 
-    params = %{
-      "authkey" => auth_key,
-      "template_id" => template_id,
-      "mobile" => to,
-      "otp" => otp
+    Req.new(
+      base_url: "https://control.msg91.com/api/v5",
+      headers: [
+        {"accept", "application/json"},
+        {"authkey", auth_key}
+      ]
+    )
+  end
+
+  @doc """
+  Sends an SMS to user with an OTP in it.
+
+  For this to work correctly, a template should be whitelisted on a DLT provider and this template needs to be added on the SMS vendor like MSG91. The expected shape of var is %{"username" => "string", "otp" => "4_digit_OTP"}
+  """
+  @impl true
+  def send_otp(mobile, var) do
+    username = var["username"] || "user"
+    otp = var["OTP"]
+
+    data = %{
+      "template_id" => @template_otp_verification,
+      "short_url" => "0",
+      "recipients" => [%{"mobiles" => mobile, "username" => username, "otp" => otp}]
     }
 
-    case Req.post(@api_url, json: params) do
-      {:ok, %Req.Response{status: status}} when status in 200..299 ->
-        :ok
-
-      {:ok, %Req.Response{status: status, body: body}} ->
-        {:error, {status, body}}
-
-      {:error, reason} ->
-        {:error, reason}
+    case Req.post(base_req(), url: "/flow", json: data) do
+      {:ok, %Req.Response{status: status}} when status in 200..299 -> :ok
+      {:ok, %Req.Response{status: status, body: body}} -> {:error, {status, body}}
+      {:error, reason} -> {:error, reason}
     end
+  end
+
+  @impl true
+  def send_forget_password(mobile, var) do
+    :ok
   end
 end

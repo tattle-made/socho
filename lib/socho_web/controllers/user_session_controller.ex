@@ -52,6 +52,19 @@ defmodule SochoWeb.UserSessionController do
     end
   end
 
+  # phone + password login
+  defp create(conn, %{"user" => %{"phone_number" => phone, "password" => password} = user_params}, info) do
+    if user = Accounts.get_user_by_phone_and_password(String.trim(phone), password) do
+      conn
+      |> put_flash(:info, info)
+      |> UserAuth.log_in_user(user, user_params)
+    else
+      conn
+      |> put_flash(:error, "Invalid phone number or password")
+      |> redirect(to: ~p"/users/log-in")
+    end
+  end
+
   # email + password login
   defp create(conn, %{"user" => user_params}, info) do
     %{"email" => email, "password" => password} = user_params

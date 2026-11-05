@@ -47,6 +47,7 @@ defmodule SochoWeb.Router do
       on_mount: [{SochoWeb.UserAuth, :require_authenticated}] do
       live "/users/settings", UserLive.Settings, :edit
       live "/users/settings/confirm-email/:token", UserLive.Settings, :confirm_email
+      live "/studies", StudyLive.Index, :index
     end
 
     live_session :require_admin_or_manager,
@@ -55,7 +56,6 @@ defmodule SochoWeb.Router do
         {SochoWeb.UserAuth, :require_admin_or_manager}
       ] do
       live "/users", UserLive.Management, :index
-      live "/studies", StudyLive.Index, :index
       live "/studies/new", StudyLive.Builder, :new
       live "/studies/:id/edit", StudyLive.Builder, :edit
       live "/studies/:id/settings", StudyLive.Settings, :edit
@@ -101,5 +101,13 @@ defmodule SochoWeb.Router do
       live "/clients/:id", ClientLive.Show, :show
       live "/clients/:id/edit", ClientLive.Edit, :edit
     end
+  end
+
+  # Noise Routes
+  scope "/", SochoWeb do
+    pipe_through :browser
+
+    get "/apple-touch-icon.png", PageController, :no_content
+    get "/apple-touch-icon-precomposed.png", PageController, :no_content
   end
 end

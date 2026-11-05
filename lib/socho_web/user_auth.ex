@@ -288,15 +288,7 @@ defmodule SochoWeb.UserAuth do
   end
 
   @doc "Returns the path to redirect to after log in."
-  def signed_in_path(%Plug.Conn{assigns: %{current_scope: %Scope{user: %Accounts.User{role: :participant}}}}) do
-    ~p"/dashboard"
-  end
-
-  def signed_in_path(%Plug.Conn{assigns: %{current_scope: %Scope{user: %Accounts.User{}}}}) do
-    ~p"/studies"
-  end
-
-  def signed_in_path(_), do: ~p"/"
+  def signed_in_path(_), do: ~p"/studies"
 
   @doc """
   Plug for routes that require the user to be authenticated.

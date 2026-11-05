@@ -8,5 +8,7 @@ defmodule Socho.SMS.Adapter do
       config :socho, Socho.SMS, adapter: Socho.SMS.Adapters.Msg91
   """
 
-  @callback send_sms(to :: String.t(), body :: String.t()) :: :ok | {:error, term()}
+  @callback send_otp(to :: String.t(), var :: map()) :: :ok | {:error, term()}
+
+  @callback send_forget_password(to :: String.t(), var :: map()) :: :ok | {:error, term()}
 end

@@ -389,6 +389,58 @@ defmodule Socho.AccountsTest do
     end
   end
 
+  describe "create_user_with_password/2" do
+    setup do
+      {:ok, client} = Socho.Clients.create_client(%{name: "Acme Corp #{System.unique_integer()}"})
+      %{inviter_scope: user_scope_fixture(), client: client}
+    end
+
+    test "assigns the given client_id to the created participant", %{
+      inviter_scope: inviter_scope,
+      client: client
+    } do
+      attrs = %{
+        "email" => unique_user_email(),
+        "role" => "participant",
+        "password" => valid_user_password(),
+        "client_id" => client.id
+      }
+
+      assert {:ok, user} = Accounts.create_user_with_password(inviter_scope, attrs)
+      assert user.client_id == client.id
+    end
+
+    test "leaves client_id nil when none is given", %{inviter_scope: inviter_scope} do
+      attrs = %{
+        "email" => unique_user_email(),
+        "role" => "participant",
+        "password" => valid_user_password()
+      }
+
+      assert {:ok, user} = Accounts.create_user_with_password(inviter_scope, attrs)
+      assert user.client_id == nil
+    end
+  end
+
+  describe "invite_user/3" do
+    setup do
+      {:ok, client} = Socho.Clients.create_client(%{name: "Acme Corp #{System.unique_integer()}"})
+      %{inviter_scope: user_scope_fixture(), client: client}
+    end
+
+    test "assigns the given client_id to the invited participant", %{
+      inviter_scope: inviter_scope,
+      client: client
+    } do
+      attrs = %{"email" => unique_user_email(), "role" => "participant", "client_id" => client.id}
+
+      assert {:ok, user} =
+               Accounts.invite_user(inviter_scope, attrs, fn token -> "/log-in/#{token}" end)
+
+      assert user.client_id == client.id
+    end
+  end
+
   describe "inspect/2 for the User module" do
     test "does not include password" do
       refute inspect(%User{password: "123456"}) =~ "password: \"123456\""

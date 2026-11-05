@@ -3,6 +3,7 @@ defmodule SochoWeb.UserLive.Management do
 
   alias Socho.Accounts
   alias Socho.Accounts.User
+  alias Socho.Clients
 
   @impl true
   def mount(_params, _session, socket) do
@@ -16,6 +17,7 @@ defmodule SochoWeb.UserLive.Management do
         users: list_staff_and_unaffiliated(),
         form: to_form(changeset, as: "invite"),
         assignable_roles: assignable_roles,
+        clients: Clients.list_clients(),
         invite_sent: nil,
         invite_mode: :email,
         show_invite_form: false,
@@ -131,6 +133,18 @@ defmodule SochoWeb.UserLive.Management do
                   field={@form[:role]}
                   type="select"
                   options={Enum.map(@assignable_roles, &{String.capitalize(to_string(&1)), &1})}
+                />
+              </div>
+
+              <div class="form-control">
+                <label class="label">
+                  <span class="label-text">Client</span>
+                </label>
+                <.input
+                  field={@form[:client_id]}
+                  type="select"
+                  prompt="No client"
+                  options={Enum.map(@clients, &{&1.name, &1.id})}
                 />
               </div>
 
