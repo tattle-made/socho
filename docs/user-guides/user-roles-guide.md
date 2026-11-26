@@ -10,7 +10,106 @@ This section explains how to create an Admin account and sign in to Socho.
 
 ## Creating an Admin Account
 
-By default, every new user is assigned the **Participant** role. To create an Admin account, you need to use the Interactive Elixir (IEx) shell.
+Before you can use Socho as an **Admin**, you must first create a regular user account.
+
+> **Note:** By default, every new user is assigned the **Participant** role. Creating an account through the Sign Up page does **not** create an Admin account.
+
+Follow the steps below to create a user account.
+
+### Step 1
+
+On the home page, click **Sign In**.
+
+**Result:** The **Sign In** page opens.
+
+![Log In page](assets/sing-in/log-in-page.png)
+
+*Figure 1: The Socho Sign In page.*
+
+---
+
+### Step 2
+
+On the **Sign In** page, click **Sign up** to create a new account.
+
+**Result:** The **Registration** page opens.
+
+![register-page](assets/admin-user/register-page.png)
+
+*Figure 2: The Socho Registration page.*
+
+---
+
+### Step 3
+
+Enter your email address and click **Create an account**.
+
+**Result:** The **Sign In** page opens again.
+
+![Log In page](assets/sing-in/log-in-page.png)
+
+*Figure 3: The Socho Sign In page.*
+
+---
+
+### Step 4
+
+Enter your email address and click **Log in with email**.
+
+Find the blue notification box above the Email field, then click the **mailbox page** link.
+
+![Mail box text link](assets/sing-in/mail-box-link.png)
+
+**Figure 4:** Mailbox page link.
+
+The Mailbox page opens.
+
+Open the latest email.
+
+![Mailbox page](assets/sing-in/mailbox-page.png)
+
+**Figure 5:** The Socho Mailbox page.
+
+---
+
+### Step 5
+
+click the confirmation link.
+
+**Result:** The **Confirm my account** page opens.
+
+![Confirm my account page](assets/sing-in/confirmation-page.png)
+
+*Figure 5: The Socho Confirm my account page.*
+
+---
+
+### Step 6
+
+Click **Confirm and stay logged in**.
+
+**Result:** Your account is created successfully.
+
+Since every new user is assigned the **Participant** role by default, you will be redirected to the **Studies** dashboard.
+
+If no studies have been assigned to your account, the following message is displayed:
+
+> **No published studies are available yet.**
+
+![Participant Dashbord](assets/participant-user/no-assign-study.png)
+
+
+*Figure 7: The Participant Studies dashboard.*
+
+---
+
+## Changing the Participant Role to Admin
+
+The account you created is currently a **Participant** account. Participants cannot create or manage studies.
+
+To get full access to Socho, you need to change the user's role from **Participant** to **Admin** using the Interactive Elixir (IEx) shell.
+
+Follow the steps below to update the user's role.
 
 ### Step 1: Open the Socho Project
 
@@ -26,63 +125,44 @@ Run the following command:
 iex -S mix phx.server
 ```
 
-If the server starts successfully, you will see output similar to:
-
-```text
-[info] Running SochoWeb.Endpoint at http://localhost:4000
-
-Interactive Elixir
-iex(1)>
-```
-
-The `iex(1)>` prompt indicates that the Interactive Elixir (IEx) shell is ready to accept commands.
-
----
-
-### Step 3: Load the User Administration Module
-
-Import the `UserAdmin` module by running the following command:
+### Step 3: Load the Required Modules
 
 ```elixir
-alias Socho.Accounts.UserAdmin
+alias Socho.Repo
+alias Socho.Accounts.User
 ```
 
-Expected output:
+### Step 4: Find the User
 
 ```elixir
-Socho.Accounts.UserAdmin
+user = Repo.get_by(User, email: "example@gmail.com")
 ```
 
----
+Replace `example@gmail.com` with the email address you used to create your account.
 
-### Step 4: Create an Admin User
-
-Run the following command:
+### Step 5: Change the User Role to Admin
 
 ```elixir
-UserAdmin.create_user(
-  "example@gmail.com",
-  "Password123!",
-  :admin
-)
+user
+|> Ecto.Changeset.change(role: :admin)
+|> Repo.update()
 ```
 
-Replace:
+**Result:** The user's role is updated successfully.
 
-- `example@gmail.com` with the email address you want to use.
-- `Password123!` with a secure password.
+### Step 6: Verify the Updated Role
 
-Result:
+```elixir
+Repo.get_by(User, email: "example@gmail.com")
+```
 
-The Admin account is created successfully.
+Verify that the output contains:
 
-![Admin account created successfully](assets/admin-user/admin-createoutput.png)
+```elixir
+role: :admin
+```
 
-**Figure 1:** Admin account created successfully.
-
----
-
-## Signing In as an Admin
+### Step 7: Sign In Again
 
 After creating the Admin account, sign in using the same email address.
 
@@ -98,7 +178,7 @@ The Socho home page opens.
 
 ![Socho Home Page](assets/sing-in/home-page.png)
 
-**Figure 2:** The Socho home page.
+**Figure 8:** The Socho home page.
 
 ---
 
@@ -110,7 +190,7 @@ Click **Sign In**.
 
 ![Log In page](assets/sing-in/log-in-page.png)
 
-**Figure 3:** The Sign In page.
+**Figure 9:** The Sign In page.
 
 ---
 
@@ -124,7 +204,7 @@ Find the blue notification box above the Email field, then click the **mailbox p
 
 ![Mail box text link](assets/sing-in/mail-box-link.png)
 
-**Figure 4:** Mailbox page link.
+**Figure 10:** Mailbox page link.
 
 ---
 
@@ -136,7 +216,7 @@ Open the latest email.
 
 ![Mailbox page](assets/sing-in/mailbox-page.png)
 
-**Figure 5:** The Socho Mailbox page.
+**Figure 11:** The Socho Mailbox page.
 
 ---
 
@@ -148,7 +228,7 @@ The **Confirm my account** page opens.
 
 ![Confirm my account page](assets/sing-in/confirmation-page.png)
 
-**Figure 6:** The Socho Confirm my account page.
+**Figure 12:** The Socho Confirm my account page.
 
 ---
 
@@ -212,7 +292,7 @@ Click the **Users** card on the home page or click **Users** from the navigation
 
 ![User Page](assets/manager-user-account/user-page.png)
 
-**Figure 7:** The Users page.
+**Figure 13:** The Users page.
 
 ---
 
@@ -224,7 +304,7 @@ On the **Users** page, click **+ Invite User** in the top-right corner.
 
 ![New User Form](assets/manager-user-account/new-user-form.png)
 
-**Figure 8:** The Invite a New User form.
+**Figure 14:** The Invite a New User form.
 
 ---
 
@@ -243,7 +323,7 @@ This confirms that the invitation has been sent successfully.
 
 ![Confirm invitation message](assets/manager-user-account/confirm-invitation-message.png)
 
-**Figure 9:** Invitation sent confirmation.
+**Figure 15:** Invitation sent confirmation.
 
 ---
 
@@ -255,7 +335,7 @@ On the **Users** page, locate the Manager account you just invited and click **V
 
 ![User Details page](assets/manager-user-account/user-details-page.png)
 
-**Figure 10:** The selected user's details page opens.
+**Figure 16:** The selected user's details page opens.
 
 From this page, you can edit the manager's information, such as the display name, role (if permitted), and assigned client.
 
@@ -277,7 +357,7 @@ The Socho home page opens.
 
 ![Socho Home Page](assets/sing-in/home-page.png)
 
-**Figure 11:** The Socho home page.
+**Figure 17:** The Socho home page.
 
 ---
 
@@ -289,7 +369,7 @@ Click **Sign In**.
 
 ![Log In page](assets/sing-in/log-in-page.png)
 
-**Figure 12:** The Sign In page.
+**Figure 18:** The Sign In page.
 
 ---
 
@@ -303,7 +383,7 @@ Find the blue notification box above the Email field, then click the **mailbox p
 
 ![Mail box text link](assets/sing-in/mail-box-link.png)
 
-**Figure 13:** Mailbox page link.
+**Figure 19:** Mailbox page link.
 
 ---
 
@@ -315,7 +395,7 @@ Open the latest email.
 
 ![Mailbox page](assets/sing-in/mailbox-page.png)
 
-**Figure 14:** The Socho Mailbox page.
+**Figure 20:** The Socho Mailbox page.
 
 ---
 
@@ -327,7 +407,7 @@ The **Confirm my account** page opens.
 
 ![Confirm my account page](assets/sing-in/confirmation-page.png)
 
-**Figure 15:** The Socho Confirm my account page.
+**Figure 21:** The Socho Confirm my account page.
 
 ---
 
@@ -397,7 +477,7 @@ Click the **Users** card on the home page or click **Users** from the navigation
 
 ![User Page](assets/manager-user-account/user-page.png)
 
-**Figure 16:** The Users page.
+**Figure 22:** The Users page.
 
 ---
 
@@ -409,7 +489,7 @@ On the **Users** page, click **+ Invite User** in the top-right corner.
 
 ![New User Form](assets/manager-user-account/new-user-form.png)
 
-**Figure 17:** The Invite a New User form.
+**Figure 23:** The Invite a New User form.
 
 ---
 
@@ -428,7 +508,7 @@ This confirms that the invitation has been sent successfully.
 
 ![Confirm invitation message](assets/manager-user-account/confirm-invitation-message.png)
 
-**Figure 18:** Invitation sent confirmation.
+**Figure 24:** Invitation sent confirmation.
 
 ---
 
@@ -440,7 +520,7 @@ On the **Users** page, locate the Participant account you just invited and click
 
 ![User Details page](assets/participant-user/participant-detail-page.png)
 
-**Figure 19:** The selected user's details page opens.
+**Figure 25:** The selected user's details page opens.
 
 From this page, you can edit the participant's information, such as the display name and assigned client.
 
@@ -462,7 +542,7 @@ The Socho home page opens.
 
 ![Socho Home Page](assets/sing-in/home-page.png)
 
-**Figure 20:** The Socho home page.
+**Figure 26:** The Socho home page.
 
 ---
 
@@ -474,7 +554,7 @@ Click **Sign In**.
 
 ![Log In page](assets/sing-in/log-in-page.png)
 
-**Figure 21:** The Sign In page.
+**Figure 27:** The Sign In page.
 
 ---
 
@@ -488,7 +568,7 @@ Find the blue notification box above the Email field, then click the **mailbox p
 
 ![Mail box text link](assets/sing-in/mail-box-link.png)
 
-**Figure 22:** Mailbox page link.
+**Figure 28:** Mailbox page link.
 
 ---
 
@@ -500,7 +580,7 @@ Open the latest email.
 
 ![Mailbox page](assets/sing-in/mailbox-page.png)
 
-**Figure 23:** The Socho Mailbox page.
+**Figure 29:** The Socho Mailbox page.
 
 ---
 
@@ -512,7 +592,7 @@ The **Confirm my account** page opens.
 
 ![Confirm my account page](assets/sing-in/confirmation-page.png)
 
-**Figure 24:** The Socho Confirm my account page.
+**Figure 30:** The Socho Confirm my account page.
 
 ---
 
@@ -526,7 +606,7 @@ Your Participant account has been created successfully. You can now sign in and 
 
 ![Participant Dashbord](assets/participant-user/participant-dashbord.png)
 
-**Figure 25:** The Participant dashboard or Studies page (if applicable).
+**Figure 31:** The Participant dashboard or Studies page (if applicable).
 
 ## What a Participant Can Do
 
@@ -559,7 +639,7 @@ Sign in using your Participant account.
 
 ![Participant Studies Dashboard](assets/participant/studies-dashboard.png)
 
-**Figure 26:** The Participant Studies dashboard showing assigned studies.
+**Figure 32:** The Participant Studies dashboard showing assigned studies.
 
 ---
 
@@ -571,7 +651,7 @@ Click the study you want to complete.
 
 ![Assigned Study](assets/participant/assigned-study.png)
 
-**Figure 27:** The selected study.
+**Figure 33:** The selected study.
 
 ---
 
