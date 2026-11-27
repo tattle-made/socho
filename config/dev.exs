@@ -5,7 +5,7 @@ config :socho, Socho.Repo,
   username: "tattle",
   password: "weak_password",
   hostname: "localhost",
-  database: "socho_dev",
+  database: System.get_env("SOCHO_DB", "socho_dev"),
   stacktrace: true,
   show_sensitive_data_on_connection_error: true,
   pool_size: 10

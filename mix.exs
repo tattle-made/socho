@@ -72,7 +72,8 @@ defmodule Socho.MixProject do
       {:ex_aws_s3, "~> 2.5"},
       {:sweet_xml, "~> 0.7"},
       {:hackney, "~> 4.0"},
-      {:gen_smtp, "~> 1.0"}
+      {:gen_smtp, "~> 1.0"},
+      {:stampede, "~> 1.4", only: :dev}
     ]
   end
 
